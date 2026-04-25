@@ -491,6 +491,9 @@ These are explicitly NOT part of this implementation. If a test or example depen
 - Function versioning / namespaces beyond simple IDs
 - Resource accounting / scheduling
 - Multi-process / distributed execution
-- A CLI tool
 
 These are all listed in `ARCHITECTURE.md` § "Open Questions" and will be tackled in a future phase.
+
+A reference CLI client lives at `examples/05_cli.py`. It uses `HTTPClient`
+and depends on the server (`examples/03_run_server.py`) being up. Once the
+implementation is done, both should run as documented.
