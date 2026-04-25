@@ -11,6 +11,11 @@ to their owning registry so they can resolve chained function IDs at call time.
 """
 
 from ai_core.functions.base import BaseFunction
+from ai_core.registry.exceptions import (
+    FunctionAlreadyExistsError,
+    FunctionInUseError,
+    FunctionNotFoundError,
+)
 
 
 class FunctionRegistry:
@@ -42,7 +47,21 @@ class FunctionRegistry:
                  for each id in func.closure["func_chain"]:
                      _references[id] = _references.get(id, set()) | {func.id}
         """
-        raise NotImplementedError
+        if func.id in self._functions:
+            raise FunctionAlreadyExistsError(f"Function {func.id} already registered")
+
+        self._functions[func.id] = func
+
+        func_type = func.metadata.get("type")
+        if func_type:
+            self._by_type.setdefault(func_type, []).append(func.id)
+
+        for tag in func.metadata.get("tags", []):
+            self._by_tag.setdefault(tag, []).append(func.id)
+
+        if func.metadata.get("type") == "composite":
+            for ref_id in func.closure.get("func_chain", []):
+                self._references.setdefault(ref_id, set()).add(func.id)
 
     def unregister(self, func_id: str) -> None:
         """Remove a function.
@@ -55,29 +74,59 @@ class FunctionRegistry:
             4. If the removed function was a composite, also remove its entries
                from _references for each id in its func_chain.
         """
-        raise NotImplementedError
+        if func_id not in self._functions:
+            raise FunctionNotFoundError(f"Function {func_id} not found")
+
+        referrers = self._references.get(func_id)
+        if referrers:
+            raise FunctionInUseError(
+                f"{func_id} is still referenced by {sorted(referrers)}"
+            )
+
+        func = self._functions.pop(func_id)
+
+        # Update indexes
+        func_type = func.metadata.get("type")
+        if func_type and func_type in self._by_type and func_id in self._by_type[func_type]:
+            self._by_type[func_type].remove(func_id)
+
+        for tag in func.metadata.get("tags", []):
+            if tag in self._by_tag and func_id in self._by_tag[tag]:
+                self._by_tag[tag].remove(func_id)
+
+        # Clean up references if it was a composite
+        if func.metadata.get("type") == "composite":
+            for ref_id in func.closure.get("func_chain", []):
+                if ref_id in self._references:
+                    self._references[ref_id].discard(func_id)
+                    if not self._references[ref_id]:
+                        del self._references[ref_id]
 
     # ---------- Lookup ----------
 
     def get(self, func_id: str) -> BaseFunction:
         """Get a function by ID. Raises FunctionNotFoundError if missing."""
-        raise NotImplementedError
+        if func_id not in self._functions:
+            raise FunctionNotFoundError(f"Function {func_id} not found")
+        return self._functions[func_id]
 
     def has(self, func_id: str) -> bool:
         """Return True if `func_id` is registered."""
-        raise NotImplementedError
+        return func_id in self._functions
 
     def list_all(self) -> list[str]:
         """Return all registered function IDs (sorted, for stable output)."""
-        raise NotImplementedError
+        return sorted(self._functions.keys())
 
     def find_by_type(self, func_type: str) -> list[BaseFunction]:
         """Return all functions whose metadata['type'] equals `func_type`."""
-        raise NotImplementedError
+        ids = self._by_type.get(func_type, [])
+        return [self._functions[fid] for fid in ids]
 
     def find_by_tag(self, tag: str) -> list[BaseFunction]:
         """Return all functions whose metadata['tags'] contains `tag`."""
-        raise NotImplementedError
+        ids = self._by_tag.get(tag, [])
+        return [self._functions[fid] for fid in ids]
 
     # ---------- References ----------
 
@@ -87,4 +136,4 @@ class FunctionRegistry:
         For a non-referenced or non-existent ID, returns an empty set.
         Does NOT raise if `func_id` is unregistered.
         """
-        raise NotImplementedError
+        return set(self._references.get(func_id, set()))

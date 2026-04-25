@@ -11,6 +11,7 @@ Behavior:
     - Raises subprocess.TimeoutExpired if the script exceeds `timeout`.
 """
 
+import subprocess
 from typing import Any
 
 from ai_core.functions.base import BaseFunction
@@ -33,7 +34,9 @@ class ShellFunction(BaseFunction):
             script_path: absolute path to the script (e.g. "/scripts/echo.sh")
             timeout: max runtime in seconds
         """
-        raise NotImplementedError
+        super().__init__(func_id)
+        self.closure = {"script_path": script_path, "timeout": timeout}
+        self.metadata["type"] = "shell"
 
     def __call__(self, tokens: Tokens, context: Context) -> FunctionResult:
         """Run the script with tokens as the first arg.
@@ -45,13 +48,29 @@ class ShellFunction(BaseFunction):
             3. Return (result.stdout, context).
             4. If non-zero exit code, raise RuntimeError with stderr.
         """
-        raise NotImplementedError
+        result = subprocess.run(
+            ["bash", self.closure["script_path"], tokens.decode()],
+            capture_output=True,
+            timeout=self.closure["timeout"],
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Shell function {self.id} failed: {result.stderr.decode()}"
+            )
+        return result.stdout, context
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize. Closure is JSON-safe."""
-        raise NotImplementedError
+        return super().to_dict()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ShellFunction":
         """Reconstruct from a dict produced by to_dict()."""
-        raise NotImplementedError
+        closure = data["closure"]
+        func = cls(
+            func_id=data["id"],
+            script_path=closure["script_path"],
+            timeout=closure.get("timeout", 30),
+        )
+        func.metadata = data["metadata"]
+        return func

@@ -39,7 +39,14 @@ class LLMFunction(BaseFunction):
             temperature: sampling temperature
             max_tokens: max tokens to generate
         """
-        raise NotImplementedError
+        super().__init__(func_id)
+        self.closure = {
+            "model": model,
+            "system_prompt": system_prompt,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        self.metadata["type"] = "llm"
 
     def __call__(self, tokens: Tokens, context: Context) -> FunctionResult:
         """Send the input as a user message and return the assistant's reply.
@@ -53,13 +60,42 @@ class LLMFunction(BaseFunction):
             6. Write history back to context["llm_history"].
             7. Return (response.encode(), context).
         """
-        raise NotImplementedError
+        history = list(context.get("llm_history", []))
+
+        if self.closure["system_prompt"] and not history:
+            history.append({"role": "system", "content": self.closure["system_prompt"]})
+
+        history.append({"role": "user", "content": tokens.decode()})
+
+        # Import inside __call__ to ensure the mock from conftest.py takes effect
+        from ai_core.llm_client import llm_client
+
+        reply = llm_client.call(
+            model=self.closure["model"],
+            messages=list(history),
+            temperature=self.closure["temperature"],
+            max_tokens=self.closure["max_tokens"],
+        )
+
+        history.append({"role": "assistant", "content": reply})
+        context["llm_history"] = history
+
+        return reply.encode(), context
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize. Closure is JSON-safe."""
-        raise NotImplementedError
+        return super().to_dict()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "LLMFunction":
         """Reconstruct from a dict produced by to_dict()."""
-        raise NotImplementedError
+        closure = data["closure"]
+        func = cls(
+            func_id=data["id"],
+            model=closure["model"],
+            system_prompt=closure.get("system_prompt", ""),
+            temperature=closure.get("temperature", 0.7),
+            max_tokens=closure.get("max_tokens", 2048),
+        )
+        func.metadata = data["metadata"]
+        return func

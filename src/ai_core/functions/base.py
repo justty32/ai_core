@@ -68,7 +68,9 @@ class BaseFunction(ABC):
         Subclasses should call `super().__init__(func_id)` first, then
         set `self.closure` and adjust `self.metadata`.
         """
-        raise NotImplementedError
+        self.id = func_id
+        self.closure = {}
+        self.metadata = _default_metadata(func_id)
 
     @abstractmethod
     def __call__(self, tokens: Tokens, context: Context) -> FunctionResult:
@@ -96,7 +98,12 @@ class BaseFunction(ABC):
 
         Subclasses may override if their closure contains non-JSON values.
         """
-        raise NotImplementedError
+        return {
+            "type": self.metadata["type"],
+            "id": self.id,
+            "closure": self.closure,
+            "metadata": self.metadata,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BaseFunction":

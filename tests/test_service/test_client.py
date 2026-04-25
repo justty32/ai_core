@@ -4,7 +4,7 @@ These tests route HTTPClient at an in-process FastAPI app via httpx.ASGITranspor
 No real network required.
 """
 
-import httpx
+from fastapi.testclient import TestClient
 import pytest
 
 from ai_core.functions.calculate import CalculateFunction
@@ -15,17 +15,14 @@ from ai_core.service.core import CoreService
 
 @pytest.fixture
 def http_client() -> HTTPClient:
-    """An HTTPClient routed to an in-process FastAPI app via httpx.ASGITransport."""
+    """An HTTPClient routed to an in-process FastAPI app via TestClient."""
     core = CoreService()
     core.register(CalculateFunction("up", lambda b: b.upper()))
     app = create_app(core)
 
     client = HTTPClient(base_url="http://testserver")
-    # Replace the network-backed httpx.Client with one routed straight to the ASGI app.
-    client._client = httpx.Client(  # type: ignore[attr-defined]
-        transport=httpx.ASGITransport(app=app),
-        base_url="http://testserver",
-    )
+    # Replace the network-backed httpx.Client with TestClient (which has the same sync API)
+    client._client = TestClient(app, base_url="http://testserver")  # type: ignore
     return client
 
 

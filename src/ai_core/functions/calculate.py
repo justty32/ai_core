@@ -29,7 +29,9 @@ class CalculateFunction(BaseFunction):
             func_id: unique identifier
             python_func: callable that takes tokens (bytes) and returns tokens (bytes)
         """
-        raise NotImplementedError
+        super().__init__(func_id)
+        self.closure = {"func": python_func}
+        self.metadata["type"] = "calculate"
 
     def __call__(self, tokens: Tokens, context: Context) -> FunctionResult:
         """Apply the wrapped callable to tokens.
@@ -39,16 +41,19 @@ class CalculateFunction(BaseFunction):
             2. If the result isn't bytes, encode str/repr to bytes.
             3. Return (result_bytes, context).
         """
-        raise NotImplementedError
+        result = self.closure["func"](tokens)
+        if isinstance(result, bytes):
+            return result, context
+        return str(result).encode(), context
 
     def to_dict(self) -> dict[str, Any]:
         """Raise NotImplementedError — Python callables can't be JSON-serialized.
 
         The persistence layer should detect this and skip with a warning.
         """
-        raise NotImplementedError
+        raise NotImplementedError("CalculateFunction cannot be JSON-serialized")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "CalculateFunction":
         """Raise NotImplementedError — see to_dict() rationale."""
-        raise NotImplementedError
+        raise NotImplementedError("CalculateFunction cannot be JSON-serialized")

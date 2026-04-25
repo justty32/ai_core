@@ -1,26 +1,22 @@
-"""Common type aliases used throughout ai_core.
+"""Common type definitions for ai_core."""
 
-These are pure aliases (no runtime cost). They exist to make function
-signatures readable and to document the data contracts in one place.
-"""
-
-from typing import Any, TypeAlias
+from typing import Any
 
 # Raw input/output of every function. Always bytes — tokenization is the LLM's job,
 # and bytes support binary content (audio, images) without lossy conversion.
-Tokens: TypeAlias = bytes
+type Tokens = bytes
 
 # Session-level global data. Owned by the caller (client), passed through the core,
-# and returned (possibly mutated) to the caller. The core never persists it.
+# and modified by functions.
 #
-# Conventional keys (not enforced):
+# Common fields:
 #   - "llm_history": list[dict[str, str]] — conversation history for LLM functions
 #   - any other client-defined fields
-Context: TypeAlias = dict[str, Any]
+type Context = dict[str, Any]
 
 # Function descriptive metadata (resource profile, tags, semantic info).
 # See ARCHITECTURE.md for the canonical structure.
-Metadata: TypeAlias = dict[str, Any]
+type Metadata = dict[str, Any]
 
 # Standard return type for any function: (new_tokens, updated_context).
-FunctionResult: TypeAlias = tuple[Tokens, Context]
+type FunctionResult = tuple[Tokens, Context]

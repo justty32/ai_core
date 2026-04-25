@@ -58,7 +58,16 @@ class LLMClient:
         Returns:
             The response text (`response.choices[0].message.content`).
         """
-        raise NotImplementedError
+        import litellm
+
+        response = litellm.completion(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
+        return response.choices[0].message.content or ""
 
 
 # Module-level singleton instance. Import this to use the client.

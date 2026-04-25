@@ -40,7 +40,9 @@ class CompositeFunction(BaseFunction):
             func_chain: ordered list of function IDs to invoke
             registry: the registry to look up function IDs against
         """
-        raise NotImplementedError
+        super().__init__(func_id)
+        self.closure = {"func_chain": list(func_chain), "registry": registry}
+        self.metadata["type"] = "composite"
 
     def __call__(self, tokens: Tokens, context: Context) -> FunctionResult:
         """Execute each function in the chain, threading tokens & context.
@@ -55,7 +57,11 @@ class CompositeFunction(BaseFunction):
         Errors:
             - If any func_id isn't registered, propagate FunctionNotFoundError.
         """
-        raise NotImplementedError
+        current_tokens = tokens
+        for func_id in self.closure["func_chain"]:
+            func = self.closure["registry"].get(func_id)
+            current_tokens, context = func(current_tokens, context)
+        return current_tokens, context
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize.
@@ -63,7 +69,12 @@ class CompositeFunction(BaseFunction):
         The `registry` ref is NOT serialized — only `func_chain`.
         On load, the loader rebinds the registry.
         """
-        raise NotImplementedError
+        return {
+            "type": "composite",
+            "id": self.id,
+            "closure": {"func_chain": list(self.closure["func_chain"])},
+            "metadata": self.metadata,
+        }
 
     @classmethod
     def from_dict(
@@ -77,4 +88,13 @@ class CompositeFunction(BaseFunction):
             data: dict produced by to_dict()
             registry: registry to bind (the loader passes the freshly-built one)
         """
-        raise NotImplementedError
+        if registry is None:
+            raise ValueError("CompositeFunction.from_dict requires a registry")
+
+        func = cls(
+            func_id=data["id"],
+            func_chain=data["closure"]["func_chain"],
+            registry=registry,
+        )
+        func.metadata = data["metadata"]
+        return func

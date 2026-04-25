@@ -29,21 +29,21 @@ class CoreService:
             registry: an existing registry to use (mainly for testing).
                       If None, create a fresh one.
         """
-        raise NotImplementedError
+        self.registry = registry if registry is not None else FunctionRegistry()
 
     # ---------- Function management ----------
 
     def register(self, func: BaseFunction) -> None:
         """Register a function. Forwards to self.registry.register()."""
-        raise NotImplementedError
+        self.registry.register(func)
 
     def unregister(self, func_id: str) -> None:
         """Unregister a function. Forwards to self.registry.unregister()."""
-        raise NotImplementedError
+        self.registry.unregister(func_id)
 
     def list_functions(self) -> list[str]:
         """List all registered function IDs."""
-        raise NotImplementedError
+        return self.registry.list_all()
 
     def get_function_info(self, func_id: str) -> dict[str, Any]:
         """Return a JSON-friendly dict describing a function.
@@ -57,7 +57,12 @@ class CoreService:
 
         Raises FunctionNotFoundError.
         """
-        raise NotImplementedError
+        func = self.registry.get(func_id)
+        return {
+            "id": func.id,
+            "type": func.metadata.get("type"),
+            "metadata": func.metadata,
+        }
 
     # ---------- Execution ----------
 
@@ -81,15 +86,22 @@ class CoreService:
             FunctionNotFoundError if func_id isn't registered
             (any exception raised by the function)
         """
-        raise NotImplementedError
+        if context is None:
+            context = {}
+        func = self.registry.get(func_id)
+        return func(tokens, context)
 
     # ---------- Persistence ----------
 
     def save(self, path: str) -> None:
         """Save the registry to a JSON file. Delegates to persistence.serializer."""
-        raise NotImplementedError
+        from ai_core.persistence.serializer import save_core
+
+        save_core(self, path)
 
     @classmethod
     def load(cls, path: str) -> "CoreService":
         """Load a registry from a JSON file. Delegates to persistence.serializer."""
-        raise NotImplementedError
+        from ai_core.persistence.serializer import load_core
+
+        return load_core(path)

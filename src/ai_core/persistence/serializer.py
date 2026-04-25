@@ -31,6 +31,8 @@ Load order:
       2. Then load composites, binding the registry into each.
 """
 
+import json
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -39,40 +41,64 @@ if TYPE_CHECKING:
 # Bump when changing the on-disk format incompatibly.
 SAVE_FORMAT_VERSION = "0.1.0"
 
+logger = logging.getLogger(__name__)
+
 
 def save_core(core: "CoreService", path: str) -> None:
-    """Serialize a CoreService to a JSON file.
+    """Serialize a CoreService to a JSON file."""
+    from ai_core.functions.calculate import CalculateFunction
 
-    Steps:
-        1. Iterate over all functions in core's registry.
-        2. For each:
-             - skip CalculateFunction with a warning (logging.warning).
-             - call func.to_dict() to get the per-function payload.
-        3. Wrap into the top-level envelope:
-             {"version": SAVE_FORMAT_VERSION, "functions": [...]}.
-        4. Write to `path` as JSON (indent=2 for readability).
-    """
-    raise NotImplementedError
+    functions_data = []
+    for func_id in core.list_functions():
+        func = core.registry.get(func_id)
+        if isinstance(func, CalculateFunction):
+            logger.warning("Skipping calculate function %s during save", func_id)
+            continue
+        functions_data.append(func.to_dict())
+
+    payload = {"version": SAVE_FORMAT_VERSION, "functions": functions_data}
+    with open(path, "w") as f:
+        json.dump(payload, f, indent=2)
 
 
 def load_core(path: str) -> "CoreService":
-    """Deserialize a CoreService from a JSON file.
+    """Deserialize a CoreService from a JSON file."""
+    from ai_core.functions.composite import CompositeFunction
+    from ai_core.functions.llm import LLMFunction
+    from ai_core.functions.shell import ShellFunction
+    from ai_core.service.core import CoreService
 
-    Steps:
-        1. Read the JSON file.
-        2. Validate top-level "version" matches SAVE_FORMAT_VERSION.
-        3. Build a fresh CoreService.
-        4. Two-pass load:
-             a. First pass: instantiate all non-composite functions
-                from their dicts (dispatch on entry["type"]) and register them.
-             b. Second pass: instantiate composites, passing the now-built
-                registry into CompositeFunction.from_dict(data, registry).
-        5. Return the assembled CoreService.
+    with open(path) as f:
+        data = json.load(f)
 
-    Type dispatch table (subclass selection by `type`):
-        "llm"       -> LLMFunction.from_dict
-        "shell"     -> ShellFunction.from_dict
-        "composite" -> CompositeFunction.from_dict (needs registry)
-        "calculate" -> log warning, skip (can't restore)
-    """
-    raise NotImplementedError
+    if data.get("version") != SAVE_FORMAT_VERSION:
+        raise ValueError(
+            f"Unsupported save format version: {data.get('version')}; "
+            f"expected {SAVE_FORMAT_VERSION}"
+        )
+
+    core = CoreService()
+
+    # First pass: non-composites
+    type_dispatch = {
+        "llm": LLMFunction.from_dict,
+        "shell": ShellFunction.from_dict,
+    }
+    composite_entries = []
+
+    for entry in data["functions"]:
+        t = entry["type"]
+        if t == "composite":
+            composite_entries.append(entry)
+        elif t == "calculate":
+            logger.warning("Cannot restore calculate function %s", entry.get("id"))
+        elif t in type_dispatch:
+            core.register(type_dispatch[t](entry))
+        else:
+            raise ValueError(f"Unknown function type: {t}")
+
+    # Second pass: composites (need registry)
+    for entry in composite_entries:
+        core.register(CompositeFunction.from_dict(entry, registry=core.registry))
+
+    return core

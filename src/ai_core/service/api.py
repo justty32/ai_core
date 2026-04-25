@@ -14,8 +14,12 @@ Errors:
     Other exceptions                      -> 500 with ErrorResponse
 """
 
-from fastapi import FastAPI
+import base64
 
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from ai_core.registry.exceptions import FunctionNotFoundError
 from ai_core.service.core import CoreService
 from ai_core.service.models import (
     ExecuteRequest,
@@ -25,35 +29,35 @@ from ai_core.service.models import (
 
 
 def create_app(core: CoreService) -> FastAPI:
-    """Build a FastAPI app bound to the given CoreService.
+    """Build a FastAPI app bound to the given CoreService."""
+    app = FastAPI(title="ai_core", version="0.1.0")
 
-    Steps to implement:
-        1. Create FastAPI(title="ai_core", version="0.1.0").
-        2. Define exception handlers for FunctionNotFoundError (404) and
-           generic Exception (500), returning ErrorResponse-shaped JSON.
-        3. Define the routes below.
-        4. Return the app.
+    @app.exception_handler(FunctionNotFoundError)
+    async def _not_found_handler(request: Request, exc: FunctionNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "function_not_found", "detail": str(exc)},
+        )
 
-    The route handlers should:
-        - decode req.tokens (base64 -> bytes)
-        - call core.execute(...)
-        - encode result tokens (bytes -> base64)
-        - return ExecuteResponse(tokens=..., context=...)
-    """
-    raise NotImplementedError
+    @app.post("/execute", response_model=ExecuteResponse)
+    def execute_endpoint(req: ExecuteRequest) -> ExecuteResponse:
+        tokens = base64.b64decode(req.tokens.encode())
+        out_tokens, out_context = core.execute(req.func_id, tokens, req.context)
+        return ExecuteResponse(
+            tokens=base64.b64encode(out_tokens).decode(),
+            context=out_context,
+        )
 
+    @app.get("/functions", response_model=list[str])
+    def list_endpoint() -> list[str]:
+        return core.list_functions()
 
-# Below are skeleton route signatures for reference (the implementer should
-# nest these inside `create_app` so they close over `core`):
-#
-# @app.post("/execute", response_model=ExecuteResponse)
-# def execute(req: ExecuteRequest) -> ExecuteResponse: ...
-#
-# @app.get("/functions", response_model=list[str])
-# def list_functions() -> list[str]: ...
-#
-# @app.get("/functions/{func_id}", response_model=FunctionInfo)
-# def get_function(func_id: str) -> FunctionInfo: ...
+    @app.get("/functions/{func_id}", response_model=FunctionInfo)
+    def info_endpoint(func_id: str) -> FunctionInfo:
+        info = core.get_function_info(func_id)
+        return FunctionInfo(**info)
+
+    return app
 
 
 __all__ = ["create_app", "ExecuteRequest", "ExecuteResponse", "FunctionInfo"]
