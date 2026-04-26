@@ -1,395 +1,294 @@
 ---
-name: System Design 4 - Core Architecture
-description: ai_core 的三層架構：函數定義、函數管理、客户端-服務端接口
+name: System Design - Process-Based Architecture
+description: ai_core 基於 process 的極簡架構，依託 OS 機制，由 AI 自我擴展
 type: design
-updated: 2026-04-25
+updated: 2026-04-26
 ---
 
-# SYSTEM_DESIGN_4 — Core Architecture
+# SYSTEM_DESIGN — Process-Based Architecture
 
-ai_core 的三層架構：
+ai_core 是一個極簡的 AI 系統，核心理念：
 
-1. **Layer 1 — 函數定義** — 如何定義一個函數
-2. **Layer 2 — 函數管理** — 如何管理已定義的函數
-3. **Layer 3 — 客户端-服務端接口** — 如何與 Core 通信
-
----
-
-## Layer 1：函數定義
-
-### 核心概念
-
-每個函數由三部分組成：
-
-- **Closure** — 函數自身擁有的數據（固定綁定，運行時不變）
-  - 例：LLM 模型名稱、system prompt、shell 腳本路徑
-
-- **Context** — 會話級的全局數據（動態、屬於會話，不屬於函數）
-  - 例：LLM 對話歷史、臨時變數、會話狀態
-
-- **Metadata** — 函數的描述信息（幫助系統理解函數）
-  - 資源特性、可發現性、語義分類、執行要求、產出內容
-
-### Metadata 設計
-
-```python
-metadata = {
-    # 基本識別
-    "id": "denoise_voice_v1",
-    "type": "preprocessing",
-    "version": "1.0",
-    
-    # 可發現性
-    "expanded_name": "audio.denoise_voice",
-    "tags": ["voice", "preprocessing", "audio"],
-    "grouping": "audio_processing",
-    
-    # 語義分類
-    "conceptual_purpose": "清理語音中的背景噪音",
-    "domain": "audio",
-    
-    # 資源特性
-    "resource_profile": {
-        "memory": {"self": 5_000_000, "running": 10_000_000, "peak": 15_000_000},
-        "time": {"startup": 500, "actual_work": 100, "teardown": 50}
-    },
-    
-    # 執行要求
-    "input_requirements": {
-        "source_type": "voice",
-        "required_fields": ["session_id"],
-        "preconditions": []
-    },
-    
-    # 產出
-    "output_produces": {
-        "denoised": "boolean",
-        "noise_level_after": "float"
-    }
-}
-```
-
-### BaseFunction 基類
-
-```python
-from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Any
-
-class BaseFunction(ABC):
-    """所有函數的基類"""
-    
-    def __init__(self, func_id: str):
-        self.id = func_id
-        self.closure: Dict[str, Any] = {}        # 函數自身的數據
-        self.metadata: Dict[str, Any] = {...}    # 函數的描述信息
-    
-    @abstractmethod
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-        """
-        函數簽名：(tokens, context) → (tokens, context)
-        
-        Args:
-            tokens: 輸入數據
-            context: 會話級的全局上下文（可讀寫）
-        
-        Returns:
-            (output_tokens, updated_context)
-        """
-        pass
-```
-
-### 四種函數類型
-
-#### 1. LLM Function
-
-```python
-class LLMFunction(BaseFunction):
-    def __init__(self, func_id: str, model: str, system_prompt: str = ""):
-        super().__init__(func_id)
-        
-        # Closure — LLM 的固定配置
-        self.closure = {
-            "model": model,
-            "system_prompt": system_prompt,
-            "temperature": 0.7,
-            "max_tokens": 2048
-        }
-        
-        self.metadata["type"] = "llm"
-    
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-        # 從 context 讀取歷史，調用 LLM，寫回歷史
-        history = context.get("llm_history", [])
-        messages = history + [{"role": "user", "content": tokens.decode()}]
-        
-        response = llm_client.call(
-            model=self.closure["model"],
-            messages=messages,
-            temperature=self.closure["temperature"]
-        )
-        
-        result = response.choices[0].message.content
-        context["llm_history"] = messages + [{"role": "assistant", "content": result}]
-        
-        return result.encode(), context
-```
-
-#### 2. Shell Function
-
-```python
-class ShellFunction(BaseFunction):
-    def __init__(self, func_id: str, script_path: str):
-        super().__init__(func_id)
-        self.closure = {"script_path": script_path}
-        self.metadata["type"] = "shell"
-    
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-        result = subprocess.run(
-            ["bash", self.closure["script_path"], tokens.decode()],
-            capture_output=True,
-            timeout=30
-        )
-        return result.stdout, context
-```
-
-#### 3. Calculate Function
-
-```python
-class CalculateFunction(BaseFunction):
-    def __init__(self, func_id: str, python_func: Callable):
-        super().__init__(func_id)
-        self.closure = {"func": python_func}
-        self.metadata["type"] = "calculate"
-    
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-        result = self.closure["func"](tokens)
-        return result if isinstance(result, bytes) else str(result).encode(), context
-```
-
-#### 4. Composite Function（S-expression）
-
-```python
-class CompositeFunction(BaseFunction):
-    """由其他函數組合而成，展示 S-expression 的理念"""
-    
-    def __init__(self, func_id: str, func_chain: List[str]):
-        super().__init__(func_id)
-        self.closure = {"func_chain": func_chain}
-        self.metadata["type"] = "composite"
-    
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-        current = tokens
-        for func_id in self.closure["func_chain"]:
-            func = function_registry.get(func_id)
-            current, context = func(current, context)
-        return current, context
-```
+1. **所有功能都是 process**，依託 OS 機制（可執行文件 + CLI args + stdin/stdout）
+2. **共同約定極小**，只有 `--metadata` 一條規則
+3. **AI 自我擴展**，process 由 AI 實作和填充，不是人工建框架
 
 ---
 
-## Layer 2：函數管理
+## 核心理念
 
-### FunctionRegistry — 函數註冊表
+### 為什麼選 process？
 
-```python
-class FunctionRegistry:
-    """
-    管理已定義的函數
-    
-    職責：
-    - 註冊/註銷函數
-    - 查找函數（按 ID、type、tag）
-    - 追蹤依賴關係
-    - 管理生命週期
-    """
-    
-    def __init__(self):
-        self.functions: Dict[str, BaseFunction] = {}
-        self.references: Dict[str, Set[str]] = {}  # func_id → {引用它的 func_ids}
-        self.by_type: Dict[str, List[str]] = {}
-        self.by_tag: Dict[str, List[str]] = {}
-    
-    def register(self, func: BaseFunction) -> None:
-        """註冊函數"""
-        self.functions[func.id] = func
-        
-        # 建立索引
-        func_type = func.metadata.get("type")
-        if func_type:
-            self.by_type.setdefault(func_type, []).append(func.id)
-        
-        for tag in func.metadata.get("tags", []):
-            self.by_tag.setdefault(tag, []).append(func.id)
-        
-        # 追蹤依賴（Composite 函數）
-        if func_type == "composite":
-            for ref_func_id in func.closure.get("func_chain", []):
-                self.references.setdefault(ref_func_id, set()).add(func.id)
-    
-    def unregister(self, func_id: str) -> None:
-        """
-        註銷函數
-        
-        只有當沒有其他函數引用它時，才能刪除
-        （類似垃圾回收）
-        """
-        if self.references.get(func_id):
-            raise FunctionInUseError(
-                f"Cannot unregister {func_id}: still referenced by {self.references[func_id]}"
-            )
-        del self.functions[func_id]
-    
-    def get(self, func_id: str) -> BaseFunction:
-        """按 ID 獲取函數"""
-        return self.functions.get(func_id)
-    
-    def find_by_type(self, func_type: str) -> List[BaseFunction]:
-        """按類型查找"""
-        return [self.functions[fid] for fid in self.by_type.get(func_type, [])]
-    
-    def find_by_tag(self, tag: str) -> List[BaseFunction]:
-        """按標籤查找"""
-        return [self.functions[fid] for fid in self.by_tag.get(tag, [])]
-```
+之前的設計試圖建立 BaseFunction、FunctionRegistry、Client-Server 等抽象層，太複雜。
 
----
+回歸最簡單的事實：**OS 已經有完美的 process 管理機制**。
 
-## Layer 3：客户端-服務端接口
+- 可執行文件 = 函數定義
+- CLI args = 函數參數
+- stdin/stdout = I/O 通道
+- 文件系統 = 函數註冊表
+- pipe / subprocess = 函數組合
 
-### 架構概念
+不需要重新發明這些。
 
-**Core 是一個無狀態的函數執行服務**
-- 不管理會話
-- 只管理函數（FunctionRegistry + LLMClient）
-- 接收請求，執行函數，返回結果
-
-**會話由客户端管理**
-- 可以是 CLI 進程、Desktop App、Web、Android 等
-- 各自維護自己的 context、history、臨時數據
-- 通過 API 調用 Core 的函數
-- 完全獨立，Core 無需知道會話存在
-
-```
-┌────────────────────────────────────┐
-│  Core Service                      │
-├────────────────────────────────────┤
-│ • FunctionRegistry                 │
-│ • LLMClient（單例）                │
-│ • execute(func_id, tokens, context)│
-└────────────────────────────────────┘
-         ↑        ↑        ↑
-    (REST API)
-         │        │        │
-    ┌────┴─┐  ┌──┴───┐  ┌─┴────┐
-   CLI   Desktop   Web    ...
- (process)(process)(JS)
-    
-    Each client session:
-    ├─ context（本地維護）
-    ├─ history（本地維護）
-    └─ calls Core API
-```
-
-### 統一接口
-
-```python
-# Core 的執行接口（可通過不同方式訪問）
-def execute(func_id: str, tokens: bytes, context: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
-    """
-    執行一個函數
-    
-    Args:
-        func_id: 函數 ID
-        tokens: 輸入數據
-        context: 會話的上下文（客户端維護）
-    
-    Returns:
-        (output_tokens, updated_context)
-    """
-    func = function_registry.get(func_id)
-    if not func:
-        raise FunctionNotFoundError(f"Function {func_id} not found")
-    
-    return func(tokens, context)
-```
-
-### 通信方式（簡化示例）
-
-#### REST API（主要方式）
-
-```
-POST /execute
-Content-Type: application/json
-
-{
-    "func_id": "llm_v1",
-    "tokens": "base64_encoded_bytes",
-    "context": {
-        "llm_history": [...],
-        "temp_vars": {...}
-    }
-}
-
-Response:
-{
-    "tokens": "base64_encoded_bytes",
-    "context": {
-        "llm_history": [...],
-        "temp_vars": {...}
-    }
-}
-```
-
-#### Python Module（直接導入）
-
-```python
-from ai_core import core_instance
-
-tokens, context = core_instance.execute(
-    func_id="llm_v1",
-    tokens=b"hello",
-    context=session_context
-)
-```
-
-#### System Pipe（subprocess）
+### 唯一的共同約定
 
 ```bash
-# 客户端進程向 Core 發送請求
-echo '{"func_id":"llm_v1","tokens":"...","context":{...}}' | core_service
-# 讀取結果
+./any_process --metadata    # 輸出 JSON，描述自己
+./any_process "input"       # 正常執行
 ```
 
-### Core 的便携性
-
-Core 應該能被完整地保存到文件並在任何環境中恢復：
-- 函數註冊表的序列化
-- 所有函數定義的保存
-- Closure 數據的持久化
-- 不依賴特定路徑或環境變量
-
-（詳細實現細節在後續討論）
+像 `--help` / `--version` 一樣，是 CLI convention。任何 shell script、Python file、binary 都可以遵守。
 
 ---
 
-## 三層架構總結
+## 系統元件
 
-| Layer | 核心 | 職責 |
-|-------|------|------|
-| **L1** | 函數定義 | BaseFunction、Closure、Metadata、四種類型、S-expression |
-| **L2** | 函數管理 | FunctionRegistry、索引、依賴追蹤、生命週期 |
-| **L3** | 客户端-服務端接口 | 統一執行接口、多種通信方式、Core 便携性 |
+### 1. Process
+
+最基本的單位。任何可執行文件，只要遵守 `--metadata` 約定。
+
+**Metadata 格式：**
+
+```json
+{
+  "name": "translate",
+  "description": "將文字翻譯成目標語言",
+  "version": "1.0",
+  "tags": ["translate", "language"],
+  "input": "text",
+  "output": "text"
+}
+```
+
+**I/O 約定：**
+
+```bash
+./process "arg"                  # 小輸入：CLI arg
+./process < input.txt            # 大輸入：file → stdin
+./process > output.txt           # 大輸出：stdout → file
+./process < input.txt > output.txt
+```
+
+**Process 類型（依實作方式分）：**
+
+- **LLM 入口** — 直接呼叫 LLM（如 `gemini-2.5-flash.py`）
+- **Context 綁定包** — 預設 system prompt 後呼叫 LLM 入口（如 `senior-engineer.py`）
+- **輸出解析包** — 解析或轉換另一個 process 的輸出（如 `arrange-output.py`）
+- **組合 process** — 串接多個 process（內部 subprocess 呼叫，或讓使用者用 shell pipe）
+- **任何其他** — shell script、純計算、外部工具的 wrapper 等
+
+**組合方式：**
+
+```bash
+# Shell pipe（最自然）
+cat article.txt | python senior-engineer.py | python arrange-output.py
+
+# 在 process 內部用 subprocess
+p1 = subprocess.run(["python", "senior-engineer.py"], input=text, ...)
+p2 = subprocess.run(["python", "arrange-output.py"], input=p1.stdout, ...)
+```
+
+---
+
+### 2. Hub
+
+一次性工具，**不是 server**，管理所有 process 的索引。
+
+```bash
+./hub --build-list ./processes/   # 掃描目錄，呼叫每個 --metadata，寫入 list.json
+./hub --search-func "translate"   # 讀 list.json，回傳匹配的 process
+```
+
+**list.json**（atomic write：先寫 tmp 再 rename，避免讀寫衝突）：
+
+```json
+[
+  {"name": "translate", "path": "./processes/translate.py", "description": "..."},
+  {"name": "summarize", "path": "./processes/summarize.sh", "description": "..."}
+]
+```
+
+**為什麼不是 server？**
+
+- 無狀態，沒有 socket、port、並發問題
+- 失敗代價小（重跑就好）
+- 文件系統就是天然的儲存
+
+**未來功能：** `--search-func` 目前做精確/關鍵字匹配。未來可加入模糊搜尋（語意查詢），透過 LLM 或向量搜尋實現。
+
+---
+
+### 3. Session Library
+
+幫助 process 管理多輪 session 狀態。
+
+**運作模型（像回合制 RPG）：**
+
+```
+使用者行動（輸入文字、按 Enter）
+    → 機器開始執行（呼叫 process、LLM、運算）
+    → 機器完成，等待下一輪使用者行動
+    → 重複
+```
+
+每一輪結束後狀態被保存，下一輪可接續。
+
+**設計邊界：**
+
+- ✅ 只負責 dict 的讀寫與持久化
+- ❌ 不處理使用者介面邏輯（slash command、args、file save UI 都屬於上層）
+
+**狀態存放：**
+
+- 主要在記憶體
+- 持久化由 process 設計者自行決定（多久存一次、存哪裡）
+
+**最簡實作：**
+
+```python
+import json, os
+
+class Session:
+    def __init__(self, path="session.json"):
+        self.path = path
+        self.data = json.load(open(path)) if os.path.exists(path) else {}
+
+    def get(self, key, default=None):
+        return self.data.get(key, default)
+
+    def set(self, key, value):
+        self.data[key] = value
+        json.dump(self.data, open(self.path, "w"))
+```
+
+**使用範例：**
+
+```python
+session = Session("~/.my_process/session.json")
+
+# 每一輪開始：讀取上一輪狀態
+history = session.get("history", [])
+
+# 執行這一輪
+history.append({"role": "user", "content": input_text})
+response = call_llm(history)
+history.append({"role": "assistant", "content": response})
+
+# 每一輪結束：保存狀態
+session.set("history", history)
+print(response)
+```
+
+---
+
+### 4. cli_lib（未來）
+
+建在 session library 之上的互動層 library，處理使用者介面相關的邏輯：
+
+- **slash command** — `/reset`、`/save`、`/history` 等回合內指令
+- **args 支援** — 從 CLI args 初始化 session、設定參數
+- **file save UI** — 提示使用者儲存/載入 session 的介面流程
+- **big I/O control** — 大輸入輸出的處理流程
+
+process 設計者可選擇性引入，不強制使用。
+
+---
+
+### 5. func_center（未來）
+
+輕量 server，管理簡單的 LLM+context 包。
+
+**動機：** 每個 process 都是文件，但啟動一個 Python process 有開銷（loading interpreter、imports 等）。對於頻繁呼叫的輕量函數（簡單 LLM 包），用 server 集中管理會更高效。
+
+```bash
+./func_center --func llm_summarize "input text"
+```
+
+只在需要時引入，初期所有 process 都是文件。
+
+---
+
+## AI 驅動的自我擴展
+
+**這是整個系統最核心的能力。**
+
+使用者說「幫我做一個能做 XXX 的 process」，AI：
+
+1. 理解意圖
+2. 實作一個符合約定的 process（支援 `--metadata`、stdin/stdout）
+3. 放進 processes 目錄
+4. 執行 `hub --build-list` 更新索引
+5. 這個 process 從此可被呼叫和組合
+
+**核心設計原則：**
+
+> 每一個約定都要極度簡單，AI 才能輕易實作。
+> 約定越簡單 → AI 實作門檻越低 → 系統擴展越快。
+
+這就是為什麼整個系統只有 `--metadata` 一條規則：**讓 AI 寫 process 的負擔最小**。
+
+系統不是人工填充的，而是透過 AI 自我生長。每個新 process 都成為之後可被組合的積木。
+
+---
+
+## 架構總覽
+
+```
+[hub]                    ← 一次性工具，搜尋 list.json
+    ↓
+[processes]              ← 各種 shell command，支援 --metadata
+    │
+    ├─ session library   ← 每個 process 自己用，管理回合狀態
+    │
+    └─ AI 不斷生成新 process
+
+（未來）
+[cli_lib]                ← 互動層，slash command、args、UI
+[func_center]            ← 輕量 LLM 包的 server
+```
 
 ---
 
 ## 設計原則
 
-✅ **極簡核心** — Core 無狀態，只做函數執行
-✅ **客户端自主** — 會話由客户端管理，完全獨立
-✅ **多方式通信** — REST、Python Module、System Pipe 等
-✅ **天然分布式** — 客户端可在不同機器上
-✅ **便携可復現** — Core 可完整保存和恢復
+✅ **依託 OS** — 不重新發明 process 管理、文件系統、pipe
+✅ **約定極簡** — 只有 `--metadata`，越簡單 AI 越容易實作
+✅ **無狀態核心** — hub 一次性、不是 server，無並發問題
+✅ **AI 自我擴展** — 系統由 AI 持續填充，不是人工建框架
+✅ **回合制模型** — session 狀態以回合為單位管理
+✅ **延遲優化** — func_center、cli_lib 都是「之後」，不是現在
 
 ---
 
-讓我們繼續改進和討論！
+## 與之前設計的差異
+
+**棄用：**
+
+- BaseFunction 抽象類別（直接用 OS 的 executable）
+- FunctionRegistry 類（直接用文件系統 + list.json）
+- Closure / Context 的形式區分（每個 process 自己決定）
+- Client-Server 持續服務（hub 改為一次性）
+- REST API / Python Module / Pipe 多種通信（只有 stdin/stdout）
+
+**保留：**
+
+- 函數組合的 LISP 思想（用 shell pipe / subprocess 體現）
+- Metadata 的描述性設計（簡化欄位）
+- 多客户端的分離（每個 process 獨立）
+
+**新增：**
+
+- AI 自我擴展作為核心驅動力
+- 回合制 session 模型
+- 約定簡化到極致的設計原則
+
+---
+
+## 下一步
+
+1. 實作最簡 hub（`--build-list` + `--search-func`）
+2. 寫一兩個範例 process（LLM 入口、context 綁定包）
+3. 實作最簡 session library
+4. 試著讓 AI 透過約定生成新的 process
+5. 觀察哪裡需要 cli_lib 或 func_center

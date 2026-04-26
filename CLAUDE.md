@@ -4,103 +4,77 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案願景
 
-用 LISP 式的函數式思維來架構 LLM 的呼叫與組合。把 LLM 視為一個純函數：
+ai_core 是一個極簡的 AI 系統，依託 OS 的 process 機制，由 AI 自我擴展。
 
 ```
-llm : tokens → tokens
+process = 可執行文件 + --metadata 約定
+hub     = 一次性的索引工具
+session = 一個有持久化的 dict
+AI      = 持續生成新 process 來擴展系統
 ```
 
-所有複雜行為都是這個基本函數的組合與包裝，沒有魔法，只有 closure 與 transform。
+沒有 BaseFunction 類別，沒有 Registry class，沒有 server，沒有 REST API。
 
-## 核心抽象層
+把 OS 已有的 executable / CLI args / stdin-stdout / 文件系統當成函數系統來用。
 
-**Layer 1 — `make-model`：配置模型**
+## 核心理念
 
-```python
-def make_model(model, temperature, top_k, ...):
-    def call(tokens):
-        return call_llm(model, temperature, top_k, tokens)
-    return call
+### 為什麼選 process？
+
+OS 已經有完美的函數機制：
+
+- 函數定義 → executable file
+- 函數參數 → CLI args
+- I/O → stdin / stdout
+- 註冊表 → 文件系統
+- 組合 → pipe / subprocess
+- 元數據 → `--metadata` 約定
+
+不需要在 Python 裡重新建一套。
+
+### 唯一的共同約定
+
+```bash
+./any_process --metadata    # 輸出 JSON，描述自己
+./any_process "input"       # 正常執行
 ```
 
-把模型名稱與參數封裝進 closure，回傳一個純粹的 `tokens → tokens` 函數。
+像 `--help` / `--version` 一樣，是 CLI convention。
 
-**Layer 2 — `bind`：綁定 context（偏函數應用）**
+### AI 自我擴展是核心驅動力
 
-```python
-def bind(context, model_fn):
-    def call(input_tokens):
-        return model_fn(context + input_tokens)
-    return call
-```
+> 約定越簡單 → AI 實作門檻越低 → 系統擴展越快。
 
-把 system prompt / few-shot examples 等 context 預先綁入函數，產生一個新的、更專化的函數。等同於 LISP 的 closure 或 partial application。
+整個系統只有 `--metadata` 一條規則，是刻意的——讓 AI 寫 process 的負擔最小，系統才能透過 AI 持續生長。
 
-**Layer 3 — `take`：解析輸出**
+## 系統元件
 
-```python
-def take(schema, fn):
-    def call(input_tokens):
-        raw = fn(input_tokens)
-        return parse(schema, raw)
-    return call
-```
+### 必要元件
 
-把 LLM 的原始 token 輸出轉換為結構化資料（JSON → dataclass 等）。
+1. **process** — 任何遵守 `--metadata` 約定的可執行文件
+2. **hub** — 一次性工具：`--build-list` 掃描目錄、`--search-func` 查詢
+3. **session library** — 多輪 session 狀態的 dict 持久化（回合制 RPG 模型）
 
-**組合範例：**
+### 未來元件
 
-```python
-agent = take(json_schema,
-         bind(system_prompt,
-         make_model("claude-sonnet-4-6", temperature=0.7, top_k=40)))
-
-result = agent("使用者的輸入")
-```
-
-每一層都是對前一層的包裝，整體就是函數組合。
-
-## 系統架構（三層模型）
-
-### Layer 1 — 函數定義
-
-每個函數由三部分組成：
-- **Closure** — 函數自身的數據（固定綁定）
-- **Context** — 會話級的全局數據（動態變化，不屬於函數）
-- **Metadata** — 函數的描述信息（資源特性、標籤、語義等）
-
-函數類型：LLM、Shell、Calculate、Composite（S-expression 組合）
-
-### Layer 2 — 函數管理
-
-**FunctionRegistry**：管理已定義的函數
-- 註冊、查找、註銷函數
-- 追蹤依賴關係（垃圾回收風格）
-- 建立索引支持快速查找
-- 支持版本管理和命名空間
-
-### Layer 3 — 客户端-服務端接口
-
-**Core 是無狀態的函數執行服務**：
-- 不管理會話（由客户端管理）
-- 只管理函數和執行
-- 支持多種通信方式（REST API、Python Module、System Pipe 等）
-- **Core 應該能被序列化保存和便携使用**
-
-## 參考文檔
-
-- **SYSTEM_DESIGN.md** — 完整的三層架構設計（主要文檔）
-- **SYSTEM_DESIGN_EXTRA.md** — 設計總結和待決策問題
-- **old/** — 之前的設計迭代版本
+4. **cli_lib** — 互動層：slash command、args、UI、big I/O control
+5. **func_center** — 輕量 LLM 包的 server，避免 Python interpreter 啟動開銷
 
 ## 設計原則
 
-✅ LISP 風格 — 函數是一等公民，可組合和引用  
-✅ 極簡核心 — Core 無狀態，只做函數管理和執行  
-✅ 元數據驅動 — 所有決策基於 Metadata  
-✅ 多方式通信 — 不依賴特定的傳輸協議  
-✅ 客户端自主 — 每個會話獨立管理自己的上下文  
-✅ 函數獨立 — 函數是黑盒，易於版本管理和替換
+✅ **依託 OS** — 不重新發明 process / 文件系統 / pipe
+✅ **約定極簡** — 只有 `--metadata`，越簡單 AI 越容易實作
+✅ **AI 自我擴展** — 系統由 AI 持續填充，不是人工建框架
+✅ **無狀態核心** — hub 一次性、不是 server，沒有並發問題
+✅ **延遲優化** — cli_lib、func_center 都是「之後」
+✅ **回合制模型** — session 狀態以回合為單位管理
+
+## 參考文檔
+
+- **SYSTEM_DESIGN.md** — 主要設計文檔（process-based architecture）
+- **SYSTEM_DESIGN_EXTRA.md** — 設計總結與待決策問題
+- **usage.md** — 從使用者角度看的實作指南
+- **old/** — 之前的迭代版本（已棄用）
 
 ## 使用者資訊
 

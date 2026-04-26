@@ -1,364 +1,186 @@
 ---
-name: System Design Conclusion - Final Architecture
-description: ai_core 系統設計的最終版本，整合所有決策
+name: System Design Extra - Conclusion & Open Questions
+description: ai_core 設計總結、設計取捨、待決策問題
 type: design
-updated: 2026-04-25
+updated: 2026-04-26
 ---
 
-# ai_core — System Design Conclusion
+# ai_core — System Design Extra
 
-**最後更新**：2026-04-25  
-**狀態**：Final Design（可開始詳細規劃和實現）
-
----
-
-## 核心願景
-
-用 **LISP 式的函數式思維** 架構 LLM 的調用與組合，把 LLM 視為一個純函數：
-
-```
-llm : tokens → tokens
-```
-
-所有複雜行為都是這個基本函數的組合與包裝，沒有魔法，只有 **closure 與 transform**。
-
-### 三層核心抽象
-
-```python
-# Layer 0 — 基本構件
-def make_model(model, temperature, top_k, ...):
-    def call(tokens):
-        return call_llm(model, temperature, top_k, tokens)
-    return call
-
-# Layer 1 — 綁定 context（偏函數應用）
-def bind(context, model_fn):
-    def call(input_tokens):
-        return model_fn(context + input_tokens)
-    return call
-
-# Layer 2 — 解析輸出
-def take(schema, fn):
-    def call(input_tokens):
-        raw = fn(input_tokens)
-        return parse(schema, raw)
-    return call
-
-# 組合範例
-agent = take(json_schema,
-         bind(system_prompt,
-         make_model("claude-sonnet-4-6", temperature=0.7)))
-
-result = agent("使用者的輸入")
-```
+**最後更新**：2026-04-26
+**狀態**：Process-Based Architecture 確立，待詳細實作
 
 ---
 
-## 系統架構：三層模型
+## TL;DR
 
-### Layer 1 — 函數定義
+ai_core 是一個極簡的 AI 系統，把 OS 的 process 機制當成函數系統來用：
 
-**定義一個函數 = 寫一個 Python class**
-
-每個函數由三部分組成：
-
-#### Closure（函數自身的數據，固定不變）
-```python
-# 例：LLM 函數的 closure
-{
-    "model": "claude-sonnet-4-6",
-    "system_prompt": "You are an expert...",
-    "temperature": 0.7,
-    "max_tokens": 2048
-}
+```
+process = 可執行文件 + --metadata 約定
+hub     = 一次性的索引工具
+session = 一個有持久化的 dict
+AI      = 持續生成新 process 來擴展系統
 ```
 
-#### Context（會話級的全局數據，動態變化）
-```python
-# 不屬於函數，屬於會話
-{
-    "llm_history": [{role, content}, ...],
-    "temp_vars": {...},
-    "session_id": "primary",
-    "session_state": "active"
-}
-```
-
-#### Metadata（函數的描述信息）
-```python
-{
-    # 基本識別
-    "id": "denoise_voice_v1",
-    "type": "preprocessing",
-    "version": "1.0",
-    
-    # 可發現性
-    "expanded_name": "audio.denoise_voice",
-    "tags": ["voice", "preprocessing"],
-    
-    # 語義分類
-    "conceptual_purpose": "清理語音中的背景噪音",
-    "domain": "audio",
-    
-    # 資源特性
-    "resource_profile": {
-        "memory": {"self": 5MB, "running": 10MB, "peak": 15MB},
-        "time": {"startup": 500ms, "actual_work": 100ms, "teardown": 50ms}
-    },
-    
-    # 執行要求
-    "input_requirements": {
-        "source_type": "voice",
-        "required_fields": ["session_id"],
-        "preconditions": []
-    }
-}
-```
-
-#### BaseFunction 基類
-
-```python
-class BaseFunction(ABC):
-    def __init__(self, func_id: str):
-        self.id = func_id
-        self.closure: Dict[str, Any] = {}
-        self.metadata: Dict[str, Any] = {...}
-    
-    @abstractmethod
-    def __call__(self, tokens: bytes, context: Dict[str, Any]) 
-        -> Tuple[bytes, Dict[str, Any]]:
-        """(tokens, context) → (tokens, context)"""
-        pass
-```
-
-#### 四種函數類型
-
-1. **LLM Function** — 調用 LLM
-   - Closure：模型名、system prompt、溫度等
-   - 讀寫：context 中的 llm_history
-
-2. **Shell Function** — 執行 Shell 命令
-   - Closure：腳本路徑
-   - 副作用：執行外部命令
-
-3. **Calculate Function** — 包裝 Python 函數
-   - Closure：Python 函數本身
-   - 用途：純計算或有副作用的操作
-
-4. **Composite Function** — 組合其他函數
-   - Closure：函數 ID 列表
-   - S-expression 思想：函數的優雅組合
-   ```python
-   (denoise (contextualize (call_llm tokens)))
-   ```
+沒有 BaseFunction，沒有 Registry class，沒有 server，沒有 REST API。
 
 ---
 
-### Layer 2 — 函數管理
+## 從前一版設計的演進
 
-**管理已定義的函數**
+### 之前的問題
 
-#### FunctionRegistry
+之前的 SYSTEM_DESIGN 有三層架構：
 
-```python
-class FunctionRegistry:
-    # 註冊/查找/註銷函數
-    # 追蹤依賴關係（垃圾回收）
-    # 建立索引（快速查找）
-```
+1. Layer 1 — 函數定義（BaseFunction、Closure、Metadata）
+2. Layer 2 — 函數管理（FunctionRegistry）
+3. Layer 3 — 客户端-服務端接口
 
-**職責**：
-- 存儲所有已定義的函數
-- 按 ID、type、tag 查找
-- 追蹤 Composite 函數的依賴
-- 防止刪除仍被引用的函數（類似垃圾回收）
-- 支持版本管理和命名空間
+實作後使用者覺得「不夠 simple and stupid」——抽象層太厚，重新發明了 OS 已經有的東西。
 
-**關鍵操作**：
-```python
-registry.register(func)           # 註冊函數
-registry.get(func_id)              # 查找函數
-registry.find_by_type("llm")       # 按類型查找
-registry.find_by_tag("voice")      # 按標籤查找
-registry.unregister(func_id)       # 註銷（只有沒被引用時才能刪除）
-```
+### 新設計的轉變
 
----
+| 之前 | 現在 |
+|------|------|
+| BaseFunction 類別 | 任何 executable file |
+| FunctionRegistry 類別 | 文件系統 + list.json |
+| Closure / Context 物件區分 | process 自己決定 |
+| Server 持續運行 | hub 一次性執行 |
+| REST API / Module / Pipe | stdin / stdout / args |
+| Layer 1 / 2 / 3 | 一個約定（--metadata） |
 
-### Layer 3 — 客户端-服務端接口
+### 關鍵頓悟
 
-**Core 是無狀態的函數執行服務**
+**OS 已經有完美的函數機制。**
 
-#### 架構特點
+- 函數定義 → executable
+- 函數參數 → CLI args
+- I/O → stdin/stdout
+- 註冊表 → 文件系統
+- 組合 → pipe / subprocess
+- 元數據 → `--metadata` 約定
 
-```
-Core Service (函數管理 + 執行)
-  ├─ FunctionRegistry
-  ├─ LLMClient（單例）
-  └─ execute(func_id, tokens, context)
-
-              ↕ API / Module / Pipe
-
-多個獨立的客户端會話
-  ├─ CLI 進程
-  ├─ Desktop App 進程
-  ├─ Web 頁面
-  └─ Android App
-  
-每個會話：
-  ├─ context（本地維護）
-  ├─ history（本地維護）
-  └─ calls Core API
-```
-
-#### Core 的責任
-
-✅ **應該做**：
-- 管理函數註冊表
-- 執行函數
-- 提供統一的執行接口
-
-❌ **不應該做**：
-- 管理會話
-- 管理用戶輸入/輸出
-- 知道什麼是 CLI、Web、Desktop
-
-#### 客户端的責任
-
-✅ **應該做**：
-- 管理自己的 context
-- 處理用戶輸入
-- 調用 Core API
-- 呈現輸出
-
-❌ **不應該做**：
-- 管理函數
-- 決定執行邏輯
-
-#### 通信方式
-
-```
-REST API (主要)
-POST /execute
-{
-    "func_id": "llm_v1",
-    "tokens": "base64_encoded",
-    "context": {...}
-}
-
-Python Module (直接導入)
-core.execute(func_id, tokens, context)
-
-System Pipe (subprocess 通信)
-echo '{"func_id": "llm_v1", ...}' | core_service
-```
-
-#### Core 的便携性
-
-Core 應該能被完整地保存到文件（**待詳細設計**）：
-- 函數註冊表的序列化
-- 所有函數定義的保存
-- Closure 數據的持久化
-- 跨平台/跨環境使用
+我們不需要在 Python 裡重新建一套。
 
 ---
 
-## 設計原則
+## 核心設計原則
 
-### 1. LISP 風格
-- 函數是一等公民
-- 函數可以被組合和引用
-- 環境作為執行容器
+### 1. 約定極簡
 
-### 2. 極簡核心
-- Core 只做必要的事
-- 無狀態（或狀態少）
-- 單一職責
+> 每一個約定都要極度簡單，AI 才能輕易實作。
 
-### 3. 元數據驅動
-- Metadata 描述函數特性
-- 幫助系統進行智能決策
-- 支持自動發現和組合
+整個系統只有 `--metadata` 一條規則。這是刻意的——**讓 AI 寫 process 的負擔最小**，系統才能透過 AI 快速擴展。
 
-### 4. 多方式通信
-- REST API、Python Module、System Pipe
-- 不依賴特定的傳輸協議
-- 靈活部署和集成
+### 2. 依託 OS
 
-### 5. 客户端自主
-- 每個會話獨立管理自己的上下文
-- Core 無需知道會話存在
-- 天然支持多進程/多機器
+不重新發明 process 管理、文件系統、pipe。
 
-### 6. 函數獨立
-- 函數是黑盒，可獨立測試
-- 函數間通過標準接口通信
-- 易於版本管理和替換
+### 3. AI 自我擴展
+
+系統的價值不在框架本身，而在於 AI 能持續生成符合約定的 process。
+
+### 4. 延遲優化
+
+`func_center`（輕量 server）和 `cli_lib`（互動層）都是「之後」。先把核心做出來再說。
+
+### 5. 無狀態核心
+
+hub 是一次性工具，不是 server。沒有 socket、port、並發問題。
 
 ---
 
-## 與之前設計的關係
+## 系統元件回顧
 
-### 來自 SYSTEM_DESIGN_1、2、3 的概念
+### 必要元件（現在）
 
-**保留**：
-- 三層核心抽象（make_model、bind、take）
-- Metadata 的多維度設計
-- 函數的四種類型分類
-- 多客户端的分離思想
-- 資源特性的定義
+1. **process 約定** — `--metadata` + stdin/stdout
+2. **hub** — `--build-list` + `--search-func`
+3. **session library** — 一個有持久化的 dict
 
-**調整**：
-- 不再在 Core 中管理會話（改由客户端管理）
-- 簡化了 Context Management（改為客户端責任）
-- 澄清了 Closure vs Context 的區分
+### 未來元件
 
-**棄用**：
-- Layer 3 的虛擬會話管理
-- 複雜的資源調度邏輯（暫時）
-- 分佈式執行的設計（暫時）
+4. **cli_lib** — slash command、args、file UI、big I/O control
+5. **func_center** — 輕量 LLM 包的 server，避免 Python interpreter 啟動開銷
 
 ---
 
 ## 待詳細設計的問題
 
-### Layer 1 相關
-1. 函數間的 S-expression 如何動態組合？
-2. 是否支持條件分支和循環？
-3. 如何驗證 metadata 的完整性？
+### Process 約定
 
-### Layer 2 相關
-1. 版本管理的具體策略
-2. 函數的動態註冊機制
-3. 依賴解析和衝突處理
+- [ ] `--metadata` 的 JSON schema 是否需要更嚴格的規範？
+- [ ] 失敗時的錯誤格式（stderr？exit code？）
+- [ ] 大輸入的觸發條件（什麼時候用 stdin、什麼時候用 args）
 
-### Layer 3 相關
-1. Core 的序列化格式（JSON？Pickle？）
-2. REST API 的完整 spec
-3. Core 在不同環境中的部署方式
+### Hub
+
+- [ ] 模糊搜尋未來怎麼做（LLM？embedding？）
+- [ ] processes 目錄結構（扁平？分類？命名空間？）
+- [ ] list.json 的版本管理（多個版本共存？）
+
+### Session Library
+
+- [ ] 持久化策略（每次 set 就寫？批次寫？）
+- [ ] 多 process 共享同一個 session 的情況
+- [ ] session 文件的位置慣例（`~/.{process_name}/`？）
+
+### AI 自我擴展
+
+- [ ] AI 如何知道現有的 process（透過 hub 查嗎？）
+- [ ] AI 生成 process 的測試流程
+- [ ] 重複/相似 process 的處理（避免泛濫）
+
+### cli_lib（未來）
+
+- [ ] slash command 的命名空間（process 自定義 vs 全域）
+- [ ] big I/O control 的具體 API
+
+### func_center（未來）
+
+- [ ] 何時觸發遷移（什麼樣的 process 該被收進 func_center？）
+- [ ] 通信協議（unix socket？stdin/stdout？）
+- [ ] 與獨立 process 的呼叫介面是否一致
 
 ---
 
-## 下一步
+## 不再追求的東西
 
-1. **詳細設計** — 對每一層進行詳細的技術設計
-2. **實現規劃** — 確定實現的優先級和路線圖
-3. **原型開發** — 實現最小可運行版本
-4. **迭代改進** — 基於實踐反饋調整設計
+明確棄用，避免之後又掉進去：
+
+- ❌ 統一的 BaseFunction 類別 — 每個 process 自己寫，不要 wrapper
+- ❌ 中央 FunctionRegistry — 文件系統就是 registry
+- ❌ Closure vs Context 的形式區分 — process 內部自己處理
+- ❌ Server 持續運行（除了 func_center 未來）
+- ❌ 多種通信協議 — stdin/stdout 為主
+- ❌ 複雜的依賴解析、版本管理 — 之後真的需要再說
+- ❌ 跨機器分散式 — 不是現在的問題
 
 ---
 
 ## 設計文檔地圖
 
-- **SYSTEM_DESIGN_4.md** — 詳細的三層架構實現
-- **SYSTEM_DESIGN_CONCLUSION.md** — 本文件，最終總結
-- （後續補充更多實現細節的文檔）
+- **SYSTEM_DESIGN.md** — 主要設計文檔（process-based architecture）
+- **SYSTEM_DESIGN_EXTRA.md** — 本文件，總結與待解問題
+- **usage.md** — 從使用者角度看的實作指南
+- **CLAUDE.md** — 給 AI 的專案指引
+- **old/** — 之前的設計迭代版本（已棄用）
 
 ---
 
-> **ai_core 的核心承諾：**  
-> 把 LLM 視為一個純函數，通過函數組合和管理，  
-> 在無狀態 Core + 獨立客户端的架構下，  
-> 以簡潔優雅的方式架構 AI 應用。
+## 下一步
 
-讓我們開始實現吧！
+1. **實作最簡 hub** — `--build-list` 掃描目錄、`--search-func` 查詢
+2. **寫範例 processes** — LLM 入口、context 綁定包、輸出解析包
+3. **實作 session library** — 最小可用的 dict 持久化
+4. **AI 寫 process 的流程驗證** — 讓 AI 根據意圖生成符合約定的 process
+5. **觀察痛點** — 哪些地方會推動 cli_lib 或 func_center 的需要
+
+---
+
+> **ai_core 的核心承諾：**
+>
+> 把每一個 AI 能力做成 process，依託 OS，
+> 用最小的約定讓 AI 能持續擴展系統。
+> 沒有魔法，只有 executables、stdin/stdout、和一個 metadata 約定。
