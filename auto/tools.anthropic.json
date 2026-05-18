@@ -1,0 +1,706 @@
+[
+  {
+    "name": "ask",
+    "description": "General Q&A with persistent conversation history for follow-up questions",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "question"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "bind_context",
+    "description": "Prepend a system prompt to input and call an LLM",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "chain",
+    "description": "Execute a planner JSON plan: run each process in order, pipe outputs between steps",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "json plan (from planner) + --input <initial_input>"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "changelog_gen",
+    "description": "Generate a CHANGELOG.md entry from git log commits",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "git log output"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "dockerfile_gen",
+    "description": "Generate an optimized multi-stage Dockerfile for a Go service",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "service description or go.mod content"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "echo",
+    "description": "Echo input text back to stdout unchanged",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "error_diagnose",
+    "description": "Diagnose error messages and stack traces, suggest root cause and fix",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "error message or stack trace"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_api_gen",
+    "description": "Generate a Go HTTP handler (net/http style) from an endpoint description",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "endpoint description (method, path, request/response)"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_bench",
+    "description": "Generate Go benchmark functions (testing.B) for performance testing",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go function source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_channel_patterns",
+    "description": "Generate Go concurrency patterns: pipeline, fan-out/in, worker pool, timeout, done channel",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "pattern name or description (e.g. 'worker pool with 5 workers')"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_commit_msg",
+    "description": "Generate a conventional commit message from a git diff of Go code",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "git diff output"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_concurrency_review",
+    "description": "Review Go concurrency: goroutine leaks, race conditions, channel patterns, sync usage",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code with concurrency"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_config_gen",
+    "description": "Generate a Go config struct loaded from environment variables",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "list of config fields or service description"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_context_gen",
+    "description": "Add context.Context propagation to Go functions and method calls",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code without context"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_doc",
+    "description": "Add or improve godoc comments for exported Go functions, types, and methods",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_error_wrap",
+    "description": "Improve Go error handling: wrap with context, use sentinel errors, errors.Is/As",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_explain",
+    "description": "Explain Go code in plain language, including patterns and gotchas",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_generics",
+    "description": "Refactor Go code to use generics (type parameters) or explain existing generic code",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_graceful_shutdown",
+    "description": "Add graceful shutdown with signal handling to a Go HTTP/gRPC server",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go server or main.go code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_grpc_gen",
+    "description": "Generate Go gRPC server implementation from a proto service definition",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "protobuf service definition"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_interface",
+    "description": "Infer a minimal Go interface from a struct's methods or usage patterns",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go struct or usage code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_middleware_gen",
+    "description": "Generate Go HTTP middleware (net/http) from a description",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "middleware description"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_migrate_gen",
+    "description": "Generate SQL up/down migrations from Go struct changes (PostgreSQL by default)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "old and new go struct definitions"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_mock",
+    "description": "Generate a testify/mock compatible mock struct for a Go interface",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go interface definition"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_openapi_gen",
+    "description": "Generate OpenAPI 3.0 YAML spec from Go HTTP handler code and struct definitions",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go http handler code with request/response structs"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_refactor",
+    "description": "Suggest and apply refactors to Go code: extract interface, reduce duplication, improve naming",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code (optionally with refactor goal)"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_repo_gen",
+    "description": "Generate a Go Repository interface and PostgreSQL implementation for a domain entity",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go struct or entity description"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_review",
+    "description": "Review Go code for correctness, idioms, error handling, and best practices",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_struct_gen",
+    "description": "Generate Go structs from a natural language description or sample JSON",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "data description or sample JSON"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_test_gen",
+    "description": "Generate table-driven Go unit tests for the given function or struct",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "go function or struct source code"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "go_wire_gen",
+    "description": "Generate Go dependency injection wiring (manual wire-style injector function)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "component list with dependencies (or existing structs)"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "json_format",
+    "description": "Validate and pretty-print JSON with 2-space indentation",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "json string"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "llm_call",
+    "description": "Send input text to an LLM and return the response",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "llm_chat",
+    "description": "Multi-turn LLM conversation with persistent session history",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "makefile_gen",
+    "description": "Generate a Makefile with common Go targets: build, test, lint, docker, migrate",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "project description or go.mod content"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "planner",
+    "description": "Decompose a natural language task into an ordered sequence of process calls",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "task description in natural language"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "pr_review",
+    "description": "Review a git diff as a senior engineer — logic, safety, style",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "git diff or patch"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "regex_explain",
+    "description": "Explain a regular expression pattern in plain language with examples",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "regex pattern (optionally with sample string)"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "shell_explain",
+    "description": "Explain a shell command or bash script in plain language",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "shell command or script"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "slugify",
+    "description": "Convert text into a URL-safe slug (lowercase ASCII, hyphen-separated)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "sql_explain",
+    "description": "Explain SQL queries and suggest index/performance improvements",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "sql query"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "summarize",
+    "description": "Summarize text into concise bullet points",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "translate_zh",
+    "description": "Translate text to Traditional Chinese (繁體中文)",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "text in any language"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "yaml_explain",
+    "description": "Explain a YAML config file (k8s, docker-compose, GitHub Actions, etc.) in plain language",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "yaml file content"
+        }
+      },
+      "required": [
+        "input"
+      ]
+    }
+  }
+]

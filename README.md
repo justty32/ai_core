@@ -71,6 +71,8 @@ echo "Hello, World!" | .venv/bin/python processes/slugify.py
 | `tags` | | 字串陣列，幫助搜尋 |
 | `input` | | 輸入型態描述 |
 | `output` | | 輸出型態描述 |
+| `examples` | | `[{"input": "...", "output": "..."}]`；`hub --validate` 會逐一執行並比對輸出 |
+| `io` | | `{"input": stdin\|file\|args\|none, "output": stdout\|file\|none, "format": {"input": text\|json\|binary, "output": ...}}`；給 orchestrator/export 用 |
 
 ### 錯誤與 I/O 契約
 
@@ -95,6 +97,9 @@ METADATA = {
     "tags": ["..."],
     "input": "text",
     "output": "text",
+    "examples": [
+        {"input": "hi", "output": "HI"},
+    ],
 }
 
 def run(text: str) -> str:
@@ -123,10 +128,10 @@ if __name__ == "__main__":
 # 3. 設執行權限
 chmod +x processes/<name>.py
 
-# 4. 驗證 metadata 契約
+# 4. 驗證 metadata 契約 + 跑 examples
 .venv/bin/python hub --validate processes/<name>.py
 
-# 5. 跑一次煙霧測試
+# 5. （可選）手動煙霧測試
 echo "..." | .venv/bin/python processes/<name>.py
 
 # 6. 重建索引
@@ -134,6 +139,7 @@ echo "..." | .venv/bin/python processes/<name>.py
 ```
 
 `hub --validate` 會檢查：執行權限、`--metadata` 能跑、輸出是合法 JSON 物件、含必填欄位、退出碼 0。
+若 metadata 含 `examples`，會逐一把 `input` 餵進 stdin、比對 `output`——examples 是自動煙霧測試。
 
 ---
 
@@ -142,10 +148,22 @@ echo "..." | .venv/bin/python processes/<name>.py
 ```bash
 hub --build-list <dir> [--output <file>]    # 掃描目錄建索引
 hub --search-func <query> [--list <file>]   # 子字串搜尋 (name/description/tags)
-hub --validate <process_path>               # 檢查單一 process 是否符合契約
+hub --validate <process_path>               # 檢查契約 + 跑 examples（若有）
+hub --gen-agents-md [--output <file>]       # 產出給 AI 讀的入口文件
+hub --gen-functions-md [--output <file>]    # 產出完整 process 清單
+hub --export <fmt> [--output <file>]        # 輸出 tool schemas
+                                            #   fmt: openai-tools | anthropic-tools
 ```
 
 預設 `<file>` 是 `./list.json`，預設 `<dir>` 是 `./processes`。
+所有 `--gen-*` / `--export` 在沒給 `--output` 時直接印到 stdout（pipe-friendly）。
+
+**全域旗標**：`--json-errors` 把 stderr 錯誤改成單行 JSON
+（`{"type", "message", "hint", "retriable"}`），給 orchestrator（planner/chain）程式化處理用。
+
+**list.json 條目格式**：每個 entry 含 `_status: "ok|partial|absent"`。
+`partial` 表示 metadata 解析了但缺必填欄位；`absent` 表示 `--metadata` 整個失敗。
+search-func 會跳過 `absent` 但仍會返回 `partial`（讓 caller 自己決定）。
 
 ---
 
@@ -173,6 +191,7 @@ ai_core/
 ├── hub                 ← 索引工具（可執行）
 ├── list.json           ← hub --build-list 的輸出
 ├── processes/          ← 所有 process（扁平、44 個）
+├── auto/               ← 自動產出：AGENTS.md / FUNCTIONS.md / tools.*.json
 ├── session_lib/        ← Session library 原始碼
 ├── tests/              ← pytest 測試
 ├── SYSTEM_DESIGN.md    ← 主要設計文檔

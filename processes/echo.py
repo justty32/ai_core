@@ -11,6 +11,10 @@ METADATA = {
     "tags": ["utility", "debug"],
     "input": "text",
     "output": "text",
+    "examples": [
+        {"input": "hello", "output": "hello"},
+        {"input": "", "output": ""},
+    ],
 }
 
 

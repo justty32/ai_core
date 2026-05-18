@@ -13,6 +13,16 @@ METADATA = {
     "tags": ["text", "url", "slug", "utility"],
     "input": "text",
     "output": "slug",
+    "io": {
+        "input": "stdin",
+        "output": "stdout",
+        "format": {"input": "text", "output": "text"},
+    },
+    "examples": [
+        {"input": "Hello, World!", "output": "hello-world"},
+        {"input": "  Spaces   Here  ", "output": "spaces-here"},
+        {"input": "café_FOO", "output": "cafe-foo"},
+    ],
 }
 
 

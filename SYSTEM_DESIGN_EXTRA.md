@@ -186,6 +186,32 @@ hub 是一次性工具，不是 server。沒有 socket、port、並發問題。
 
 ---
 
+## 已吸收（2026-05-18，源自兄弟版本 ai_core/）
+
+比對了 `../pas/others/ai_core` 那份較早、設計更繁複的版本後，挑了六項與「無狀態核心」相容的設計納入：
+
+- [x] **1. `io` 結構化欄位**（選填，與原 `input` / `output` 字串並存）
+  - schema：`{"io": {"input": "stdin|file|args|none", "output": "stdout|file|none", "format": {"input": "text|json|binary", "output": "..."}}}`
+  - `hub --validate` 對未知值給警告（warn-only，exit 0）。
+  - `slugify.py` 為示範。
+- [x] **2. metadata 容錯降級而非 skip**
+  - `list.json` 每筆都有 `_status: "ok|partial|absent"`；`partial` / `absent` 含 `_warning`。
+  - `search-func` 跳過 `absent`，仍返回 `partial`。
+- [x] **3. examples + 自動 dry-run**
+  - `hub --validate` 把 `metadata.examples` 逐一餵 stdin 比對 stdout。
+  - `echo.py` / `slugify.py` 為示範。
+- [x] **4. `--json-errors` 全域旗標**
+  - stderr 改吐 `{"type", "message", "hint", "retriable"}` 單行 JSON。
+- [x] **5. `hub --export <fmt>` agent 格式輸出**
+  - 第一版支援 `openai-tools` / `anthropic-tools`。
+  - MCP / claude-skill 留待真有需求再加。
+- [x] **6. `auto/AGENTS.md` + `auto/FUNCTIONS.md` 自動產出**
+  - `hub --gen-agents-md` / `--gen-functions-md`，加上 `--export` 的兩份 JSON 都寫進 `auto/`。
+
+**明確不採用**：常駐 LLM entry server、queue、rate limit、token auth、author 一站式 dry-run pipeline、Small Function Center dispatcher。這些都假設「框架是中心」，與「OS 是中心、hub 一次性」衝突。
+
+---
+
 > **ai_core 的核心承諾：**
 >
 > 把每一個 AI 能力做成 process，依託 OS，
