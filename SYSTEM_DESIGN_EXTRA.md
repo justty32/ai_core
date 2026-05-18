@@ -106,42 +106,49 @@ hub 是一次性工具，不是 server。沒有 socket、port、並發問題。
 
 ---
 
-## 待詳細設計的問題
+## 已決策（2026-05-18 端到端驗證後）
 
 ### Process 約定
 
-- [ ] `--metadata` 的 JSON schema 是否需要更嚴格的規範？
-- [ ] 失敗時的錯誤格式（stderr？exit code？）
-- [ ] 大輸入的觸發條件（什麼時候用 stdin、什麼時候用 args）
+- [x] **`--metadata` schema**：
+  - **必填**：`name`、`description`
+  - **選填**：`version`、`tags`、`input`、`output`
+  - Hub 在 `--build-list` / `--validate` 會檢查必填欄位，缺欄位的 process 會被跳過並寫入 stderr。
+  - 不限制其他欄位，但 `--validate` 會用 stderr 提示「unknown metadata fields」幫助 AI 對齊慣例。
+- [x] **失敗錯誤格式**：non-zero exit code + stderr 訊息。stdout 只用來輸出成功結果。
+  - chain.py 已依賴此契約（用 `returncode != 0` 判斷）。
+- [x] **大輸入觸發條件**：
+  - 小字串（單行、< 4KB）：CLI args。
+  - 多行或大文字：stdin（`./p < file.txt`）。
+  - **process 必須同時支援兩種**：`text = sys.argv[1] if len(sys.argv) > 1 else sys.stdin.read()`。
 
 ### Hub
 
-- [ ] 模糊搜尋未來怎麼做（LLM？embedding？）
-- [ ] processes 目錄結構（扁平？分類？命名空間？）
-- [ ] list.json 的版本管理（多個版本共存？）
+- [x] **模糊搜尋**：先 defer，現在是大小寫不敏感子字串匹配（name + description + tags 合併搜尋）。空 query 直接 error。未來再考慮 LLM / embedding。
+- [x] **processes 目錄結構**：扁平，現在 44 個還可控。超過 ~100 或出現明顯分群再分子目錄。
+- [x] **list.json 版本管理**：不做。`--build-list` 是一次性 atomic rename，重跑等於 reset。
 
 ### Session Library
 
-- [ ] 持久化策略（每次 set 就寫？批次寫？）
-- [ ] 多 process 共享同一個 session 的情況
-- [ ] session 文件的位置慣例（`~/.{process_name}/`？）
+- [x] **持久化策略**：每次 `set()` 立即寫盤（atomic rename）。回合制負載低，沒必要批次。
+- [x] **多 process 共享 session**：不支援。每個 process 自己擁有 session 文件。
+- [x] **session 位置慣例**：`~/.ai_core/<process_name>/session.json`（chain.py 已採用）。
 
 ### AI 自我擴展
 
-- [ ] AI 如何知道現有的 process（透過 hub 查嗎？）
-- [ ] AI 生成 process 的測試流程
-- [ ] 重複/相似 process 的處理（避免泛濫）
+- [x] **AI 知道現有 process 的方式**：`hub --search-func <query>` 或直接讀 `list.json`。
+- [x] **AI 生成 process 的測試流程**（標準步驟）：
+  1. `hub --search-func` 確認沒重複
+  2. 寫 `processes/<name>.py`（必含 `METADATA` + `--metadata` 入口 + stdin/args 雙入口）
+  3. `chmod +x`
+  4. `hub --validate <path>` — 檢查 exec bit + metadata schema
+  5. 跑一次煙霧測試（small input → expected output）
+  6. `hub --build-list` 重建索引
+- [x] **重複/相似 process**：靠步驟 1 的 search 把關，目前不做自動去重。
 
-### cli_lib（未來）
+### cli_lib / func_center（未來，仍 defer）
 
-- [ ] slash command 的命名空間（process 自定義 vs 全域）
-- [ ] big I/O control 的具體 API
-
-### func_center（未來）
-
-- [ ] 何時觸發遷移（什麼樣的 process 該被收進 func_center？）
-- [ ] 通信協議（unix socket？stdin/stdout？）
-- [ ] 與獨立 process 的呼叫介面是否一致
+延後到核心三元件出現明顯痛點時再決定。
 
 ---
 
@@ -171,11 +178,11 @@ hub 是一次性工具，不是 server。沒有 socket、port、並發問題。
 
 ## 下一步
 
-1. **實作最簡 hub** — `--build-list` 掃描目錄、`--search-func` 查詢
-2. **寫範例 processes** — LLM 入口、context 綁定包、輸出解析包
-3. **實作 session library** — 最小可用的 dict 持久化
-4. **AI 寫 process 的流程驗證** — 讓 AI 根據意圖生成符合約定的 process
-5. **觀察痛點** — 哪些地方會推動 cli_lib 或 func_center 的需要
+1. ✅ **實作最簡 hub** — `--build-list` / `--search-func` / `--validate`
+2. ✅ **寫範例 processes** — 44 個，含 LLM 入口、context 綁定、編排（planner/chain）
+3. ✅ **實作 session library** — 最小可用的 dict 持久化（atomic write）
+4. ✅ **AI 寫 process 的流程驗證** — 已用 `slugify.py` 端到端跑通六步流程
+5. **觀察痛點**（持續中）— 已修：shebang/venv 接合、空 query、metadata 靜默失敗。待觀察：planner 輸出穩定性、process 數量增加後搜尋體驗。
 
 ---
 

@@ -3,8 +3,14 @@
 hub — one-shot process index tool
 
 Usage:
-  hub --build-list <dir> [--output <file>]   scan dir, call --metadata on each, write list.json
-  hub --search-func <query> [--list <file>]  read list.json, return matching processes
+  hub --build-list <dir> [--output <file>]      scan dir, call --metadata on each, write list.json
+  hub --search-func <query> [--list <file>]     read list.json, return matching processes
+  hub --validate <process_path>                 check that a process meets the --metadata contract
+
+Process contract (see SYSTEM_DESIGN.md):
+  ./process --metadata        prints a single-line JSON object to stdout, exits 0
+  ./process [<arg> | stdin]   executes; success → stdout + exit 0;
+                              failure → stderr message + non-zero exit
 """
 import sys
 import json
@@ -13,6 +19,40 @@ from pathlib import Path
 
 
 DEFAULT_LIST = Path("list.json")
+METADATA_TIMEOUT = 10
+
+REQUIRED_FIELDS = ("name", "description")
+OPTIONAL_FIELDS = ("version", "tags", "input", "output")
+
+
+def _run_metadata(path: Path) -> tuple[dict | None, str]:
+    """Return (metadata, error_message). metadata is None on failure."""
+    try:
+        r = subprocess.run(
+            [sys.executable, str(path), "--metadata"],
+            capture_output=True, text=True, timeout=METADATA_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"timeout after {METADATA_TIMEOUT}s"
+    except OSError as e:
+        return None, f"exec failed: {e}"
+
+    if r.returncode != 0:
+        return None, f"exit {r.returncode}; stderr: {r.stderr.strip()[:200]}"
+
+    try:
+        meta = json.loads(r.stdout.strip())
+    except json.JSONDecodeError as e:
+        return None, f"invalid JSON: {e}"
+
+    if not isinstance(meta, dict):
+        return None, "metadata must be a JSON object"
+
+    missing = [f for f in REQUIRED_FIELDS if f not in meta]
+    if missing:
+        return None, f"missing required fields: {missing}"
+
+    return meta, ""
 
 
 def build_list(processes_dir: str, output: Path = DEFAULT_LIST):
@@ -22,61 +62,104 @@ def build_list(processes_dir: str, output: Path = DEFAULT_LIST):
         sys.exit(1)
 
     results = []
+    failures = []
     for f in sorted(processes.iterdir()):
         if not f.is_file():
             continue
-        try:
-            r = subprocess.run(
-                [str(f), "--metadata"],
-                capture_output=True, text=True, timeout=10
-            )
-            if r.returncode != 0:
-                continue
-            meta = json.loads(r.stdout.strip())
-            meta["path"] = str(f.resolve())
-            results.append(meta)
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, PermissionError):
-            pass
+        if f.name.startswith(".") or f.name.startswith("_"):
+            continue
 
-    # atomic write
+        meta, err = _run_metadata(f)
+        if meta is None:
+            failures.append((f.name, err))
+            continue
+
+        meta["path"] = str(f.resolve())
+        results.append(meta)
+
     tmp = output.with_suffix(".tmp")
     tmp.write_text(json.dumps(results, ensure_ascii=False, indent=2))
     tmp.rename(output)
+
     print(f"Registered {len(results)} processes → {output}")
+    if failures:
+        print(f"Skipped {len(failures)}:", file=sys.stderr)
+        for name, err in failures:
+            print(f"  - {name}: {err}", file=sys.stderr)
 
 
 def search_func(query: str, list_file: Path = DEFAULT_LIST):
+    if not query:
+        print("Error: --search-func requires a non-empty query", file=sys.stderr)
+        sys.exit(2)
+
     if not list_file.exists():
-        print("[]")
-        return
+        print(f"Error: {list_file} not found (run --build-list first)", file=sys.stderr)
+        sys.exit(2)
 
     entries = json.loads(list_file.read_text())
     q = query.lower()
     matches = []
     for e in entries:
-        name = e.get("name", "").lower()
-        desc = e.get("description", "").lower()
-        tags = [t.lower() for t in e.get("tags", [])]
-        if q in name or q in desc or any(q in t for t in tags):
+        haystack = " ".join([
+            e.get("name", ""),
+            e.get("description", ""),
+            " ".join(e.get("tags", [])),
+        ]).lower()
+        if q in haystack:
             matches.append(e)
 
     print(json.dumps(matches, ensure_ascii=False, indent=2))
+
+
+def validate(process_path: str):
+    p = Path(process_path)
+    if not p.is_file():
+        print(f"FAIL: {process_path} is not a file", file=sys.stderr)
+        sys.exit(2)
+    if not (p.stat().st_mode & 0o111):
+        print(f"FAIL: {process_path} is not executable (chmod +x)", file=sys.stderr)
+        sys.exit(2)
+
+    meta, err = _run_metadata(p)
+    if meta is None:
+        print(f"FAIL: --metadata: {err}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"OK: {meta.get('name')} — {meta.get('description')}")
+    extras = [k for k in meta if k not in REQUIRED_FIELDS + OPTIONAL_FIELDS]
+    if extras:
+        print(f"note: unknown metadata fields: {extras}", file=sys.stderr)
+
+
+def _arg_after(args, flag, default=None):
+    if flag not in args:
+        return default
+    i = args.index(flag) + 1
+    if i >= len(args) or args[i].startswith("--"):
+        return default
+    return args[i]
 
 
 def main():
     args = sys.argv[1:]
 
     if "--build-list" in args:
-        idx = args.index("--build-list")
-        d = args[idx + 1] if idx + 1 < len(args) and not args[idx + 1].startswith("--") else "./processes"
-        out = Path(args[args.index("--output") + 1]) if "--output" in args else DEFAULT_LIST
+        d = _arg_after(args, "--build-list", "./processes")
+        out = Path(_arg_after(args, "--output", str(DEFAULT_LIST)))
         build_list(d, out)
 
     elif "--search-func" in args:
-        idx = args.index("--search-func")
-        q = args[idx + 1] if idx + 1 < len(args) and not args[idx + 1].startswith("--") else ""
-        lf = Path(args[args.index("--list") + 1]) if "--list" in args else DEFAULT_LIST
+        q = _arg_after(args, "--search-func", "")
+        lf = Path(_arg_after(args, "--list", str(DEFAULT_LIST)))
         search_func(q, lf)
+
+    elif "--validate" in args:
+        p = _arg_after(args, "--validate")
+        if not p:
+            print("Error: --validate requires a process path", file=sys.stderr)
+            sys.exit(2)
+        validate(p)
 
     else:
         print(__doc__.strip())

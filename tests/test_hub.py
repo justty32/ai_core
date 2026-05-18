@@ -22,6 +22,13 @@ else:
     return p
 
 
+def make_bad_process(tmp_path, name, body):
+    p = tmp_path / f"{name}.py"
+    p.write_text("#!/usr/bin/env python3\n" + body)
+    p.chmod(0o755)
+    return p
+
+
 def test_build_list(tmp_path):
     make_process(tmp_path, "foo", {"name": "foo", "description": "does foo", "tags": ["a"]})
     make_process(tmp_path, "bar", {"name": "bar", "description": "does bar", "tags": ["b"]})
@@ -109,3 +116,71 @@ def test_build_list_skips_non_executable(tmp_path):
     names = [e["name"] for e in entries]
     assert "good" in names
     assert "bad" not in names
+
+
+def test_search_empty_query_errors(tmp_path):
+    out = tmp_path / "list.json"
+    out.write_text("[]")
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--search-func", "", "--list", str(out)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 2
+    assert "non-empty" in r.stderr
+
+
+def test_build_list_skips_missing_required_field(tmp_path):
+    # metadata missing 'description'
+    make_process(tmp_path, "noop", {"name": "noop", "tags": []})
+    out = tmp_path / "list.json"
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--build-list", str(tmp_path), "--output", str(out)],
+        capture_output=True, text=True,
+    )
+    entries = json.loads(out.read_text())
+    assert entries == []
+    assert "missing required fields" in r.stderr
+
+
+def test_build_list_reports_failures(tmp_path):
+    make_process(tmp_path, "good", {"name": "good", "description": "ok"})
+    make_bad_process(tmp_path, "broken", 'import sys; sys.argv  # no --metadata handling\n')
+    out = tmp_path / "list.json"
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--build-list", str(tmp_path), "--output", str(out)],
+        capture_output=True, text=True,
+    )
+    assert "Skipped" in r.stderr
+    assert "broken" in r.stderr
+
+
+def test_validate_ok(tmp_path):
+    p = make_process(tmp_path, "ok", {"name": "ok", "description": "good"})
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--validate", str(p)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 0
+    assert "OK:" in r.stdout
+
+
+def test_validate_rejects_non_executable(tmp_path):
+    p = tmp_path / "noexec.py"
+    p.write_text("#!/usr/bin/env python3\nprint('hi')\n")
+    p.chmod(0o644)
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--validate", str(p)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 2
+    assert "not executable" in r.stderr
+
+
+def test_validate_rejects_missing_metadata(tmp_path):
+    p = make_bad_process(tmp_path, "noscale", 'print("hi")\n')
+    r = subprocess.run(
+        [sys.executable, str(HUB), "--validate", str(p)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode != 0
+    assert "FAIL" in r.stderr

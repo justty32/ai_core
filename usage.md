@@ -32,6 +32,9 @@ process = 可執行文件 + CLI args
 }
 ```
 
+**必填**：`name`、`description`。其餘為選填。
+Hub `--build-list` / `--validate` 會檢查必填欄位。
+
 ### I/O 約定
 
 ```bash
@@ -40,6 +43,8 @@ process = 可執行文件 + CLI args
 ./process > output.txt           # 大輸出：stdout → file
 ./process < input.txt > output.txt
 ```
+
+**錯誤格式**：non-zero exit code + stderr 訊息。stdout 只給成功輸出（chain 等編排工具依賴此契約判斷成敗）。
 
 ---
 
@@ -110,10 +115,11 @@ hub 是一次性工具，不是 server，管理所有 process 的索引。
 
 ```bash
 ./hub --build-list ./processes/   # 掃描目錄，呼叫每個 --metadata，寫入 list.json
-./hub --search-func "translate"   # 讀 list.json，回傳匹配的 process
+./hub --search-func "translate"   # 讀 list.json，子字串匹配 (name/description/tags)
+./hub --validate <process_path>   # 檢查單一 process 是否符合契約（AI 寫完用）
 ```
 
-**（未來功能）** `--search-func` 目前做精確/關鍵字匹配。未來可加入模糊搜尋，透過 function 的 description 或其他 metadata 做語意查詢，可用 LLM 或向量搜尋實現。
+**（未來功能）** `--search-func` 目前做大小寫不敏感的子字串匹配。未來可加入模糊搜尋，透過 function 的 description 或其他 metadata 做語意查詢，可用 LLM 或向量搜尋實現。
 
 **list.json**（atomic write，先寫 tmp 再 rename）：
 
