@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_30 — HTML 展示型儀表板（dark theme dashboard） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_30_html_dashboard.md · 102 行</div>
+<h1>doc_30 — HTML 展示型儀表板（dark theme dashboard）</h1>
+<ul>
+<li><strong>來源（8 個 HTML 頁）</strong>：
+<ul>
+<li><code>overview.html</code>（967 行，單頁彙整版「專案現況總覽」）</li>
+<li><code>html/index.html</code>（首頁 / 導覽中樞）</li>
+<li><code>html/vision.html</code>（願景演化）</li>
+<li><code>html/architecture.html</code>（架構元件）</li>
+<li><code>html/status.html</code>（實作現況）</li>
+<li><code>html/milestones.html</code>（里程碑 M0–M6）</li>
+<li><code>html/decisions.html</code>（待決議 / DECISIONS）</li>
+<li><code>html/target.html</code>（目標問題 v0）</li>
+</ul>
+</li>
+<li><strong>狀態</strong>：展示型儀表板（dark theme 網站）。<strong>多為既有內容的呈現版</strong>——把 <code>roadmap.md</code> / <code>core_nature/</code> / <code>DECISIONS.md</code> / <code>docs/architectures/</code> 重新編排成網頁。<strong>快照時點 2026-05-25</strong>（頁尾與多處標註）。</li>
+<li><strong>一行摘要</strong>：一個把 ai_core 構想/規範/原型成果整理成可瀏覽網站的產物；本檔捕捉其「儀表板獨有」內容，其餘交叉引用既有 knowledge_base 檔，不重抄。</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>與現行檔的數據衝突（以現行為準）</strong>：</p>
+<ol>
+<li><strong>軸數</strong>：儀表板全程稱「<strong>8 軸</strong>」（列 lifecycle/state/interruptible/guarantee/resources/entries/state_dirs/has_entries），並把 <code>nondeterministic</code> 當「候選新軸 C1」。<strong>現行事實是 9 軸</strong>（<code>nondeterministic</code> 已扶正為第九軸，見 <code>CLAUDE.md</code> 與 <code>doc_05_axes_metadata.md</code>）。儀表板停在「8 軸 + C1 待議」的較早狀態。</li>
+<li><strong>D 組決策數</strong>：<code>decisions.html</code> 列 <strong>D1–D7（7 項）</strong>，但 <code>overview.html</code> 只列 D1–D4（且 D2–D4 內容與 decisions 頁的 D2–D4 不同——overview 把 decisions 頁的 D3/D5 之類重新編號）。兩頁內部不一致；以 <code>note_06_decisions_and_open_questions.md</code>（對照 <code>DECISIONS.md</code>）為準。</li>
+<li><strong>測試數</strong>：儀表板稱「try_implement 140 assertions 全綠、3 demo」——與現行原型現況一致（72+68=140）。但儀表板<strong>完全未提正式核心測試</strong>；現行核心測試為 <code>tests/test_core.py</code>，pytest 全收集 82 passed（含 65 等）。</li>
+<li><strong>里程碑</strong>：儀表板稱「M0–M6 皆 0 完成、src/ai_core 只有 protocol helper」。</li>
+</ol>
+</blockquote>
+<hr />
+<h2>一、儀表板作為產物本身（導覽結構）</h2>
+<p>七頁站點，共用頂部導覽列：<strong>首頁 · 願景演化 · 架構元件 · 實作現況 · 里程碑 · 待決議 · 目標問題</strong>。<code>overview.html</code> 是不在導覽列內的「單頁彙整版」，把上述七頁濃縮成一頁長文。</p>
+<p>主視覺標語（首頁 + overview 共用，可作專案一句話定位）：</p>
+<ul>
+<li><strong>「ai_core ＝ 一個讓 LLM 退縮到『意圖翻譯』與『模糊前沿』兩介面的基底；它以『拒絕為預設、憑證准入』治理 LLM 的領地，並用飛輪持續把模糊地帶固化成確定性程式碼。」</strong></li>
+<li>副標：<strong>「— 為 Heuristic Learning 提供基礎設施 —」</strong></li>
+<li>四徽章：KISS · Lightweight · No wheel-remake · Least dependency；外加 <code>構想 + 規範 + 原型</code> / <code>try_implement: 140 assertions ✅</code> / <code>Python 3.11+ · CLI-first</code>。</li>
+</ul>
+<hr />
+<h2>二、儀表板獨有、已捕捉的內容</h2>
+<h3>2.1【獨特】ai_core 元件 → Heuristic Learning 角色對照表（首頁專有）</h3>
+<p>既有 <code>note_04</code> 雖記錄了「ai_core 為 HL 提供基礎設施」的定位與 Learning Beyond Gradients 參考，但<strong>這張逐元件對照表是儀表板首頁獨有</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>ai_core 元件</th>
+<th>在 HL 中扮演的角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entry_manager + client</td>
+<td>LLM 監督者的呼叫介面</td>
+</tr>
+<tr>
+<td>author</td>
+<td>agent 產生 / 修改策略函式</td>
+</tr>
+<tr>
+<td>hub + funcs/</td>
+<td>策略函式庫（Heuristic System）</td>
+</tr>
+<tr>
+<td>author dry-run + retry</td>
+<td>環境回饋驅動的改進迴圈</td>
+</tr>
+<tr>
+<td><code>--metadata</code> 介面</td>
+<td>agent 理解工具的唯一入口</td>
+</tr>
+</tbody>
+</table>
+<p>HL 定義（首頁複述）：coding agent 直接編輯策略程式碼，環境回饋驅動下一輪改進，舊能力固化為測試與版本差異，而非消失在模型權重裡。參考：Learning Beyond Gradients。
+交叉引用：<code>note_04_thinking_layers_model.md</code> §A（HL 定位來源）、<code>note_01_vision_and_origin.md</code>（飛輪/資產工廠論述）。</p>
+<h3>2.2【獨特】現況快照數據面板（status.html + index.html + overview.html）</h3>
+<p>儀表板把現況量化成徽章/卡片，這些「彙整數據快照」值得保留：</p>
+<ul>
+<li><strong>首頁狀態快照（2026-05-25）四卡</strong>：
+<ul>
+<li>正式規範 = <strong>完整</strong>（<code>core_nature/</code> + <code>docs/architectures/</code> 完整；8 軸定義、M0–M6 架構文件全篇完成）</li>
+<li>探索原型 = <strong>原型</strong>（<code>try_implement/</code> 純標準庫；140 assertions 全綠、3 demo 可跑）</li>
+<li>正式實作 = <strong>最小</strong>（<code>src/ai_core/</code> 只有 protocol helper：<code>_core.py</code> + <code>metadata.py</code> + <code>env.py</code>；M1–M6 未開始）</li>
+<li>待決議 = <strong>待處理</strong>（A1–A4、B1–B3、C1–C4、D1–D4，共 <strong>~15 項</strong>）</li>
+</ul>
+</li>
+<li><strong>status.html 四個大數字</strong>：<code>140</code> try_implement assertions 全綠 · <code>3</code> 端到端 demo · <code>~15</code> DECISIONS 待決議項 · <code>0</code> M0–M6 里程碑已完成。</li>
+<li><strong>decisions.html 分組計數</strong>：A 組 <strong>4</strong> 項（已原型待扶正）· B 組 <strong>3</strong> 項（開放方向題）· C 組 <strong>4</strong> 項（候選新軸）· D 組 <strong>7</strong> 項（已拍板待追認）。</li>
+</ul>
+<h3>2.3【獨特】status.html 的逐檔現況清單（檔級「完成/最小/待實作/YAGNI」標記）</h3>
+<p><code>status.html</code> 給每個檔案打了狀態標籤，這是比 <code>doc_15</code>/<code>CLAUDE.md</code> 更細的<strong>檔級進度盤點</strong>，獨有部分保留如下：</p>
+<ul>
+<li><strong><code>src/ai_core/</code> 逐檔</strong>：<code>_core.py</code>=完成（含註記「A1 懸案：攔截策略與 subcommand 不相容」）、<code>__init__.py</code>=完成（公開 register 入口）、<code>protocol/metadata.py</code>=完成（fetch_metadata / MetadataView / make_json_error / should_use_json_errors）、<code>protocol/env.py</code>=完成（AI_CORE_TOKEN / AI_CORE_FUNCS_DIR…）。</li>
+<li><strong>尚待實作子模組（標目標里程碑）</strong>：<code>entry_manager/</code>（server/queue/ratelimit/backends/cli）=<strong>M1</strong>；<code>client/</code>（ai-core-call cli）=<strong>M1</strong>；<code>hub/</code>（scanner/exports/server/cli）=<strong>M3</strong>；<code>small_funcs/</code>（registry/funcs/cli）=<strong>M4</strong>；<code>author/</code>（generator/dryrun/cli）=<strong>M5</strong>；<code>protocol/server.py</code>=<strong>YAGNI</strong>（等第二個 manager 出現才從 entry_manager 抽出）。</li>
+<li><strong><code>docs/architectures/</code> 八檔對照</strong>（01_overview ~ 08_changelog，全部「完成」）——交叉引用 <code>doc_10</code>~<code>doc_17</code>。</li>
+<li><strong><code>core_nature/</code> 八檔對照</strong>（overview/lib_spec/cli_spec/data_format/execution_forms/axis_spec/composite_spec/terminal_model，全部「完成」）——交叉引用 <code>doc_01</code>~<code>doc_08</code>。</li>
+<li><strong><code>try_implement/</code> 清單</strong>：tools/ <strong>7 個工具</strong> + lib/ <strong>11 個模組</strong> + demos/ <strong>3 個</strong> + docs/ <strong>2 份</strong> + funcs/ 範例。逐檔職責與 <code>code_02</code>~<code>code_04</code> 一致——交叉引用之，不重抄。</li>
+</ul>
+<blockquote>
+<p>註：status.html 把 lib/ 數成「11 個模組」（state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta），tools/ 數成「7 個工具」+ meta_core。與 <code>code_02</code>/<code>code_03</code> 一致。</p>
+</blockquote>
+<h3>2.4【小幅獨特】overview.html 頁尾一句話索引</h3>
+<p><code>overview.html</code> 頁尾把專案地圖濃縮成一行（可作快速索引）：
+<strong>「規範在 <code>core_nature/</code> · 原型在 <code>try_implement/</code> · 架構在 <code>docs/architectures/</code> · 北極星在 <code>roadmap.md</code>」</strong>（2026-05-25 現況快照）。</p>
+<hr />
+<h2>三、純呈現版頁面（僅交叉引用，不重抄）</h2>
+<p>以下各頁經逐字比對，內容＝既有 markdown 的網頁呈現版，無新增獨特資訊（除上節已捕捉者）。對照如下：</p>
+<table>
+<thead>
+<tr>
+<th>儀表板頁</th>
+<th>＝何內容的呈現版</th>
+<th>交叉引用 knowledge_base</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vision.html</code> 願景演化</td>
+<td>roadmap §1 願景／演化鏈／兩個 regime／北極星兩介面／治理（拒絕為預設+憑證准入）／固化引擎手動 vs 自動／設計哲學四原則</td>
+<td><code>note_01_vision_and_origin.md</code></td>
+</tr>
+<tr>
+<td><code>architecture.html</code> 架構元件</td>
+<td>docs/architectures 01–02／lib_spec：五元件設計、Singleton Resource Manager Pattern（Entry-managing vs Simple 兩亞型）、<code>--metadata</code> 協議規則、八軸表、技術選型表（Python3.11+/uv/litellm/fastapi+uvicorn/platformdirs/pyproject scripts/JSON）</td>
+<td><code>doc_10</code>~<code>doc_14</code>、<code>doc_05</code>（軸）、<code>doc_11</code>（協議）、<code>doc_06</code>（lib 契約）</td>
+</tr>
+<tr>
+<td><code>status.html</code> 實作現況</td>
+<td>各目錄盤點（獨有的檔級狀態標記已於 §2.3 捕捉）</td>
+<td><code>doc_15</code>、<code>code_02</code>~<code>code_04</code>、<code>doc_01</code>~<code>doc_08</code>、<code>doc_10</code>~<code>doc_17</code></td>
+</tr>
+<tr>
+<td><code>milestones.html</code> 里程碑</td>
+<td>docs/architectures 06 的 M0–M6（＋M3.5）逐項 checklist、依賴關係（主路徑 M0→M1→M2→M3→M3.5→M4→M5→M6；M4 可在 M2 後並行；M5 依賴 M1）、「先解 A1 阻塞級再開 M0」的告警</td>
+<td><code>doc_15_arch_project_milestones.md</code>、<code>note_06</code>（A1）</td>
+</tr>
+<tr>
+<td><code>decisions.html</code> 待決議</td>
+<td>DECISIONS.md 的 A1–A4 / B1–B3 / C1–C4 / D1–D7，逐條「現況/建議/你要決定什麼」、建議處理順序（①A1+A2+A3 →②C1+C2 →③A4 →④B 系列）</td>
+<td><code>note_06_decisions_and_open_questions.md</code></td>
+</tr>
+<tr>
+<td><code>target.html</code> 目標問題</td>
+<td>roadmap §6/§7/§8：v0 切片、A/B 兩層分法、程式碼輔助助手（上層生資產／下層填碼）、驗收標準、v0 會逼出的懸案表（B1/B3/C2/C1/A4）、開放問題、v0 在 HL 飛輪的位置</td>
+<td><code>note_01</code>（v0/目標問題/開放問題）、<code>note_06</code>（懸案）</td>
+</tr>
+<tr>
+<td><code>index.html</code> 首頁</td>
+<td>導覽中樞（獨有的 HL 對照表＋狀態快照已於 §2.1/§2.2 捕捉）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>overview.html</code> 總覽</td>
+<td>上述七頁的單頁濃縮（獨有頁尾索引已於 §2.4 捕捉）</td>
+<td>同上各檔</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>四、結論</h2>
+<p>此儀表板是 ai_core <strong>2026-05-25 時點</strong>的對外展示快照，內容主體為既有規範/構想/原型的呈現版，<strong>無實質遺漏的新設計決策</strong>。唯一需要無損保留的儀表板獨有產物為：(1) ai_core↔HL 元件角色對照表；(2) 量化的現況快照數據面板；(3) status.html 的檔級進度標記（含各子模組對應里程碑）；(4) overview 頁尾一行索引。閱讀時須留意儀表板停在「8 軸」的較早狀態，現行已為 9 軸。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_21_composition_dimension.html"><span class="dir">← 上一篇</span><span class="fn">doc_21_composition_dimension</span></a>
+<a class="next" href="note_01_vision_and_origin.html"><span class="dir">下一篇 →</span><span class="fn">note_01_vision_and_origin</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

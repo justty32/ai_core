@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_14_arch_author_sfc · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_14_arch_author_sfc.md · 122 行</div>
+<h1>doc_14_arch_author_sfc</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/05_author_sfc.md</code>（§8 ai-core-author + §9 Small Function Center）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 ai-core-author（generate→dry-run→register 一站式產生新函式，dry-run 強制）與 Small Function Center（SFC dispatcher 慣例）設計。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li><code>ai-core-author</code> 對應 roadmap 的「authoring function / 函式自我增殖」概念；現行尚無此 CLI 二進位，但「上層聰明模型生資產、dry-run 驗證後才進 registry」的精神與 roadmap §第一目標問題一致，可信。</li>
+<li>SFC（<code>ai-core-sfc</code>）對應 roadmap/CLAUDE.md 的「Small Function Center」概念與原型 <code>try_implement/tools/sfc.py</code>（現行原型已改接真 <code>ai_core</code>）。本版的 dispatch-flag 慣例、pass-through vs SFC 自管 metadata 等設計細節屬參考。</li>
+<li>「Calling Pack 就是普通獨立 function」的定位與現行「LLM Calling Packing」原型 <code>try_implement/lib/llm_call.py</code> 概念一致。</li>
+<li>路徑預設（<code>user_data_dir/ai_core/funcs/</code>、<code>platformdirs</code>）依賴外部相依，與現行純標準庫硬約束衝突；以現行為準時路徑機制僅為參考。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§8. ai-core-author 設計（讓 AI / 人類製作新函式）</h2>
+<blockquote>
+<p>一站式工具：從「我想要一個能做 X 的 function」到「funcs/foo.sh 已註冊並通過驗證」。</p>
+</blockquote>
+<p><strong>Calling Pack 說明</strong>：Calling pack 是一種常見的 function 模式，把固定的 system prompt / context 與 LLM 呼叫封裝成一個具名 function（例如 <code>llm_call_coding_question.sh</code>）。實作上就是普通獨立 function，放在 <code>funcs/</code>，通常由 <code>ai-core-author</code> 產生後再手調 prompt。<strong>不需要新的架構概念</strong>。</p>
+<h3>8.1 流程</h3>
+<pre><code>caller (人 or AI) 提供：
+    {name, description, examples: [{input, output}], language?: &quot;bash|python|...&quot;}
+        │
+        ▼
+[1] 呼叫 ai-core-call 產出 function 骨架 + metadata（含 examples 抄回 metadata）
+        │
+        ▼
+[2] dry-run：把 examples 一筆筆當輸入跑，比對輸出
+        │
+        ├─ 通過 ──▶ [3] 註冊
+        │
+        └─ 失敗 ──▶ 把錯誤回給 LLM，最多重試 N 輪
+        │
+        ▼
+[3] 寫入 funcs/&lt;name&gt;.&lt;ext&gt; 或 SFC registry（見 §8.3）
+[4] 自動跑 --metadata 確認協議遵守
+[5] 在 ledger 留下 authoring record（含使用的 prompt、迭代次數）
+</code></pre>
+<blockquote>
+<p>註：步驟 [5] 提及的 ledger 為此架構家族早期概念，後於 2026-05-12 整體移除 Calling Chain Observability / ledger（見 <a href="doc_17_arch_changelog.html">doc_17_arch_changelog.md</a>）；此處流程圖保留原文。</p>
+</blockquote>
+<h3>8.2 為什麼 dry-run 是強制的</h3>
+<ul>
+<li>防止 AI 寫出「看起來對、實際亂跑」的 function 進入 registry</li>
+<li>提供人類看記錄時的信心：「這個 function 已通過 N 個範例驗證」</li>
+<li>沒有 examples 的 author 請求會被拒絕（或退化為「人類事後手動驗證」模式）</li>
+</ul>
+<h3>8.3 CLI</h3>
+<pre><code class="language-bash">ai-core-author --spec spec.json                    # 寫成獨立 function（預設）
+ai-core-author --spec spec.json --language python  # 指定語言
+ai-core-author --spec spec.json --dry-run-only     # 不註冊只驗證
+ai-core-author --spec spec.json --target ./funcs/  # 指定輸出目錄
+ai-core-author --spec spec.json --target sfc --sfc &lt;sfc-name&gt;  # 塞進指定 SFC
+</code></pre>
+<p><strong>獨立 function 還是 SFC 子函式？</strong>
+預設寫成獨立 function（<code>funcs/&lt;name&gt;.&lt;ext&gt;</code>）。需要塞進 SFC 時，spec 裡加 <code>&quot;target&quot;: &quot;sfc&quot;</code> 並帶 <code>--sfc &lt;sfc-name&gt;</code>；author 會呼叫該 SFC 的 registry 介面而非直接寫檔。一般函式邏輯簡單且獨立時選獨立 function；屬於同一工具域的微小 one-liner 集合時才考慮 SFC。</p>
+<p><strong><code>funcs/</code> 預設路徑與跨專案使用</strong>：
+預設輸出至 <code>user_data_dir/ai_core/funcs/</code>（與 <code>ai-core-hub</code> 預設掃描路徑一致）。跨專案使用時有兩種方式：以 <code>--target &lt;path&gt;</code> 明確指定，或設定 <code>AI_CORE_FUNCS_DIR</code> 環境變數讓兩個工具共用同一路徑。</p>
+<p><code>ai-core-author</code> 自身遵守 <code>--metadata</code> 協議（讓 AI 也能透過 hub 發現它，從而要求另一個 AI 寫新 function — 函式自我增殖）。</p>
+<hr />
+<h2>§9. Small Function Center (SFC) 設計</h2>
+<p><strong>定位</strong>：SFC 是一種 dispatcher pattern，把大量邏輯相關的微小函式集中到一個 entrypoint，避免 hub 清單因每個 one-liner 都變成獨立檔案而膨脹。</p>
+<p><strong>這不是一個固定實作，而是一個慣例</strong>：任何提供「透過某個 CLI 參數選項呼叫子函式」能力的工具都可算作 SFC；旗標名稱不強制為 <code>--call</code>，由實作者自行決定。</p>
+<h3>9.1 最小合約（唯一強制）</h3>
+<pre><code class="language-bash">&lt;sfc-name&gt; &lt;dispatch-flag&gt; &lt;func_name&gt; [--input X] [--output Y]   # 呼叫子函式
+&lt;sfc-name&gt; --metadata                                               # 描述 SFC 自身
+</code></pre>
+<p><code>dispatch-flag</code> 的名稱（<code>--call</code>、<code>--run</code>、<code>--invoke</code>…）由實作者自訂；metadata 的 <code>usage</code> 欄位說明實際用法。I/O 慣例、stderr 錯誤、exit code 同全系統標準（<a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §5）。</p>
+<h3>9.2 建議額外介面（強烈建議，不強制）</h3>
+<pre><code class="language-bash">&lt;sfc-name&gt; --list                                      # 列出所有子函式名稱
+&lt;sfc-name&gt; &lt;dispatch-flag&gt; &lt;func_name&gt; --metadata      # 查詢某子函式的 metadata
+</code></pre>
+<p><strong>子函式 metadata 查詢</strong>（<code>&lt;dispatch-flag&gt; &lt;func_name&gt; --metadata</code>）強烈建議實作，原因：</p>
+<ul>
+<li>hub scanner 呼叫 <code>--list</code> 展開子函式後，還需要各子函式的 metadata 才能讓 AI 理解用法</li>
+<li>缺少此介面，hub 只能列出子函式名稱，無法提供 summary / io / examples 等慣例欄位</li>
+</ul>
+<p><strong>實作方式（二擇一）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>說明</th>
+<th>適用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pass-through</strong></td>
+<td>SFC 把 <code>--metadata</code> 直接轉給底層子函式執行（子函式本身輸出 JSON）</td>
+<td>子函式是獨立可執行檔，自身遵守 <code>--metadata</code> 協議</td>
+</tr>
+<tr>
+<td><strong>SFC 自管</strong></td>
+<td>SFC 內部維護各子函式的 metadata，收到查詢時自行輸出</td>
+<td>子函式是 SFC 內的 Python function 或 bash snippet，無法獨立執行</td>
+</tr>
+</tbody>
+</table>
+<p><code>--list</code> 的存在讓 hub scanner 能把子函式分別展開列入清單；若 <code>--list</code> 與 metadata 查詢都不支援，hub 只收錄 SFC 本身。</p>
+<h3>9.3 可擴充性建議</h3>
+<p>SFC 應讓新增子函式<strong>不需修改核心程式碼</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>語言</th>
+<th>建議方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>子函式各自是獨立 <code>.py</code> module，放到指定目錄，SFC 啟動時自動 import / 動態掛載</td>
+</tr>
+<tr>
+<td>Bash</td>
+<td>子函式各自是獨立 <code>.sh</code>，SFC 做 <code>case</code> 分派或 source</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>只要新增子函式不改動 SFC 核心即可，實作自由</td>
+</tr>
+</tbody>
+</table>
+<p><strong>內部管理</strong>（registry file、動態掃描目錄、hardcode dict…）完全自由，取決於使用情境。</p>
+<h3>9.4 與 hub 的整合</h3>
+<p>hub scanner（<a href="doc_13_arch_hub.html">doc_13_arch_hub.md</a> §7.5）遇到 SFC 時：</p>
+<ul>
+<li>若 SFC 支援 <code>--list</code> → 展開子函式，各自作為獨立 function 列出</li>
+<li>若不支援 → 只列出 SFC 本身，標 <code>&quot;type&quot;: &quot;sfc&quot;</code></li>
+</ul>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_13_arch_hub.html"><span class="dir">← 上一篇</span><span class="fn">doc_13_arch_hub</span></a>
+<a class="next" href="doc_15_arch_project_milestones.html"><span class="dir">下一篇 →</span><span class="fn">doc_15_arch_project_milestones</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

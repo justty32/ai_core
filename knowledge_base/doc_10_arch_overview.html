@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_10_arch_overview · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_10_arch_overview.md · 127 行</div>
+<h1>doc_10_arch_overview</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/01_overview.md</code> ＋ <code>docs/ARCHITECTURE.md</code>（快速概覽四元件表）、<code>docs/architectures/index.md</code>（導覽結構）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 ai_core 架構總綱——定位（AI 80% / 人類 20%）、設計原則、Singleton Resource Manager Pattern（兩種亞型）、整體架構圖、技術選型。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li>此版以「五大 CLI 元件」（<code>ai-core-server</code>／<code>ai-core-call</code>／<code>ai-core-hub</code>／<code>ai-core-sfc</code>／<code>ai-core-author</code>）為骨幹，與 core_nature 的「library <code>register()</code>/<code>intercept()</code> + 九軸」描述體系不同。現行正式核心只有 <code>src/ai_core/_core.py</code>，並無這些 CLI 二進位。本版的元件命名與設計細節僅作為「另版架構提案」保留。</li>
+<li>此版技術選型大量引入外部相依（<code>litellm</code>、<code>fastapi</code>+<code>uvicorn</code>、<code>uv</code>、<code>platformdirs</code>），<strong>與現行硬約束「只用 Python 3.11+ 標準庫、<code>dependencies = []</code>」直接衝突</strong>。以 roadmap/CLAUDE.md 的「Least dependency / 純標準庫」為準。</li>
+<li>metadata 協議差異見 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a>；現行九軸見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>。</li>
+</ul>
+</li>
+<li><strong>交叉引用</strong>：本架構家族其餘檔案 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a>、<a href="doc_12_arch_entry_manager.html">doc_12_arch_entry_manager.md</a>、<a href="doc_13_arch_hub.html">doc_13_arch_hub.md</a>、<a href="doc_14_arch_author_sfc.html">doc_14_arch_author_sfc.md</a>、<a href="doc_15_arch_project_milestones.html">doc_15_arch_project_milestones.md</a>、<a href="doc_16_arch_agents.html">doc_16_arch_agents.md</a>、<a href="doc_17_arch_changelog.html">doc_17_arch_changelog.md</a>。願景脈絡見 <a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a>。</li>
+</ul>
+<hr />
+<h2>快速概覽（出自 <code>ARCHITECTURE.md</code>）</h2>
+<p>ai_core 把 LLM 呼叫視為<strong>函式</strong>，再把所有支援設施（queue 管理、shell 包裝、metadata 發現）疊在這個基礎概念上。四個核心元件：</p>
+<table>
+<thead>
+<tr>
+<th>元件</th>
+<th>CLI</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM Entry Manager</td>
+<td><code>ai-core-server</code> + <code>ai-core-call</code></td>
+<td>統一管理多個 LLM 後端，queue + rate limit</td>
+</tr>
+<tr>
+<td>Function Hub</td>
+<td><code>ai-core-hub</code> / <code>ai-core-hub-server</code></td>
+<td>掃描函式集，產生 AI 可用的 skill 清單</td>
+</tr>
+<tr>
+<td>Small Function Center</td>
+<td><code>ai-core-sfc</code></td>
+<td>把大量微型函式集中到一個 dispatcher，避免清單膨脹</td>
+</tr>
+<tr>
+<td>ai-core-author</td>
+<td><code>ai-core-author</code></td>
+<td>一站式產生新函式（generate → dry-run → register）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>唯一跨元件硬規則</strong>：每個函式支援 <code>--metadata</code>，回傳合法 JSON。</p>
+<blockquote>
+<p>導覽索引（<code>index.md</code>）對應章節：01_overview = 定位 + §1–§3；02_protocol = §4–§5；03_entry_manager = §6；04_hub = §7；05_author_sfc = §8–§9；06_project = §10–§14；07_agents = §15；08_changelog = §16。</p>
+</blockquote>
+<hr />
+<h2>定位（Positioning）</h2>
+<p>ai_core 同時服務 <strong>AI agent</strong> 與 <strong>人類使用者</strong>。預期使用比例約 <strong>AI 80% / 人類 20%</strong>，但<strong>人類保持完全掌控</strong>：</p>
+<ul>
+<li>AI agent 透過 ai_core 呼叫 LLM、組合既有函式、甚至<strong>產出新的函式</strong></li>
+<li>函式會自我增殖：人類或 AI 在「足夠明確的 context」下，呼叫某 authoring function 讓 LLM 寫出新 function；這個新 function 進入 hub 被後續 caller 使用，形成生長的工具樹</li>
+<li>人類看到 AI 寫出的好用 function 可以直接拿來用 — 所有函式都是普通 shell command，沒有 AI-only 的格式</li>
+</ul>
+<p>設計後果：</p>
+<ol>
+<li>CLI 與 metadata 同時對人類友善與 AI 友善 — 不為了討好任一方而犧牲另一方</li>
+<li>系統不假設 caller 是 AI；任何 function 都能在純 shell 環境下被人手動呼叫</li>
+<li>任何 AI 寫出來的 function 都得通過 dry-run + 範例驗證才能進入 registry，避免「AI 生 AI 用」的內部黑箱</li>
+</ol>
+<hr />
+<h2>§1. 設計原則</h2>
+<p>承襲 <code>thinking.md</code>：</p>
+<ul>
+<li><strong>KISS、輕量、不重造輪子、相依最少</strong></li>
+<li><strong>shell 為一等公民</strong>：所有元件以 CLI 為主介面，人類與 AI 都用同一個介面</li>
+<li><strong>每個函式預設 stateless one-shot</strong>；需要狀態者自己管狀態，重量級者升格為常駐 server</li>
+<li><strong>錯誤訊息走 stderr、正常輸出走 stdout 或 <code>--output</code> 指定路徑</strong>（Unix 慣例）</li>
+<li><strong>metadata 是極簡協議</strong>：只強制「合法 JSON」，不規定具體 schema</li>
+<li><strong>metadata 容錯</strong>：所有 caller / hub / author 等元件都必須<strong>預期某些函式根本沒寫 <code>--metadata</code>、或寫得不合法、或缺慣例 key</strong>。這時應 graceful 降級（使用合理預設、提示使用者讀文件），而不是 crash 或拒絕呼叫該函式</li>
+</ul>
+<h3>Singleton Resource Manager Pattern</h3>
+<p>對「一次只能服務一個請求、建立成本高」的單例資源（LLM 模型、heavy GPU 計算、配額受限的外部 API、長連線的本地服務等），統一採用此 pattern：</p>
+<ol>
+<li><strong>常駐 server</strong> 包住該資源，HTTP / IPC 對外</li>
+<li><strong>per-resource FIFO queue + worker</strong></li>
+<li><strong>配套一支 shell wrapper CLI</strong>（因為 shell 不該被迫去 curl）— wrapper 把 args 翻成 HTTP 呼叫；server + wrapper 是<strong>共生雙元件</strong>，一起發布</li>
+<li>wrapper CLI 必須提供 <code>--metadata</code>（描述這支 wrapper 工具自身）與 <code>--entry-metadata</code>（描述 server 底下個別 entry，如某個 model）</li>
+<li>配額不足 / 不合法輸入 / 不存在的 entry → wrapper 直接 stderr + 非 0 exit code</li>
+</ol>
+<p><strong>此 pattern 有兩種亞型：</strong></p>
+<table>
+<thead>
+<tr>
+<th>亞型</th>
+<th>說明</th>
+<th>介面</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Entry-managing singleton</strong></td>
+<td>管理多個具名資源（entries），每個 entry 有自己的配額 / 狀態。例：LLM Entry Manager（多個 model）</td>
+<td><code>--metadata</code>（工具自身）+ <code>--entry-metadata</code>（個別 entry）</td>
+</tr>
+<tr>
+<td><strong>Simple singleton server</strong></td>
+<td>包住單一資源，不需要 entry 概念。功能上更像常駐的 MCP 工具伺服器，只是變成 singleton 以保護底層資源。</td>
+<td>只有 <code>--metadata</code></td>
+</tr>
+</tbody>
+</table>
+<p>只有 <strong>entry-managing</strong> 亞型需要在 metadata 中宣告 <code>has_entries: true</code>，讓 caller 知道還有 <code>--entry-metadata</code> 可用（詳見 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.7）。</p>
+<p><strong>LLM Entry Manager 是 entry-managing 亞型的首個實例</strong>：<code>ai-core-server</code>（server）+ <code>ai-core-call</code>（wrapper CLI）。未來新增同類 manager 時應沿用同一套介面慣例（同名旗標、同樣的錯誤碼語意），讓 caller 對所有 manager 的行為一致。</p>
+<blockquote>
+<p>寫第二個 manager 時的 server / queue / rate-limit 共用樣板會抽到 <code>src/ai_core/protocol/</code>，見 <a href="doc_15_arch_project_milestones.html">doc_15_arch_project_milestones.md</a> §10.1。第一版 YAGNI，先讓 Entry Manager 內部消化。</p>
+</blockquote>
+<hr />
+<h2>§2. 整體架構</h2>
+<pre><code>caller（人類 shell / AI agent / 其他 function）
+   │
+   ├── 直接 shell call ────────────────────────────┐
+   │                                                ▼
+   │                               任意語言寫的 function
+   │                               （唯一硬規則：--metadata 印合法 JSON）
+   │                                       │
+   │                                       ├── 單純函式：直接執行
+   │                                       └── 重資源：透過 wrapper CLI ──▶ singleton server
+   │
+   ├── 想知道有哪些 function ──▶ Function Hub（server / one-shot 雙形態）
+   │
+   └── 想新增 function ─────────▶ ai-core-author（一站式產生 + dry-run + 註冊）
+</code></pre>
+<p>具體 singleton manager 的首例：</p>
+<pre><code>ai-core-server（HTTP）          ←── ai-core-call（shell wrapper CLI）
+   ├─ per-model asyncio queue
+   ├─ rate limit (rpm / tokens / cost)
+   └─ litellm router → ollama / lm-studio / gemini
+</code></pre>
+<hr />
+<h2>§3. 技術選型</h2>
+<blockquote>
+<p>⚠️ <strong>與現行衝突</strong>：下表的外部相依（litellm / fastapi / uvicorn / uv / platformdirs）違反現行「只用標準庫、<code>dependencies = []</code>」硬約束。保留作為舊版提案紀錄。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>選擇</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主語言</td>
+<td>Python 3.11+</td>
+<td>LLM 生態最完整；asyncio 跨平台行為穩定</td>
+</tr>
+<tr>
+<td>套件管理</td>
+<td><code>uv</code></td>
+<td>快、跨平台、有 lockfile</td>
+</tr>
+<tr>
+<td>LLM 抽象</td>
+<td><code>litellm</code></td>
+<td>已支援 ollama、lm studio (OpenAI 相容)、gemini</td>
+</tr>
+<tr>
+<td>HTTP server</td>
+<td><code>fastapi</code> + <code>uvicorn</code></td>
+<td>Entry Manager / Hub server 都用</td>
+</tr>
+<tr>
+<td>跨平台路徑</td>
+<td><code>platformdirs</code></td>
+<td>自動找對 config / data dir</td>
+</tr>
+<tr>
+<td>CLI 註冊</td>
+<td><code>pyproject.toml [project.scripts]</code></td>
+<td>不靠 shebang，Win/Linux 都能跑</td>
+</tr>
+<tr>
+<td>配置 / metadata</td>
+<td>JSON</td>
+<td>已拍板</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>語言中立性</strong>：Python 是 ai_core <strong>自身實作</strong>所用的語言。<strong>Function 本身語言不限</strong> — bash、Python、Go、任何可執行檔皆可，只要符合 <code>--metadata</code> 協議即可被 hub 收錄與呼叫。</p>
+</blockquote>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_08_composite.html"><span class="dir">← 上一篇</span><span class="fn">doc_08_composite</span></a>
+<a class="next" href="doc_11_arch_protocol.html"><span class="dir">下一篇 →</span><span class="fn">doc_11_arch_protocol</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

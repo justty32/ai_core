@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_01｜願景與初心（Vision &amp; Origin） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_01_vision_and_origin.md · 214 行</div>
+<h1>note_01｜願景與初心（Vision &amp; Origin）</h1>
+<ul>
+<li><strong>來源</strong>：<code>roadmap.md</code>（建立於 2026-05-24，源自一次「檢討初心」的討論；同日第二輪討論把重心從「隔開貴/便宜智能」搬到「LLM 退縮到兩介面 + 拒絕為預設的憑證准入」，已整合）。</li>
+<li><strong>狀態</strong>：<strong>戰略主文件 / 北極星（最新事實）</strong>。這是判斷「那些東西該不該做、該先做哪個」的尺；不是規範（規範在 <code>core_nature/</code>，見 doc_01~doc_08），也不是實作（探索在 <code>try_implement/</code>）。活文件，逐項可改，標「待議」者皆未定案。</li>
+<li><strong>一行摘要</strong>：未來只剩便宜小笨模型可用 → 做框架輔助它；趁現在聰明模型還便宜當「資產工廠」轉飛輪；終點是把 LLM 擠到「意圖翻譯」與「模糊前沿」兩介面，以「拒絕為預設、憑證准入」治理，飛輪持續把模糊地帶固化成確定性程式碼；第一目標問題＝程式碼輔助助手。</li>
+</ul>
+<blockquote>
+<p>交叉引用：待決規範表（§7）與開放問題（§8）的詳載見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。九軸/register/intercept 等核心契約見 <a href="code_01_core_library.html">code_01_core_library.md</a> 與 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>。</p>
+</blockquote>
+<hr />
+<h2>0. 一頁摘要</h2>
+<ul>
+<li><strong>初心</strong>：未來聰明可靠的 LLM 會因 AI 泡沫化而變貴；假設手上只剩便宜的本地 &lt;10B 小模型 → 必須做一套框架去<strong>輔助小笨模型</strong>，把它包裝成可靠的東西。CLI 天生適合 LLM，所以基本形態是「一堆小命令行函式 + 它們的組合」。</li>
+<li><strong>時間維度</strong>：<strong>趁現在聰明大模型還便宜，先用它生產出耐久的資產（程序 / snippet / few-shot / 骨架），讓未來的笨模型去消費。</strong> 飛輪的第一圈要趁早轉。</li>
+<li><strong>終點形狀</strong>：在成熟系統裡，<strong>LLM 被擠到只剩兩個介面</strong>——(1) 人類意圖 → 程式可理解意圖的<strong>翻譯層</strong>；(2) 尚未被固化的<strong>模糊地帶的暫時處理者</strong>。其餘全是確定性程式碼。</li>
+<li><strong>治理原則（拒絕為預設）</strong>：LLM 預設什麼都不碰；只有**「千錘百鍊證明非它不可」＋「測得夠穩」<strong>，才</strong>核准<strong>它進入某個環節，並發給一張</strong>證書**（用哪個模型、測試組、穩定度 %）。舉證責任在「讓 LLM 進來」那邊，不在「把它拿掉」那邊。</li>
+<li><strong>由此得到的專案定義（升級版）</strong>：
+<blockquote>
+<p>ai_core = <strong>一個讓 LLM 退縮到「意圖翻譯」與「模糊前沿」兩介面的基底；它以「拒絕為預設、憑證准入」治理 LLM 的領地，並用飛輪持續把模糊地帶固化成確定性程式碼。</strong></p>
+</blockquote>
+</li>
+<li><strong>第一個目標問題</strong>：<strong>程式碼輔助助手</strong>——上層「讀框架原始碼 → 生資產」（＝結構化抽取），下層「在精準標記的位置填碼」（＝受約束生成）。</li>
+<li><strong>方法論剎車</strong>：先選目標問題，再讓它告訴你哪些規範該先定。目標問題 = 停止鍵，是「東西愈做愈大」的解藥。</li>
+</ul>
+<hr />
+<h2>1. 初心與演化鏈</h2>
+<p>這個專案不是憑空長大的，它有一條有內在邏輯的演化鏈（這段以前只在腦子裡，今天落檔）：</p>
+<ol>
+<li><strong>前提（約束）</strong>：AI 泡沫化 → 聰明可靠的 LLM 太貴 → 假設只有便宜的本地 &lt;10B 小笨模型可用。</li>
+<li><strong>初心（最小形態）</strong>：既然只能用小笨模型，就得做框架去<strong>輔助</strong>它；CLI 天生適合 LLM → 最初只是幾支小命令行程式，做 <strong>prompt 片段管理 + 組合 + 輸出後處理</strong>（＝最原始的 SFC）。</li>
+<li><strong>第一次擴張</strong>：推論要時間、一次只能回一串 → <strong>singleton 資源</strong> + 時間/記憶體管理（＝ LLM Entry Manager 的由來）。</li>
+<li><strong>質變的領悟</strong>：擴著擴著發現這形狀<strong>像符號神經網路</strong>——一張計算圖，多數節點是確定性的 shell/py 函式，少數節點是那個隨機的 LLM。</li>
+<li><strong>野心的引爆點</strong>：LLM 能自己生 prompt → <strong>自我改進迴圈 → 數據飛輪</strong>。為此東西從「幾支小程式」膨脹成「整套規範 + 框架 + 概念」。</li>
+</ol>
+<blockquote>
+<p>設計哲學（KISS / Lightweight / No wheel-remake / Least dependency）不是美學偏好，是<strong>前提的邏輯必然</strong>：一個前提是「窮、只能用便宜算力」的專案，更付不起一座龐大基礎設施的維護成本。</p>
+</blockquote>
+<hr />
+<h2>2. 時間維度：資產工廠 vs 資產消費者</h2>
+<p>初心只講了「未來」的約束。今天補上的洞察是<strong>現在這個窗口</strong>的價值：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>聰明模型（現在便宜）</th>
+<th>笨模型（未來便宜）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>角色</td>
+<td><strong>資產工廠</strong></td>
+<td><strong>資產消費者</strong></td>
+</tr>
+<tr>
+<td>跑法</td>
+<td>貴、稀有、一次性</td>
+<td>便宜、高頻</td>
+</tr>
+<tr>
+<td>做什麼</td>
+<td>讀框架原始碼、生程序/skill、生 snippet 庫、生 few-shot、搭骨架、<strong>做固化（見 §3）</strong></td>
+<td>照著資產，在窄任務上填碼 / 套用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>策略</strong>：把現在的「便宜智能窗口」當成一筆<strong>一次性的資本投資</strong>，產出折舊很慢的資產。聰明模型今天做好的東西，明天換成笨模型還能用。</p>
+<p>此分工有兩個尺度：</p>
+<ul>
+<li><strong>per-phase（粗）</strong>：工廠（一次性生資產）vs 消費者（高頻用資產）。</li>
+<li><strong>per-request（細）</strong>：同一個請求內，<strong>先笨模型填，沒過驗證再升級給聰明模型</strong>——一條成本梯度（見 §3 的「洞」與升級）。</li>
+</ul>
+<hr />
+<h2>3. 終點形狀與治理原則（本專案的核心）</h2>
+<h3>3.1 終點：LLM 退縮到兩介面</h3>
+<p>在成熟系統裡，系統大部分是確定性程式碼，<strong>LLM 只剩兩個介面</strong>：</p>
+<ol>
+<li><strong>意圖翻譯層</strong>：人類的模糊意圖 → 程式可理解的結構化意圖。</li>
+<li><strong>模糊前沿的暫時處理者</strong>：還沒被固化成程式碼的模糊地帶，暫由 LLM 扛著。</li>
+</ol>
+<p>這兩個洞是<strong>永遠不會完全閉合</strong>的（總有新意圖、總有新模糊案例）；其餘的洞都該隨時間被填成程式碼。</p>
+<h3>3.2 單位不是「skill」，是「帶 LLM 留白的程序」</h3>
+<p>我們一度叫它「skill」，但它太重了，這個詞不準。它其實是：</p>
+<blockquote>
+<p><strong>一段大部分為確定性程式碼的「程序 / 套」，中間留著少數 LLM 才填的洞。</strong></p>
+</blockquote>
+<p>最精準的類比——<strong>LLM 是 cache-miss handler，或一個巨大 <code>switch</code> 的 <code>default:</code> 分支</strong>：</p>
+<ul>
+<li>請求先過一個<strong>確定性前濾網</strong>（format matcher，如「改 XX 檔 XX 行：…」）。命中 → 走純程式碼。</li>
+<li>只有<strong>落穿前濾網的、沒被預先定義的那塊</strong>（範例裡的 <code>…</code>），才掉進 LLM。</li>
+<li>它也不限於一個函數，而可以是<strong>一整條調用鏈</strong>；且<strong>會隨所用模型型號而變化</strong>（見下）。</li>
+</ul>
+<h3>3.3 洞的大小 = f(模型能力)</h3>
+<p>關鍵性質：同一段程序，<strong>笨模型 → 塞更多 matcher、洞更小</strong>（不敢信它）；<strong>聰明模型 → matcher 更少、洞更大</strong>（可放手）。同一套程序、不同的「填充比例」。</p>
+<ul>
+<li>「先笨模型想、沒通過邏輯測試再叫聰明模型」＝ <strong>per-request 動態縮放這個洞</strong>。</li>
+<li>橫切的 <strong>使用者習慣層</strong>（如「我是繁中使用者 → 產出都用繁中」）疊在整條鏈上，是 <code>llm_call</code> context binding 的 user-profile 級升級。</li>
+</ul>
+<h3>3.4 治理原則：拒絕為預設 + 憑證准入</h3>
+<p><strong>舉證責任在「讓 LLM 進來」那邊。</strong> LLM 預設零領地；要佔據某個環節，得通過<strong>兩部分閘門</strong>：</p>
+<ol>
+<li><strong>必要性</strong>：千錘百鍊證明<strong>確定性程式碼辦不到</strong>、非 LLM 不可。</li>
+<li><strong>穩定性</strong>：在測試組下<strong>做得夠穩</strong>，過可靠度門檻。</li>
+</ol>
+<p>兩個類比：</p>
+<ul>
+<li><strong>最小權限（least privilege）</strong>：LLM 預設無權，每個環節單獨申請、單獨核准。</li>
+<li><strong>新藥審批</strong>：一個 LLM 環節 = 一款藥，臨床試驗證明<strong>療效</strong>（非它不可）＋<strong>安全性</strong>（夠穩），才<strong>核准用於該適應症</strong>。</li>
+</ul>
+<p><strong>後果——每個 LLM 留白帶一張證書</strong>（這把飄很久的 <code>nondeterministic</code> 軸做實了）：</p>
+<blockquote>
+<p>不是含糊的「這裡是隨機的」，而是「<strong>此環節經測試組 B、用模型 Z、認證穩定度 X%</strong>」。LLM 不是被信任，是被<strong>認證</strong>；可被<strong>撤照</strong>（哪天有人想出確定性解法就踢出去）。整個系統因此<strong>可稽核</strong>：永遠知道哪幾個點是「沒辦法才放 LLM 進來」、各自多穩、用什麼擋著。</p>
+</blockquote>
+<h3>3.5 兩個 regime，飛輪是它們之間的遷移</h3>
+<p>「拒絕為預設」的嚴格和「趁便宜先轉幾圈」的寬鬆，表面衝突，其實是<strong>兩個 regime</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>regime</th>
+<th>時機</th>
+<th>姿態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>開機期</strong></td>
+<td>現在，聰明模型便宜</td>
+<td>寬鬆——讓 LLM 多做、先把骨架搭起來、先轉幾圈</td>
+</tr>
+<tr>
+<td><strong>成熟期</strong></td>
+<td>未來，只剩笨模型</td>
+<td>嚴格——拒絕為預設、憑證准入、footprint 極小</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>飛輪 = 從寬鬆遷往嚴格的力</strong>：持續地 (a) 把 LLM 環節換成確定性程式碼（<strong>撤照</strong>）、(b) 給活下來的 LLM 環節發<strong>證書</strong>（<strong>認證</strong>）。開機期容許鬆，正因為飛輪保證它會收緊。</p>
+</blockquote>
+<h3>3.6 最硬的未決問題：固化引擎</h3>
+<p>飛輪的「免費能量」來自<strong>固化（crystallization）</strong>——把「LLM 老在處理的同一類模糊案例」凍成確定性 matcher / 分支。<strong>但固化不是免費的：誰做？</strong></p>
+<ul>
+<li><strong>手動</strong>：人觀察、人寫新分支 → 這專案是「一個好用的工具」。</li>
+<li><strong>自動</strong>：聰明模型定期掃 log、自動提案新的確定性分支 → 這專案是「一個會自我改進的系統」。後者難非常多。</li>
+</ul>
+<p>此問題決定 v0 切片要不要把「固化」也做進去（見 §8，詳載於 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>）。<strong>目前未決。</strong></p>
+<hr />
+<h2>4. 設計張力與它的解藥</h2>
+<p><strong>張力</strong>：設計哲學要 KISS（前提的必然），但北極星（飛輪 / 自我改進）天然往「大」拉。兩股力反向。</p>
+<p><strong>解藥 = 目標問題</strong>：框架沒有目標問題時會<strong>無限長</strong>——每條軸、每個複合規範看起來都「可能有用」。一旦釘死一個具體目標，它變成<strong>剎車</strong>：只有這個目標用得到的部分才做。<strong>目標問題 = 停止鍵。</strong></p>
+<p><strong>A / B 兩層分法</strong>（避免把兩個東西當一個做，那正是「感覺在爆炸」的根因）：</p>
+<ul>
+<li><strong>A：能用的最小工具</strong>（SFC + 幾個組合原語 + singleton 管理）。今天就能交付、忠於初心、天然小。<strong>這是產品。</strong></li>
+<li><strong>B：北極星願景</strong>（規範家族 + 治理原則 + 飛輪）。<strong>這是羅盤</strong>，用來指引 A 怎麼長，不是 v1。</li>
+</ul>
+<p><strong>方法論翻轉</strong>（重要）：</p>
+<blockquote>
+<p>不要「先把八軸 / 複合 / 多函數合作的標準全定完，再選問題」。
+要「<strong>先選目標問題，讓它告訴你哪些標準該先定、哪些可以晚點</strong>」。
+理由：<code>try_implement/DECISIONS.md</code> 裡那堆懸案的<strong>優先序取決於目標是什麼</strong>。沒有目標只能憑空猜；有了目標，它們自動排好序。</p>
+</blockquote>
+<hr />
+<h2>5. 第一目標問題：程式碼輔助助手</h2>
+<p><strong>場景</strong>：手上有一個程式框架。理想做法是用聰明大模型 + AI agent（如 Claude Code）讀框架原始碼 → 生 skill → 輔助編寫相關程式碼。效果好，但很花錢（每次都燒聰明模型）。</p>
+<p><strong>ai_core 的版本</strong>：把它拆成兩層，聰明模型只跑一次性的上層，笨模型跑高頻的下層。</p>
+<h3>上層：讀框架 → 生資產（＝結構化抽取）</h3>
+<ul>
+<li>聰明模型讀原始碼，抽出<strong>有 schema 的資產</strong>：API 簽名 / 用法 snippet / 觸發條件 / few-shot / 護欄 / verifier hook。</li>
+<li>本質是結構化抽取問題：schema 可驗證，retry_until_valid / guard 咬得住。</li>
+<li>「結構化抽取也不錯」這個念頭就安放在這——<strong>它不是另一個目標，是同一個目標的上層。</strong></li>
+</ul>
+<h3>下層：在精準標記的位置填碼（＝受約束生成，§3.2 的「洞」）</h3>
+<ul>
+<li>笨模型最不該做的是「重寫整個檔」（自由度爆炸 → 必錯）。</li>
+<li><strong>把輸出收縮到窄面</strong>：固定 snippet 寫進 prompt + <strong>行數助手</strong>精準標記「在第 N 行插入 / 填這個洞」。自由度愈小，笨模型愈不會搞砸。</li>
+<li>行數助手 = 那個確定性函式；模型只負責粗粒度決定「填什麼、填哪」。</li>
+<li>佐證：Claude Code 自己的 Edit 工具就要求 exact string match、不準重寫整檔——聰明模型都需要這層約束，笨模型只會更需要。</li>
+</ul>
+<blockquote>
+<p><strong>正名</strong>：我們生的不是「skill」（一個文字檔），而是 §3.2 的**「帶 LLM 留白的程序」**——可能是一整條調用鏈、隨模型型號變化、且每個 LLM 留白都該帶 §3.4 的證書。</p>
+</blockquote>
+<hr />
+<h2>6. 最小垂直切片（v0）</h2>
+<p>先別鋪整套規範，先切一條最小的線證明飛輪能轉：</p>
+<blockquote>
+<p>拿<strong>一個</strong>真實框架 → 用<strong>一次</strong>聰明模型呼叫，生出一小份資產（程序 + snippet 庫）→ 再讓一個<strong>便宜 / 笨模型</strong> + 行數助手 + retry/guard，產出**「raw 笨模型做不到、包了鷹架就做得到」**的正確程式碼編輯。</p>
+</blockquote>
+<p><strong>驗收標準</strong>：同一個編碼任務，對照組（raw 笨模型直接寫）失敗 / 出錯，實驗組（ai_core 鷹架）成功。<strong>一條線打通，勝過十條規範。</strong></p>
+<p>（具體選哪個框架、哪個任務、用什麼笨模型、要不要含「固化」步，待議——見 §8 / <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。）</p>
+<hr />
+<h2>7. 這個目標會逼出哪些待決規範（摘要）</h2>
+<p>v0 切片會自然撞到 <code>try_implement/DECISIONS.md</code> 裡的幾個懸案（語意/用途欄位 B1、in-process 沙箱 B3、memoize 快取、<code>nondeterministic</code> 軸含證書、組合軸推導 A4），到時它們從「憑空猜」變成「擋路、得解」。<strong>v0 切片本身就是規範的篩子。</strong></p>
+<blockquote>
+<p>完整待決規範表（含每條的「為何被逼出來」與出處）詳載於 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<hr />
+<h2>8. 開放問題 / 待續討論（摘要）</h2>
+<p>最硬的是<strong>固化引擎手動 vs 自動（§3.6）</strong>——v0 要不要把「把 LLM 處理過的模糊案例固化成新 matcher」做進去（標「這題優先」）；其餘含 v0 框架/笨模型選型、行數助手形態、生資產 schema、證書治理流程、A/B 兩層開發節奏。</p>
+<blockquote>
+<p>完整開放問題清單詳載於 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<blockquote>
+<p><strong>接續討論時</strong>：先讀本檔 → 再依當下焦點讀 <code>try_implement/DECISIONS.md</code>（懸案清單）或 <code>core_nature/composite_spec.md</code>（規範現況）。</p>
+</blockquote>
+<hr />
+<h2>附錄：使用者原話（2026-05-24 討論逐字留存）</h2>
+<blockquote>
+<p>上方各節是 Claude 的轉述與結構化整理；本附錄保留使用者當天的<strong>原始措辭</strong>，以防遺漏或日後對轉述有疑時可回溯。逐字照錄，未修改錯漏字。</p>
+</blockquote>
+<p><strong>① 檢討初心 / 演化鏈</strong></p>
+<blockquote>
+<p>是這樣的，我想要重新檢討自己做這些事情的初心。我記得上一次討論這個專案的目標的時候，有說是想要做一個標準規範以及標準實現，用於駕馭LLM的不確定性。我想這依然是沒有改變的，只是說我突然回想起好幾個月前的，與這個專案有關的，更原始的構想。那時候，我是想說，未來，聰明且可靠的LLM會愈來愈貴，那是因爲AI泡沫化的原因，所以，我假設未來我只有一些可以在本地跑的，便宜的10B以下的模型可以用，這樣的話，那我就必須去做一個框架，去很好的輔助這種小小笨模型，並且那時候我有想到說，命令行天生就適合LLM的相關使用，所以那時候的想法其實就只是簡單的SFC，一種管理prompt片段與其組合方式，還有管理LLM輸出並進行後處理的，幾個小命令行程式。後來才想到說，考慮到模型推論需要時間，且一次只能回應一串，也就是singleton資源的概念，然後還有時間和記憶體的管理這些。之後慢慢擴張，直到最後我發現到，這其實有點類似符號神經網路的概念，並且某天我突然想到說，因爲LLM可以自行生成promp，所以可以形成自我改進的循環，變成數據飛輪，于是爲了達到這個目標，我想要做的東西愈來愈龐大，從最初的幾個小程式，變成了一整套標準規範乃至於框架,概念等</p>
+</blockquote>
+<p><strong>② 這次檢討想得出什麼（roadmap 的緣起）</strong></p>
+<blockquote>
+<p>我是這樣想的，我想要定下一個初步的roadmap，在我們把八軸,複合,多函數合作等概念都定下標準後，我們等同是有了工具，那麼我們該先拿哪個問題作爲目標呢？</p>
+</blockquote>
+<p><strong>③ 緊迫性 + 第一目標＝程式碼助手</strong></p>
+<blockquote>
+<p>並且我突然想到一點，那就是，其實我會想要儘快把這些東西做出一點成果，至少在當下，比較聰明的大模型還算便宜的時候，先讓飛輪轉幾圈，打個骨架，這樣可以省下今後不少功夫。然後第一個目標問題，我想先做一個程式碼輔助助手，好比說我有個一個程式框架，以前用其他很聰明的大模型+ai agent，如claude code，請他去讀框架原始碼，然後去生skill，之後再去輔助編寫相關程式碼，那當然很好，但很花錢。目前的想法是這樣，還是先讓聰明的大模型去生skill，但是在編寫相關程式碼部分，我們可以做細化，比如把一些固定snippet寫入prompt，配合行數助手精準標記要寫入的目標...你覺得呢？等等，其實結構化抽取也不錯</p>
+</blockquote>
+<p><strong>④ 搜尋報告例子 + skill 超重（是函數/調用鏈）+ LLM 退縮到兩介面</strong></p>
+<blockquote>
+<p>然後我還有個想法，好比說我想要讓模型去搜尋某個topic，然後做報告，然後我對那個topic稍有了解，知道它應該要先讀取某些文件，然後再去某些網站用APi取得資料，所以我會給一個prompt，模型就會依據這套prompt去採用一套。然後這一套還可以繼續改進，比如說模型可能不知道API有哪些，那麼模型本身會跑另一個已經固定的流程，去分析網站的形式，若是A形式，那可以透過某些方式取得API列表之類，除此之外，還有使用者習慣這個功能，在做這一整套流程時，模型會知道我是繁體中文使用者，所以他產出的文件都會是繁體中文。然後你說的ai_core的skill，那確實會超級重，那不會只是一個文字檔，而是一個函數，並且會受到所使用的模型型號所影響，有所變化，乃至於不限於一個函數，而是一整個調用鍊條。然後我預期中的使用方式會是這樣，好比說我給了一個promp，這個prompt會先經過一個固定函數，判斷說是否符合某些特定format比如說&quot;改XX文件的XX行：...&quot;，然後去進行相關處理，而只有在...部分這塊沒有被預先定義的格式，才會拿模型去進行分析，並且有可能會先讓笨模型思考，然後若笨模型思考沒通過邏輯測試，那會讓聰明模型重新思考一次。在我的構想中，在成熟的系統中，LLM只會成爲人類意圖與程式可理解的意圖的轉換接口，還有一些尚未被定義的糢糊地帶的暫時處理者。所以，嚴格來說，其實這不太能說算是skill。</p>
+</blockquote>
+<p><strong>⑤ 治理原則的修正：拒絕為預設、憑證准入</strong></p>
+<blockquote>
+<p>或者說，在經過千錘百鍊的測試後，確定了某個環節只有LLM才能處理，並且處理的足夠穩定，才會讓LLM成爲該環節的一部分</p>
+</blockquote>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_30_html_dashboard.html"><span class="dir">← 上一篇</span><span class="fn">doc_30_html_dashboard</span></a>
+<a class="next" href="note_02_metaphors.html"><span class="dir">下一篇 →</span><span class="fn">note_02_metaphors</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

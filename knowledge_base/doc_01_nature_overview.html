@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_01_nature_overview · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_01_nature_overview.md · 28 行</div>
+<h1>doc_01_nature_overview</h1>
+<ul>
+<li><strong>來源</strong>：<code>core_nature/overview.md</code></li>
+<li><strong>狀態</strong>：定案規範（部分待填）</li>
+<li><strong>一行摘要</strong>：這套設計模式的本質定位探究——從 terminal 出發釐清函式形式內核，目標平台 POSIX（Windows 不考慮），「本質是什麼」仍標待填。</li>
+</ul>
+<blockquote>
+<p>交叉引用：九軸詳規見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>、執行模型見 <a href="doc_02_terminal_model.html">doc_02_terminal_model.md</a>、執行形式見 <a href="doc_03_execution_forms.html">doc_03_execution_forms.md</a>。</p>
+</blockquote>
+<hr />
+<p>這套設計模式的本質探究。從 terminal 環境出發，理清函式形式的內核，再擴展至其他環境。</p>
+<hr />
+<h2>為什麼從 terminal 出發</h2>
+<p>函式的執行形式（one-shot、multi-shot、persistent 等）是跨環境的普遍概念，無論程式內函數、terminal、分散式系統，內核不變，只是外在表現與限制隨環境而異。</p>
+<p>Terminal（POSIX）是最純粹的起點：限制明確、介面統一、無框架干擾。先在此把模式的內核想清楚，再往外擴展。</p>
+<p><strong>目標平台：POSIX 系統（含 pipeline）。Windows 不在考慮範圍。</strong></p>
+<hr />
+<h2>待填：本質是什麼</h2>
+<p>（這套設計模式的精確定位——工具集？設計模式？執行組織框架？待討論後補充）</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="code_04_prototype_demos_tests.html"><span class="dir">← 上一篇</span><span class="fn">code_04_prototype_demos_tests</span></a>
+<a class="next" href="doc_02_terminal_model.html"><span class="dir">下一篇 →</span><span class="fn">doc_02_terminal_model</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

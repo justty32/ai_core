@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>composite_spec.md · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_08_composite.md · 272 行</div>
+<hr />
+<h2>來源: core_nature/composite_spec.md（263 行）
+狀態: 定案規範（含「並發不處理」「nondeterministic 複合慣例候選」等待議標記）
+一行摘要: 複合式規範（composite conventions）——橫跨多軸的具名慣例：標準狀態目錄慣例（.config/.cache/.state/.data）與中斷恢復慣例（recovery.json）。</h2>
+<blockquote>
+<p>各軸的原子 metadata fields 定義於 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>；軸的概念定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；nondeterministic 複合慣例候選的脈絡見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<h1>composite_spec.md</h1>
+<p><code>lib_spec.md</code> 定義各軸的原子性 metadata fields——每個軸描述程式的一個獨立特性。本檔定義<strong>複合式規範（composite conventions）</strong>：橫跨多軸的標準模式，library 為這些模式提供一體化的配套設施。</p>
+<p>複合式規範不新增孤立的概念，而是說明「哪些軸的特定組合，在實作層面形成一個具名慣例」，以及這個慣例帶來的附加 metadata fields 與 library 工具。</p>
+<hr />
+<h2>複合規範列表</h2>
+<table>
+<thead>
+<tr>
+<th>慣例</th>
+<th>觸發條件</th>
+<th>涵蓋軸</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>標準狀態目錄慣例</td>
+<td><code>state: &quot;stateful_external&quot;</code> + terminal 環境</td>
+<td>§1、§3、§5、§6</td>
+</tr>
+<tr>
+<td>中斷恢復慣例</td>
+<td><code>state: &quot;stateful_external&quot;</code> + (<code>interruptible ∈ {resumable, rollback, resettable}</code> 或 <code>guarantee: &quot;transactional&quot;</code>) + terminal</td>
+<td>§3、§5、§6</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>標準狀態目錄慣例（Standard State Directory Convention）</h2>
+<h3>概述</h3>
+<p>當程式宣告 <code>state: &quot;stateful_external&quot;</code> 且在 terminal 環境下執行時，其外部狀態的存放位置需要一個標準約定。此慣例規定了程式在<strong>工作目錄</strong>下存取狀態的標準路徑結構，讓 hub、呼叫方與 library 能夠預期程式的副作用範圍。</p>
+<h3>目錄結構</h3>
+<pre><code>.config/&lt;program_name&gt;/     ← 或 .config/&lt;program_name&gt;.json
+.cache/&lt;program_name&gt;/      ← 或 .cache/&lt;program_name&gt;.json
+.state/&lt;program_name&gt;/      ← 或 .state/&lt;program_name&gt;.json
+.data/&lt;program_name&gt;/       ← 或 .data/&lt;program_name&gt;.json
+</code></pre>
+<p><code>&lt;program_name&gt;</code> 為程式的識別名稱（通常與執行檔名相同）。</p>
+<h3>四個目錄的語意</h3>
+<table>
+<thead>
+<tr>
+<th>目錄</th>
+<th>語意</th>
+<th>可否刪除</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.config</code></td>
+<td>程式本身不會修改的設定，由人類或外部工具寫入</td>
+<td>視情況（刪除後程式使用預設值）</td>
+</tr>
+<tr>
+<td><code>.cache</code></td>
+<td>可在程式執行時間之外被任意刪除，程式不依賴其存在</td>
+<td>可隨時刪除</td>
+</tr>
+<tr>
+<td><code>.state</code></td>
+<td>程式目前所在的 stage——執行進程、跨輪次的階段位置</td>
+<td>刪除後程式遺忘進度，可重置</td>
+</tr>
+<tr>
+<td><code>.data</code></td>
+<td>程式累積建造出來的成果性資料；重要，不可隨意刪除</td>
+<td>不可隨意刪除，需備份</td>
+</tr>
+</tbody>
+</table>
+<p><code>.state</code> 與 <code>.data</code> 的分野：清掉 <code>.state</code> 只是讓程式遺忘做到哪（可重置）；清掉 <code>.data</code> 是真的失去成果（需備份）。</p>
+<h3>檔案格式規則</h3>
+<ul>
+<li>每個位置可以是<strong>資料夾</strong>或<strong>單檔</strong></li>
+<li><strong>單檔</strong>（如 <code>.config/&lt;name&gt;.json</code>）：必須是 <code>.json</code>，且內容為 JSON 物件</li>
+<li><strong>資料夾內的子檔</strong>（如 <code>.config/&lt;name&gt;/settings.yaml</code>）：格式無限制</li>
+<li>不強制四個目錄都存在，按語意選用即可</li>
+</ul>
+<hr />
+<h3>跨軸涵蓋</h3>
+<p>此慣例同時涉及四個軸，各自職責如下：</p>
+<p><strong>§1 I/O 出入口</strong></p>
+<p>這些目錄是程式的 file I/O 通道——<code>.config</code> 是穩定的輸入來源，<code>.data</code> 是輸出成果，<code>.state</code>/<code>.cache</code> 是讀寫兩用的中繼存取點。它們都屬於 §1 的 file I/O 類型，<code>channel_constraint</code> 應視為 <code>&quot;stable&quot;</code>（file 通道屬穩定通道）。</p>
+<p>若程式需要在 <code>entries</code> 中暴露這些通道給 hub 感知（例如呼叫方需要知道 config 路徑或 data 輸出位置），應以自訂 entry 名稱 + <code>channel_constraint: &quot;stable&quot;</code> + <code>terminal_binding</code> 描述。若呼叫方不需要感知具體路徑，則無需在 <code>entries</code> 中宣告。</p>
+<p><strong>§3 跨呼叫狀態</strong></p>
+<p>此慣例是 <code>state: &quot;stateful_external&quot;</code> 在 terminal 環境下的標準實作形式。程式宣告此 field 且遵守此慣例，呼叫方即可預期狀態的存放位置，而不必額外文件說明。</p>
+<p><strong>§5 可中斷性</strong></p>
+<p>中斷對各目錄的影響取決於該目錄的角色：</p>
+<table>
+<thead>
+<tr>
+<th>目錄</th>
+<th>中斷風險</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.config</code></td>
+<td>程式只讀，中斷不影響</td>
+</tr>
+<tr>
+<td><code>.cache</code></td>
+<td>可隨時重建，中斷通常無損</td>
+</tr>
+<tr>
+<td><code>.state</code></td>
+<td>中斷若在寫入途中，可能記錄到半完成的進度；安全性取決於寫入策略</td>
+</tr>
+<tr>
+<td><code>.data</code></td>
+<td>中斷可能導致成果資料不完整，損毀風險最高</td>
+</tr>
+</tbody>
+</table>
+<p>程式應根據其對 <code>.state</code>/<code>.data</code> 的寫入方式，宣告對應的 <code>interruptible</code> 值（如 <code>&quot;unsafe&quot;</code>、<code>&quot;resettable&quot;</code>、<code>&quot;rollback&quot;</code>）。</p>
+<p><strong>§6 執行保證</strong></p>
+<p>程式對 <code>.state</code>/<code>.data</code> 的操作是否具備冪等性或事務性，由 <code>guarantee</code> 宣告。此慣例不強制特定保證等級，但建議明確宣告，讓 hub 知道重試是否安全。</p>
+<hr />
+<h3>附加 metadata field：<code>state_dirs</code></h3>
+<p>當程式遵守此慣例時，可透過 <code>state_dirs</code> 宣告實際使用的目錄子集：</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state_dirs</code></td>
+<td>array of string</td>
+<td>實際使用的目錄列表；允許值為 <code>&quot;config&quot;</code>、<code>&quot;cache&quot;</code>、<code>&quot;state&quot;</code>、<code>&quot;data&quot;</code> 的子集</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若 <code>state_dirs</code> 缺席，hub 無法推斷實際使用哪些目錄，但 <code>state: &quot;stateful_external&quot;</code> 仍足以通知呼叫方副作用的存在。</p>
+<p><code>state_dirs</code> 是資訊性宣告，目的是讓 hub 了解副作用的範圍，而非強制合約。</p>
+<pre><code class="language-python">ai_core.register(
+    state=&quot;stateful_external&quot;,
+    state_dirs=[&quot;state&quot;, &quot;data&quot;],
+)
+</code></pre>
+<pre><code class="language-json">{&quot;state&quot;: &quot;stateful_external&quot;, &quot;state_dirs&quot;: [&quot;state&quot;, &quot;data&quot;]}
+</code></pre>
+<hr />
+<h3>多實例並發</h3>
+<p>本慣例<strong>核心規範不處理多實例並發</strong>。</p>
+<p>若程式預期多個實例以相同 <code>&lt;program_name&gt;</code> 並發執行，寫入 <code>.state/&lt;program_name&gt;</code> 時建議標註自身 PID（如 <code>.state/&lt;program_name&gt;/&lt;pid&gt;.json</code>）；讀寫鎖依賴 OS。具體標註格式與看見他人標註時的行為，由程式撰寫者自行決定，本規範不規定。</p>
+<p>若 <code>&lt;program_name&gt;</code> 本身含 PID 或 UUID（如 <code>task_worker_1234</code>），則資料夾天然隔離，無競爭問題。</p>
+<hr />
+<h3>完整 metadata 範例</h3>
+<p>一個「有狀態的資料處理腳本」，遵守標準目錄慣例：</p>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;one_shot&quot;,
+    state=&quot;stateful_external&quot;,
+    state_dirs=[&quot;state&quot;, &quot;data&quot;],
+    interruptible=&quot;unsafe&quot;,
+    guarantee=&quot;idempotent&quot;,
+)
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{
+  &quot;lifecycle&quot;: &quot;one_shot&quot;,
+  &quot;state&quot;: &quot;stateful_external&quot;,
+  &quot;state_dirs&quot;: [&quot;state&quot;, &quot;data&quot;],
+  &quot;interruptible&quot;: &quot;unsafe&quot;,
+  &quot;guarantee&quot;: &quot;idempotent&quot;
+}
+</code></pre>
+<p>語意解讀：</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lifecycle: &quot;one_shot&quot;</code></td>
+<td>執行完結束</td>
+</tr>
+<tr>
+<td><code>state: &quot;stateful_external&quot;</code></td>
+<td>會讀寫外部目錄</td>
+</tr>
+<tr>
+<td><code>state_dirs: [&quot;state&quot;, &quot;data&quot;]</code></td>
+<td>具體使用 <code>.state/&lt;name&gt;/</code> 和 <code>.data/&lt;name&gt;/</code></td>
+</tr>
+<tr>
+<td><code>interruptible: &quot;unsafe&quot;</code></td>
+<td>被中斷可能使這兩個目錄進入不一致狀態</td>
+</tr>
+<tr>
+<td><code>guarantee: &quot;idempotent&quot;</code></td>
+<td>但若讓它完整執行，重跑不會累積副作用（已寫入的不會重複寫入）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>中斷恢復慣例（Interruption Recovery Convention）</h2>
+<h3>概述</h3>
+<p>當程式宣告自己在中斷後具備某種恢復能力——§5 <code>interruptible</code> 的 <code>resumable</code> / <code>rollback</code> / <code>resettable</code>，或 §6 <code>guarantee: &quot;transactional&quot;</code>——這些能力的底層實作機制是同一個：<strong>在 <code>.state</code> 留下一份恢復記錄，下一次啟動時偵測該記錄並據以恢復</strong>。</p>
+<p>本慣例直接建立在標準狀態目錄慣例之上。上層慣例已定義 <code>.state</code> 為「程式目前所在的 stage」；本慣例進一步規定該 stage 內部要存放什麼、新一輪執行如何讀取它、以及據此如何恢復。恢復能力由 §5 / §6 既有欄位宣告，落地形式由本慣例的 on-disk 約定承擔——本慣例不新增 metadata 欄位（見下文）。</p>
+<h3>觸發條件</h3>
+<p><code>state: &quot;stateful_external&quot;</code> + terminal 環境 + 下列任一：</p>
+<ul>
+<li><code>interruptible ∈ {&quot;resumable&quot;, &quot;rollback&quot;, &quot;resettable&quot;}</code></li>
+<li><code>guarantee: &quot;transactional&quot;</code></li>
+</ul>
+<h3>目錄結構</h3>
+<pre><code>.state/&lt;program_name&gt;/recovery.json    ← 恢復記錄 manifest（標準最小欄位）
+.state/&lt;program_name&gt;/recovery/         ← opaque payload（進度資料 / journal，程式自訂，選填）
+</code></pre>
+<p><code>recovery.json</code> 是程式間的真正合約；<code>recovery/</code> 子目錄存放恢復所需的實際資料，格式由程式自訂。</p>
+<h3>恢復模式</h3>
+<p>把分散在 §5 / §6 的軸值，統一為「對半完成進度的三種處置」：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>來源軸值</th>
+<th>偵測到未完成記錄時的行為</th>
+<th>還原目標</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resume</code></td>
+<td>§5 <code>resumable</code></td>
+<td>從斷點接續執行</td>
+<td>不還原，往前推進</td>
+</tr>
+<tr>
+<td><code>rollback</code></td>
+<td>§5 <code>rollback</code>、§6 <code>transactional</code></td>
+<td>撤銷所有未提交修改</td>
+<td>完整還原至呼叫前的原始狀態</td>
+</tr>
+<tr>
+<td><code>reset</code></td>
+<td>§5 <code>resettable</code></td>
+<td>重置到某個安全點</td>
+<td>安全狀態（不保證回到原始）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><code>transactional</code> 在單次執行內部保證 all-or-nothing；當執行被外部強制終止（kill）繞過保證機制時，下一輪啟動透過 <code>rollback</code> 模式補救未提交的殘局。這把 §5 的 <code>rollback</code> 與 §6 的 <code>transactional</code> 在實作層接了起來——前者描述「中斷後能回滾」的能力，後者描述「執行具事務性」的承諾，兩者共用同一份 journal。</p>
+</blockquote>
+<h3><code>recovery.json</code> 最小欄位</h3>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>string</td>
+<td><code>&quot;in_progress&quot;</code>（執行中／被中斷）｜ <code>&quot;done&quot;</code>（正常完成）</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td><code>&quot;resume&quot;</code> ｜ <code>&quot;rollback&quot;</code> ｜ <code>&quot;reset&quot;</code>；此程式採用的恢復策略</td>
+</tr>
+<tr>
+<td><code>ts</code></td>
+<td>string</td>
+<td>上次寫入此記錄的時間戳</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>string（選填）</td>
+<td>指向 <code>recovery/</code> 內進度／journal 檔的相對路徑</td>
+</tr>
+</tbody>
+</table>
+<p><code>status</code> 與 <code>mode</code> 為必填；其餘欄位與 <code>recovery/</code> 內 payload 的格式由程式自由擴充。</p>
+<h3>啟動恢復流程（標準演算法）</h3>
+<p>偵測為 <strong>auto</strong>——程式啟動時自動讀取恢復記錄，呼叫方無需傳入任何 flag。</p>
+<ol>
+<li>啟動，讀取 <code>.state/&lt;program_name&gt;/recovery.json</code></li>
+<li>記錄不存在，或 <code>status == &quot;done&quot;</code> → 視為乾淨開始，正常執行</li>
+<li><code>status == &quot;in_progress&quot;</code> → 依 <code>mode</code>：
+<ul>
+<li><code>resume</code>：載入 <code>payload</code>，從斷點接續</li>
+<li><code>rollback</code>：依 <code>payload</code> 撤銷未提交修改，還原後再正常執行（或退出交由呼叫方重試）</li>
+<li><code>reset</code>：清除／重置到安全點，再正常執行</li>
+</ul>
+</li>
+<li>開始實際工作前，將 <code>status</code> 設為 <code>&quot;in_progress&quot;</code>；正常完成後設為 <code>&quot;done&quot;</code>（或刪除記錄）</li>
+</ol>
+<p>是否額外提供 <code>--fresh</code> / <code>--resume</code> 之類的覆寫 flag，由程式自行決定，不在本慣例的強制範圍。</p>
+<h3>為何不新增 metadata 欄位</h3>
+<p>恢復能力已由 §5 <code>interruptible</code> 與 §6 <code>guarantee</code> 宣告，這正是 hub 排程時真正需要知道的（能否安全重試、能否中斷）。恢復記錄的內部細節屬 runtime 行為，hub 既不需要、也讀不到（要讀得啟動程式）。因此本慣例<strong>不新增頂層 metadata 欄位</strong>——觸發由 <code>interruptible</code> / <code>guarantee</code> + <code>state_dirs</code> 含 <code>&quot;state&quot;</code> 隱含，真正的程式間合約是 on-disk 的 <code>recovery.json</code>。新增 recovery 欄位只會與 §5 / §6 重疊，違反軸的正交性。</p>
+<h3>跨軸涵蓋</h3>
+<table>
+<thead>
+<tr>
+<th>軸</th>
+<th>職責</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§3 跨呼叫狀態</td>
+<td><code>recovery.json</code> 與 payload 都是 <code>.state</code> 下的外部狀態；<code>state_dirs</code> 應包含 <code>&quot;state&quot;</code></td>
+</tr>
+<tr>
+<td>§5 可中斷性</td>
+<td><code>interruptible</code> 宣告「中斷後能恢復」的能力；本慣例規定「怎麼恢復、記錄在哪」</td>
+</tr>
+<tr>
+<td>§6 執行保證</td>
+<td><code>guarantee: &quot;transactional&quot;</code> 的回滾承諾，透過 <code>rollback</code> 模式落地</td>
+</tr>
+</tbody>
+</table>
+<h3>並發</h3>
+<p>沿用標準狀態目錄慣例的立場：核心規範不處理多實例並發。若同名程式預期多實例並發，應將恢復記錄以 PID / session 隔離（如 <code>.state/&lt;program_name&gt;/&lt;pid&gt;/recovery.json</code>），否則彼此覆蓋。</p>
+<h3>完整範例</h3>
+<p>一個「可續傳的大檔下載器」：</p>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;one_shot&quot;,
+    state=&quot;stateful_external&quot;,
+    state_dirs=[&quot;state&quot;, &quot;data&quot;],
+    interruptible=&quot;resumable&quot;,
+    guarantee=&quot;idempotent&quot;,
+)
+</code></pre>
+<p>被中斷後重跑時，<code>.state/&lt;name&gt;/recovery.json</code>：</p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;in_progress&quot;,
+  &quot;mode&quot;: &quot;resume&quot;,
+  &quot;ts&quot;: &quot;2026-05-23T10:00:00Z&quot;,
+  &quot;payload&quot;: &quot;recovery/offset.json&quot;
+}
+</code></pre>
+<p>語意解讀：程式重新啟動，自動讀到 <code>status: &quot;in_progress&quot;</code> + <code>mode: &quot;resume&quot;</code>，從 <code>payload</code> 記錄的 offset 接續下載，不重下已完成的部分（<code>guarantee: &quot;idempotent&quot;</code> 保證重跑不累積副作用）。完成後 <code>status</code> 設為 <code>&quot;done&quot;</code>。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_07_cli.html"><span class="dir">← 上一篇</span><span class="fn">doc_07_cli</span></a>
+<a class="next" href="doc_10_arch_overview.html"><span class="dir">下一篇 →</span><span class="fn">doc_10_arch_overview</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

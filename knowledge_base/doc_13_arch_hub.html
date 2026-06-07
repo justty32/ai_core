@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_13_arch_hub · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_13_arch_hub.md · 72 行</div>
+<h1>doc_13_arch_hub</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/04_hub.md</code>（§7 Function Hub 設計）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 Function Hub 設計——one-shot（<code>ai-core-hub</code>）+ server（<code>ai-core-hub-server</code>）雙形態、可執行/副檔名雙掃描策略、SFC 展開、透過 <code>ai-core-call</code> 對 list 自舉 LLM 摘要。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li>元件名 <code>ai-core-hub</code> / <code>ai-core-hub-server</code> 對應 roadmap/CLAUDE.md 的 Function Hub 概念與原型 <code>try_implement/tools/hub.py</code>。<strong>Function Hub 規範現行尚未定案</strong>（CLAUDE.md 明言「規範未定，原型自定義」），故本版的端點 / 旗標屬參考設計，非定案。</li>
+<li>Hub server 用 FastAPI/HTTP（外部相依），與現行純標準庫硬約束衝突；以現行為準時 HTTP 端點僅為參考。</li>
+<li>「掃 wrapper CLI 而非 server 程序、用 <code>&lt;file&gt; --metadata</code> 收 metadata、容錯降級」這些原則與現行 metadata 契約一致（見 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.6）。</li>
+<li>export 格式（mcp / openai-tools / anthropic-tools / claude-skill / agent-md）詳見 <a href="doc_16_arch_agents.html">doc_16_arch_agents.md</a>。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§7. Function Hub 設計</h2>
+<p>兩種形態並存（共用同一份函式掃描邏輯）：</p>
+<h3>7.1 One-shot 版（<code>ai-core-hub</code>）</h3>
+<p>KISS、無狀態、適合 CI / build pipeline / 離線生成 skill bundle：</p>
+<pre><code class="language-bash">ai-core-hub --build-list ./funcs/* &gt; list.txt
+ai-core-hub --export mcp ./funcs/* &gt; skills.mcp.json
+ai-core-hub --export openai-tools ./funcs/* &gt; tools.json
+ai-core-hub --export anthropic-tools ./funcs/* &gt; tools.json
+</code></pre>
+<h3>7.2 Server 版（<code>ai-core-hub-server</code>）</h3>
+<p>常駐，提供 runtime discovery：</p>
+<table>
+<thead>
+<tr>
+<th>端點</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /funcs?detail=summary</code></td>
+<td>列所有函式（短資訊，給 AI scan）</td>
+</tr>
+<tr>
+<td><code>GET /funcs?detail=full</code></td>
+<td>列所有函式（完整 metadata）</td>
+</tr>
+<tr>
+<td><code>GET /funcs/&lt;name&gt;</code></td>
+<td>單一函式完整 metadata</td>
+</tr>
+<tr>
+<td><code>GET /search?q=...</code></td>
+<td>對 description 做關鍵字 / LLM 語意搜尋（後者透過 ai-core-call 自舉）</td>
+</tr>
+<tr>
+<td><code>POST /funcs/&lt;name&gt;/call</code></td>
+<td>代理執行</td>
+</tr>
+<tr>
+<td><code>GET /graph</code></td>
+<td>函式依賴圖（從 metadata 的 <code>dependencies</code> 累積）</td>
+</tr>
+<tr>
+<td><code>GET /export?format=mcp|openai-tools|anthropic-tools</code></td>
+<td>runtime export</td>
+</tr>
+</tbody>
+</table>
+<h3>7.3 對 metadata 缺漏的處理</h3>
+<p>完全遵守 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.6 的容錯規則。Hub 在 list / API 中對缺漏項標警告但仍列出函式。</p>
+<h3>7.4 list.txt 的 LLM 摘要（對抗 context 爆炸）</h3>
+<p>當函式集大到 list.txt 自己會撐爆 context 時，Hub 透過 <code>ai-core-call</code> 對每個函式的 description 自動產出更短的 summary（覆蓋或補上 <code>summary</code> 欄）— <strong>真正的自舉</strong>。</p>
+<h3>7.5 Scanner 掃描策略</h3>
+<pre><code class="language-bash">ai-core-hub --build-list ./funcs/               # 掃指定目錄下所有可執行檔
+ai-core-hub --build-list ./funcs/ --ext .sh,.py # 改為副檔名過濾
+ai-core-hub --build-list ./funcs/ --recursive   # 遞迴子目錄（預設只掃頂層）
+</code></pre>
+<p><strong>掃描邏輯</strong>：</p>
+<ol>
+<li>列出指定路徑下的檔案</li>
+<li>過濾（擇一）：
+<ul>
+<li>預設：有可執行位元（<code>os.access(path, os.X_OK)</code>）</li>
+<li><code>--ext</code>：符合指定副檔名（不再要求可執行位元）</li>
+</ul>
+</li>
+<li>對每個候選呼叫 <code>&lt;file&gt; --metadata</code>，以 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.6 容錯規則處理回應</li>
+<li>彙總成 function 清單</li>
+</ol>
+<p><strong>Server 類工具的處理原則</strong>：
+Scanner 掃的是 <strong>wrapper CLI</strong>（如 <code>ai-core-call</code>），而非 server 程序本身。wrapper 的 <code>--metadata</code> 已代表整個工具的能力；hub 不需要知道底層是否有常駐 server，統一透過 wrapper 介面取 metadata。</p>
+<blockquote>
+<p>SFC 展開細節（hub scanner 遇到 SFC 時如何處理）見 <a href="doc_14_arch_author_sfc.html">doc_14_arch_author_sfc.md</a> §9.4。</p>
+</blockquote>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_12_arch_entry_manager.html"><span class="dir">← 上一篇</span><span class="fn">doc_12_arch_entry_manager</span></a>
+<a class="next" href="doc_14_arch_author_sfc.html"><span class="dir">下一篇 →</span><span class="fn">doc_14_arch_author_sfc</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

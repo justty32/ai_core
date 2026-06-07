@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>code_04 — 原型 demo、煙霧測試、範例函式與 store · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-code">code 程式成果</span>
+  <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
+</nav>
+<main class="md">
+  <div class="filemeta">code_04_prototype_demos_tests.md · 109 行</div>
+<h1>code_04 — 原型 demo、煙霧測試、範例函式與 store</h1>
+<blockquote>
+<p><strong>來源</strong>：<code>try_implement/demos/</code>（reliable_code_qa.py / call_chain_trace.py / resumable_batch.py）、<code>try_implement/smoke_test.py</code>、<code>try_implement/lib_smoke_test.py</code>、<code>try_implement/funcs/</code>（upper.py / reverse.py / c_linter.sh / py_linter.sh）、<code>try_implement/store/</code>（functions.json / index.json）
+<strong>狀態</strong>：原型／探索（demo + 自我測試）。<strong>測試結果已實機驗證</strong>：72 + 68 = <strong>140 項斷言全綠</strong>（執行於 repo 的 <code>.venv</code> Python 3.14）。
+<strong>一行摘要</strong>：三個自我驗證的端到端 demo、兩套純標準庫煙霧測試（共 140 斷言）、範例函式與已 seed 的 SFC store。</p>
+</blockquote>
+<p>相關交叉引用：被測的工具見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a>；被測的 library 見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>；馴化框架見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>；組合維度見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>。</p>
+<p>怎麼跑（cwd 須為 <code>try_implement/</code>）：</p>
+<pre><code class="language-bash">python3 smoke_test.py        # 工具：72 斷言
+python3 lib_smoke_test.py    # lib：68 斷言
+python3 demos/reliable_code_qa.py
+python3 demos/call_chain_trace.py
+python3 demos/resumable_batch.py
+</code></pre>
+<p>（兩套煙霧測試純 <code>__main__</code>，不依賴 pytest；用自訂 <code>check(label, cond, detail)</code> helper 計數，每個 <code>check()</code> = 一項斷言，跑完印「全部通過：N 項斷言」。）</p>
+<hr />
+<h2>三個端到端 demo</h2>
+<p>每個 demo 同時是示範<strong>與</strong>自我測試：跑完用 <code>assert</code> 證明每個機制如預期生效。</p>
+<h3><code>demos/reliable_code_qa.py</code> — 可靠程式碼問答函式</h3>
+<p>把馴化框架多層串成<strong>一個</strong>可靠函式，全用 <code>lib/</code> 零件 + <code>ScriptedBackend</code> 模擬 LLM 的「同輸入不同輸出」隨機性，證明整套串起來真能動。對應 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a> §5。</p>
+<p>組裝的層（<code>build_reliable_qa</code>）：</p>
+<ul>
+<li><strong>L0 契約</strong> <code>llm_call.bind(system=...)</code> — 綁定角色，要求輸出帶 <code>```python</code> 區塊。</li>
+<li><strong>L2 驗證</strong> <code>compose.retry_until_valid</code> — 沒有程式碼區塊就重抽（拒絕採樣）。</li>
+<li><strong>L2 修復</strong> <code>compose.guard</code> — 有區塊但語法錯 → 交給 <code>repair</code>（另一次 LLM 呼叫）修。</li>
+<li><strong>L1 確定化</strong> <code>memoize.Memoizer</code> — 同問題不重算（命中完全不碰 backend）。</li>
+</ul>
+<p>mock 設計：answer backend 第一抽無程式碼（被 retry 拒）、第二抽有區塊但少右括號（語法錯，被 guard 送修）；repair backend 回正確版。</p>
+<p>自我測試 assert：retry 應抽 2 次、guard 應觸發 1 次修復、最終語法正確、memoize 第一次 miss 第二次 hit、命中快取後 backend 呼叫數不再增加。<strong>證明每層都生效。</strong></p>
+<h3><code>demos/call_chain_trace.py</code> — 重建 sfc forge 的調用鏈成樹</h3>
+<p>對應 <code>lib/trace</code> 落地。以 subprocess 跑 <code>sfc.py forge</code>，餵 <code>shout</code>、<code>wc_words</code> 兩個 call 請求加 shutdown，收集其 stderr，用 <code>trace.Collector</code> 把 trace 事件重組成調用樹並印出。</p>
+<p>自我測試 assert：樹只有一個 root、root 名為 <code>forge.serve</code>、子節點含 <code>forge.call:shout</code> 與 <code>forge.call:wc_words</code>、每次 call 都有完整 start/end（complete）。</p>
+<p>（附註：router dispatch 也用 <code>trace.child_env()</code> 把 trace id 帶給子 process——跨 process 的樹組裝需外層收集子 process stderr，同理。）</p>
+<h3><code>demos/resumable_batch.py</code> — 可續傳批次處理器</h3>
+<p>驗證「標準狀態目錄慣例」+「中斷恢復慣例」參考實作真能扛中斷（<code>lib/recovery</code> + <code>lib/state_dirs</code>）。批次處理 <code>[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;d&quot;,&quot;e&quot;]</code>（範例處理=轉大寫）：成果寫 <code>.data/batch/results.json</code>、進度 offset 寫 <code>.state/batch/recovery/offset.json</code> + <code>recovery.json</code> manifest。第一次跑到 item 2 前「崩潰」（拋例外，recovery 停在 in_progress）；第二次重跑 <code>startup</code> 偵測到 in_progress + mode=resume → 從斷點接續，不重做已完成的。</p>
+<p>自我測試 assert：第一次應崩潰、崩潰後 detect=resume/status=in_progress、第二次從 index 2 接續、最終 <code>[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;,&quot;E&quot;]</code> 全部完成、完成後 detect=clean。<strong>證明兩個複合規範參考實作能扛中斷。</strong></p>
+<hr />
+<h2>兩套煙霧測試（140 斷言全綠，已實機確認）</h2>
+<h3><code>smoke_test.py</code> — 工具端到端（72 斷言）</h3>
+<p>覆蓋面（依 <code>check()</code> label）：</p>
+<ul>
+<li><strong>indexer</strong>（5）：掃 funcs/ exit 0、找到 upper.py / c_linter.sh、markdown 格式 exit 0、markdown 含標題。</li>
+<li><strong>router</strong>（4）：路由 upper 並執行、把輸入轉大寫、<code>--list</code> 列出三項、不存在 name 回 exit 1。</li>
+<li><strong>switch</strong>（5）：lang=c exit 0、c→c_linter、python→py_linter、<code>--explain</code> 顯示 value、未知 lang 走 default。</li>
+<li><strong>sfc intake / list / call</strong>：intake python exit 0、functions.json/index.json 已建立、拒絕空 body（exit 1）+ 可讀錯誤、intake shell exit 0、list 含 shout/wc_words、shout（python in-process）→ <code>HELLO!</code>、wc_words（shell subprocess）→ <code>4</code>。</li>
+<li><strong>sfc --metadata 變體</strong>（Gap A/B 修法驗證）：<code>shout --metadata</code> 不再被攔截 + 回該函式 metadata、頂層 <code>--metadata</code> = one_shot dispatcher、<code>forge --metadata</code> = <strong>persistent（與頂層不同）</strong>、<code>intake --metadata</code> = stateful_external、未知函式 <code>--metadata</code> → exit 1、對不存在函式回 exit 1。</li>
+<li><strong>sfc forge（Layer 2/3/4）</strong>：forge exit 0、回應 5 行、<code>cmd=list</code>、記憶體查表呼叫 shout → <code>FORGE!</code>、shell wc_words → <code>3</code>、不存在函式回 ok=false、shutdown 回 shutdown=true、<strong>add</strong> 動態加入 rev + 立刻能呼叫、<strong>remove</strong> 移除 shout + list 反映增刪、<strong>persist</strong> 回報已存 + 磁碟 store 含 rev 不含 shout、<strong>Layer 4</strong> shell 超時回 timeout 錯誤封套（含 function 欄位）、unknown_function 也是結構化封套。</li>
+<li><strong>hub</strong>（4）：<code>--metadata</code> exit 0、掃出 4 個 skill、含 upper.py/reverse.py、budget 過小時收斂並標註省略。</li>
+<li><strong>llm_entry_manager</strong>（5）：metadata = persistent、宣告 singleton 資源、complete 回 text+usage、usage 查詢、超預算 → rate limit exceeded（consume rate 守門）。</li>
+<li><strong>chain</strong>（4）：<code>--metadata</code> exit 0、跑管線 upper→reverse 得 <code>IH</code>、derive 複合 lifecycle=one_shot、derive 複合 guarantee=none（最弱）。</li>
+</ul>
+<h3><code>lib_smoke_test.py</code> — lib 各模組（68 斷言）</h3>
+<p>覆蓋面：</p>
+<ul>
+<li><strong>state_dirs</strong>（2）：單檔 JSON 往返、<code>declared()</code> 合規範。</li>
+<li><strong>recovery</strong>（6）：半完成→detect=resume、startup 觸發 on_resume、complete→detect=clean、rollback 模式 detect + 觸發、reset 觸發。<strong>recovery 三模式全覆蓋。</strong></li>
+<li><strong>memoize</strong>（1）：第一次 miss、第二次 hit 且不重算。</li>
+<li><strong>server</strong>（7）：exit 0、ping→pong、list 含 handler、自訂 handler upper(hi)=HI、未知 cmd→ok=false、shutdown 回 shutdown=true、ready 訊號進 stderr。</li>
+<li><strong>singleton</strong>（RateMeter 4 + queue 4 + drain 2）：累計、remaining、would_exceed、尚未超限；queue cancel 中間項、pending 扣掉取消、dequeue 跳過取消項、dequeue 下一個；drain 因超限提前停（處理 3 個）、已超限。</li>
+<li><strong>trace</strong>（7）：只有一個 root、root=outer、inner 掛在 outer 下、兩段都 complete、render 縮排呈現巢狀、<strong>容忍 incomplete span（缺 end）</strong>、render 標記 incomplete。</li>
+<li><strong>call</strong>（4）：InProcess 反轉、Subprocess 轉大寫、<strong>Http round-trip（真實 HTTP）</strong>、from_spec 建 Subprocess。</li>
+<li><strong>llm_call</strong>（3）：預設 EchoBackend、bind 疊 system 進 prompt、bind 疊 postprocess 後綴。</li>
+<li><strong>compose</strong>（馴化組合子全覆蓋）：pipe、fanout、fanout_reduce 取最長、route 走 num/txt 分支、with_fallback 主拋例外走備援、decompose 拆-處理-合、retry_until_valid 抽到合格才回 / 用盡拋 ValidationError、vote 自一致取多數=4、best_of 取最高分、guard 驗證失敗走 repair。</li>
+<li><strong>interact</strong>（6）：run 收斂到 until、max_rounds 安全閥生效、actor_critic 修到驗收 / 第 3 輪收斂 / 永不驗收則用盡輪數、debate judge 取多數=A。</li>
+<li><strong>compose_meta</strong>（軸推導全覆蓋）：mpipe 行為正確、guarantee=最弱(none)、state=聯集、state_dirs=聯集、列出 persistent 相依；fanout 共用 dir→guarantee 退化 none + 帶 warning、不同 dir→guarantee=idempotent；mretry 拒絕包 guarantee=none（前置契約）、包 idempotent OK。</li>
+</ul>
+<p><strong>特別覆蓋面</strong>（README 強調）：真實 HTTP round-trip、所有馴化組合子、actor-critic 交互、軸推導、recovery 三模式、incomplete span——已逐一在 label 中確認。</p>
+<hr />
+<h2>範例函式（funcs/）</h2>
+<p>供 indexer / router / switch / chain demo 使用，每個都遵守 <code>--metadata</code> 契約。</p>
+<ul>
+<li><strong><code>upper.py</code></strong> — 把 stdin（或 <code>--input</code> 檔）轉大寫。Python，自含 <code>sys.path</code> 以保持獨立可執行；<code>register(lifecycle=&quot;one_shot&quot;, state=&quot;stateless&quot;)</code> + <code>intercept()</code> 放在 <code>main()</code>。router demo 的目標、chain demo 第一段。</li>
+<li><strong><code>reverse.py</code></strong> — 把 stdin 反轉（去尾端換行）。Python，同手法。chain demo 第二段（<code>echo hi</code> → upper → <code>HI</code> → reverse → <code>IH</code>）。</li>
+<li><strong><code>c_linter.sh</code></strong> — switch demo 用的假 C linter。讀 stdin 回報「以 C 規則檢查」；<strong>手寫 <code>--metadata</code> JSON</strong>（shell 函式）：<code>{&quot;lifecycle&quot;:&quot;one_shot&quot;,&quot;state&quot;:&quot;stateless&quot;}</code>。</li>
+<li><strong><code>py_linter.sh</code></strong> — 假 Python linter，同結構。</li>
+</ul>
+<hr />
+<h2>SFC store（store/）</h2>
+<p>SFC Layer 0 的預設 store，<strong>已 seed 兩個範例函式</strong>：</p>
+<p><code>store/functions.json</code>：</p>
+<ul>
+<li><strong><code>shout</code></strong>（kind=python）：<code>body = &quot;return stdin.strip().upper() + '!'&quot;</code>，description「把輸入轉大寫並加驚嘆號」，metadata one_shot/stateless。<code>echo &quot;hello there&quot; | sfc shout</code> → <code>HELLO THERE!</code>。</li>
+<li><strong><code>wc_words</code></strong>（kind=shell）：<code>body = &quot;wc -w | tr -d ' '&quot;</code>，description「數輸入有幾個字」，metadata one_shot/stateless。<code>echo &quot;a b c d&quot; | sfc wc_words</code> → <code>4</code>。</li>
+</ul>
+<p><code>store/index.json</code>：恆等映射 <code>{&quot;index&quot;: {&quot;shout&quot;: &quot;shout&quot;, &quot;wc_words&quot;: &quot;wc_words&quot;}}</code>（spike 階段 name→name，結構上預留升級空間）。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="code_03_prototype_lib.html"><span class="dir">← 上一篇</span><span class="fn">code_03_prototype_lib</span></a>
+<a class="next" href="doc_01_nature_overview.html"><span class="dir">下一篇 →</span><span class="fn">doc_01_nature_overview</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

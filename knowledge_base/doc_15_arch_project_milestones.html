@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_15_arch_project_milestones · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_15_arch_project_milestones.md · 202 行</div>
+<h1>doc_15_arch_project_milestones</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/06_project.md</code>（§10 目錄結構 + §10.1 protocol/ + §11 CLI + §12 config + §13 里程碑 M0–M6 + §14 跨平台）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的工程藍圖——<code>src/ai_core/</code> 五元件目錄樹、<code>protocol/</code> 共用 helper 出口、<code>[project.scripts]</code> 六個 CLI 入口、<code>config.json</code> 範例、開發里程碑 M0–M6、跨平台七要點。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li>此版目錄樹（<code>entry_manager/</code>、<code>client/</code>、<code>hub/</code>、<code>small_funcs/</code>、<code>author/</code>、<code>protocol/</code>）與現行<strong>完全不同</strong>：現行正式核心只有單檔 <code>src/ai_core/_core.py</code>（＋ <code>tests/test_core.py</code>），沒有這些子套件。以 CLAUDE.md「目錄結構」一節為現行事實。</li>
+<li>此版 config / CLI 大量依賴 <code>platformdirs</code>、<code>fastapi</code>、<code>litellm</code>、<code>uv</code>，<strong>違反現行純標準庫硬約束</strong>。<code>config.json</code> 範例、port 號（5577/5578）、<code>[project.scripts]</code> 六入口皆為舊版提案。</li>
+<li>此版里程碑 M0–M6 與 roadmap §6 的「v0 最小垂直切片」<strong>不是同一套規劃</strong>；現行以 roadmap 的目標問題驅動法為準，本里程碑僅作參考。</li>
+<li>跨平台一節涵蓋 Windows；現行明定「Windows 不在考慮範圍，目標平台 POSIX」。本版的 Windows 處理（msvcrt、ACL）與現行方向相左。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§10. 目錄結構</h2>
+<pre><code>ai_core/
+├── pyproject.toml
+├── README.md
+├── CLAUDE.md / thinking.md（已存在）
+├── docs/
+│   ├── ARCHITECTURE.md（導覽入口）
+│   └── architectures/（本目錄，詳細設計）
+├── src/ai_core/
+│   ├── entry_manager/      # ai-core-server
+│   │   ├── server.py
+│   │   ├── queue.py
+│   │   ├── ratelimit.py
+│   │   ├── backends.py
+│   │   └── cli.py
+│   ├── client/             # ai-core-call (entry manager wrapper)
+│   │   └── cli.py
+│   ├── hub/
+│   │   ├── scanner.py      # 共用函式掃描 / metadata fetch 邏輯
+│   │   ├── exports.py      # mcp / openai-tools / anthropic-tools 格式轉換
+│   │   ├── server.py       # ai-core-hub-server
+│   │   └── cli.py          # ai-core-hub (one-shot)
+│   ├── small_funcs/
+│   │   ├── registry.py
+│   │   ├── funcs/
+│   │   └── cli.py          # ai-core-sfc
+│   ├── author/             # ai-core-author
+│   │   ├── generator.py    # 透過 ai-core-call 產 function 骨架
+│   │   ├── dryrun.py
+│   │   └── cli.py
+│   └── protocol/
+│       ├── metadata.py     # fetch_metadata、--json-errors helper
+│       └── env.py          # AI_CORE_TOKEN 等環境變數
+├── funcs/                  # 範例外部函式
+│   └── echo.sh
+└── tests/
+</code></pre>
+<h3>§10.1 <code>protocol/</code> —— function 作者與 manager 作者的共用 helper</h3>
+<p><code>src/ai_core/protocol/</code> 是<strong>內部 helper 的集中出口</strong>。所有 function 作者（含 ai_core 自身元件）在實作 <code>--metadata</code>、<code>--json-errors</code>、token 處理、queue / rate-limit / graceful shutdown 等樣板時，<strong>都應該優先 import 此模組</strong>而非自己重抄。</p>
+<p>設計動機（出自 <code>thinking.md</code> 第 4–5 行）：</p>
+<blockquote>
+<p>「以後在製作 function 時，處理那些 metadata 的常用操作如檢查某個 key 存不存在之類，可以弄成一個 python module 方便使用。server 之類也是。」</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>子模組</th>
+<th>已存在</th>
+<th>內容</th>
+<th>主要服務對象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metadata.py</code></td>
+<td>✅</td>
+<td><code>fetch_metadata(path) -&gt; MetadataView</code>、<code>make_json_error</code> / <code>print_json_error</code> / <code>should_use_json_errors</code>（<a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.6 / §5.1）</td>
+<td>所有 function、hub、caller</td>
+</tr>
+<tr>
+<td><code>env.py</code></td>
+<td>✅</td>
+<td>全系統共用環境變數名稱常數（<code>AI_CORE_TOKEN</code> / <code>AI_CORE_FUNCS_DIR</code> / …）</td>
+<td>所有元件</td>
+</tr>
+<tr>
+<td><code>server.py</code></td>
+<td>⏳ 規劃</td>
+<td>Singleton Resource Manager Pattern 的 server 樣板：token 產生 / 讀檔（<a href="doc_12_arch_entry_manager.html">doc_12_arch_entry_manager.md</a> §6.13）、FastAPI app 工廠、graceful shutdown、<code>--metadata</code> / <code>--entry-metadata</code> 端點骨架</td>
+<td>任何 server-backed function、第二個以後的 singleton manager</td>
+</tr>
+<tr>
+<td><code>queue.py</code></td>
+<td>⏳ 規劃</td>
+<td>通用 per-entry FIFO queue + worker + <code>time_to_wait_ms</code> 逾時處理（從 <code>entry_manager/queue.py</code> 抽離通用部分）</td>
+<td>任何 entry-managing singleton</td>
+</tr>
+<tr>
+<td><code>ratelimit.py</code></td>
+<td>⏳ 規劃</td>
+<td>rpm / tokens / cost 三軸限額的通用實作（從 <code>entry_manager/ratelimit.py</code> 抽離通用部分）</td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<p><strong>抽取時機（YAGNI）</strong>：⏳ 規劃中的三項<strong>不在第一版做</strong>，而是等<strong>第二個 singleton manager 出現</strong>時才從 <code>entry_manager/</code> 抽出，避免過早抽象。但目錄位置先預留，docstring 也指向此處，讓未來抽取時不需要改 import path 大手術。</p>
+<p><strong>對 function 作者的承諾</strong>：</p>
+<ul>
+<li><code>protocol/</code> 的 API 一旦穩定就盡量不破壞性變更</li>
+<li>所有 helper 都允許 graceful 降級（缺欄位用合理預設、不丟例外給 caller），與 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.6 / §5 的容錯原則一致</li>
+<li>function 作者<strong>不需要也不應該</strong> import <code>entry_manager/</code> / <code>hub/</code> / 其他元件內部，只應使用 <code>protocol/</code></li>
+</ul>
+<hr />
+<h2>§11. CLI 入口（<code>pyproject.toml</code>）</h2>
+<pre><code class="language-toml">[project.scripts]
+ai-core-server      = &quot;ai_core.entry_manager.cli:main&quot;
+ai-core-call        = &quot;ai_core.client.cli:main&quot;
+ai-core-hub         = &quot;ai_core.hub.cli:main&quot;             # one-shot
+ai-core-hub-server  = &quot;ai_core.hub.server:main&quot;          # 常駐
+ai-core-sfc         = &quot;ai_core.small_funcs.cli:main&quot;
+ai-core-author      = &quot;ai_core.author.cli:main&quot;
+</code></pre>
+<p>跨平台都能用，不依賴 shebang。</p>
+<hr />
+<h2>§12. 配置範例</h2>
+<blockquote>
+<p>⚠️ <strong>與現行衝突</strong>：<code>platformdirs</code> 為外部相依，違反現行純標準庫硬約束。port、config schema 皆為舊版提案。</p>
+</blockquote>
+<p>位置：<code>platformdirs.user_config_dir(&quot;ai_core&quot;)/config.json</code></p>
+<ul>
+<li>Linux：<code>~/.config/ai_core/config.json</code></li>
+<li>Windows：<code>%APPDATA%\ai_core\config.json</code></li>
+</ul>
+<pre><code class="language-json">{
+  &quot;server&quot;: {&quot;host&quot;: &quot;127.0.0.1&quot;, &quot;port&quot;: 5577},
+  &quot;hub_server&quot;: {&quot;host&quot;: &quot;127.0.0.1&quot;, &quot;port&quot;: 5578},
+  &quot;models&quot;: {
+    &quot;ollama-llama3&quot;: {
+      &quot;backend&quot;: &quot;ollama&quot;,
+      &quot;model&quot;: &quot;llama3&quot;,
+      &quot;base_url&quot;: &quot;http://localhost:11434&quot;
+    },
+    &quot;lmstudio-local&quot;: {
+      &quot;backend&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;local-model&quot;,
+      &quot;base_url&quot;: &quot;http://localhost:1234/v1&quot;,
+      &quot;api_key&quot;: &quot;not-needed&quot;
+    },
+    &quot;gemini-flash&quot;: {
+      &quot;backend&quot;: &quot;gemini&quot;,
+      &quot;model&quot;: &quot;gemini-2.0-flash&quot;,
+      &quot;api_key_env&quot;: &quot;GEMINI_API_KEY&quot;,
+      &quot;limits&quot;: {&quot;rpm&quot;: 15, &quot;tokens_per_day&quot;: 1000000, &quot;cost_per_day&quot;: 5.0},
+      &quot;concurrency&quot;: 5
+    }
+  }
+}
+</code></pre>
+<hr />
+<h2>§13. 開發里程碑</h2>
+<blockquote>
+<p>⚠️ <strong>與現行衝突</strong>：此 M0–M6 與 roadmap §6「v0 最小垂直切片」不是同一套規劃；以 roadmap 為現行事實。</p>
+</blockquote>
+<h3>M0 — 骨架與協議（半天 ~ 一天）</h3>
+<ul>
+<li>[ ] <code>pyproject.toml</code> + <code>uv</code> lockfile</li>
+<li>[ ] 6 個 CLI entrypoint 空殼</li>
+<li>[ ] <code>protocol/metadata.py</code>：<code>fetch_metadata</code>（含容錯）、<code>--json-errors</code> helper</li>
+<li>[ ] 範例 <code>funcs/echo.sh</code> 支援 <code>--input/--output/--metadata</code></li>
+<li>[ ] 測試：<code>--metadata</code> 容錯（缺欄位 / 不合法 JSON / 函式根本不支援，都 graceful）</li>
+</ul>
+<h3>M1 — Entry Manager MVP</h3>
+<ul>
+<li>[ ] FastAPI server + <code>/call</code>、<code>/tasks/&lt;id&gt;</code>、<code>/status</code>、<code>/entries</code>、<code>/entries/&lt;name&gt;</code></li>
+<li>[ ] litellm 接通三個 backend（ollama / lm studio / gemini）</li>
+<li>[ ] per-model asyncio queue + worker</li>
+<li>[ ] <code>ai-core-call</code> wrapper（同步 + <code>--async</code> 模式）</li>
+<li>[ ] <strong>Dogfood</strong>：<code>ai-core-call</code> 自身實作 <code>--metadata</code> 與 <code>--entry-metadata</code></li>
+</ul>
+<h3>M2 — Rate limit + 真實 backend 測試</h3>
+<ul>
+<li>[ ] rpm / tokens / cost 限制與超限 stderr</li>
+<li>[ ] <code>--json-errors</code> 旗標</li>
+<li>[ ] 對 ollama / lm studio / gemini 各跑通一次</li>
+<li>[ ] 失敗重試與排隊降級</li>
+</ul>
+<h3>M3 — Function Hub（雙形態）</h3>
+<ul>
+<li>[ ] <code>hub/scanner.py</code>：掃描 + 容錯抓 metadata</li>
+<li>[ ] <code>ai-core-hub</code>（one-shot）：<code>--build-list</code></li>
+<li>[ ] <code>hub/exports.py</code>：mcp / openai-tools / anthropic-tools 三種 export</li>
+<li>[ ] <code>ai-core-hub-server</code>：runtime discovery API（含 <code>/funcs</code>、<code>/search</code>、<code>/graph</code>、<code>/export</code>）</li>
+<li>[ ] 用 <code>ai-core-call</code> 自己對 list.txt 做摘要 — 自舉</li>
+</ul>
+<h3>M3.5 — Agent Docs 自動化</h3>
+<ul>
+<li>[ ] <code>ai-core-hub --gen-agent-md &gt; AGENTS.md</code>（產生通用 agent 入口文件）</li>
+<li>[ ] <code>ai-core-hub --gen-functions-md &gt; auto/FUNCTIONS.md</code>（產生函式清單）</li>
+<li>[ ] <code>ai-core-hub --export claude-skill</code> 產生 <code>auto/skills/&lt;name&gt;/SKILL.md</code></li>
+<li>[ ] <code>ai-core-author</code> 成功註冊後自動觸發 <code>--gen-functions-md</code> + <code>--gen-agent-md</code>，讓 <code>auto/</code> 永遠最新</li>
+<li>[ ] <code>auto/</code> 目錄內容納入 CI / pre-commit 驗證（與 <code>funcs/</code> 一致性）</li>
+</ul>
+<h3>M4 — Small Function Center（參考實作 <code>ai-core-sfc</code>）</h3>
+<ul>
+<li>[ ] 子函式機制（Python 模組動態 import / 掛載；新增子函式不需改核心）</li>
+<li>[ ] dispatch CLI：<code>ai-core-sfc &lt;dispatch-flag&gt; &lt;name&gt; --input X --output Y</code>（旗標名稱由實作者決定）</li>
+<li>[ ] SFC 自身的 <code>--metadata</code></li>
+<li>[ ] <code>--list</code> 列出子函式名稱</li>
+<li>[ ] 子函式 metadata 查詢（pass-through 或 SFC 自管，二擇一）</li>
+<li>[ ] hub scanner 整合測試：能正確展開 SFC 內所有子函式</li>
+</ul>
+<h3>M5 — ai-core-author（自舉）</h3>
+<ul>
+<li>[ ] <code>--spec</code> 介面 + dry-run + 註冊流程</li>
+<li>[ ] 多語言骨架產出（先支援 bash / python）</li>
+<li>[ ] 失敗回饋 LLM 重試機制</li>
+<li>[ ] author 自身遵守 <code>--metadata</code>，可被其他 AI 透過 hub 發現</li>
+</ul>
+<h3>M6 — calling pack 範例集 + README</h3>
+<ul>
+<li>[ ] <code>llm_call_coding_question</code> 等典型 calling pack 範例</li>
+<li>[ ] README 教學（人類視角 + AI agent 視角）</li>
+</ul>
+<hr />
+<h2>§14. 跨平台注意事項</h2>
+<blockquote>
+<p>⚠️ <strong>與現行衝突</strong>：現行目標平台為 POSIX，Windows 不在考慮範圍。下表 Windows 相關處理（msvcrt、ACL、named pipe）為舊版才有的考量。</p>
+</blockquote>
+<ol>
+<li>路徑全用 <code>pathlib.Path</code>，不寫死 <code>/</code> 或 <code>\</code></li>
+<li>Subprocess 一律 <code>shell=False</code> + list args（避開 Windows quote 地獄）</li>
+<li>檔案 I/O 強制 <code>encoding=&quot;utf-8&quot;</code></li>
+<li>CLI 透過 <code>[project.scripts]</code>，不依賴 shebang</li>
+<li>Server port 衝突：第一版只做 TCP（unix socket / named pipe 留待未來）</li>
+<li>config / data dir 一律走 <code>platformdirs</code></li>
+<li>檔案寫入 lock：用 <code>fcntl</code>（Linux）+ <code>msvcrt</code>（Windows）寫薄 wrapper，或乾脆用單行原子 append（POSIX <code>O_APPEND</code> + Windows 對應）</li>
+</ol>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_14_arch_author_sfc.html"><span class="dir">← 上一篇</span><span class="fn">doc_14_arch_author_sfc</span></a>
+<a class="next" href="doc_16_arch_agents.html"><span class="dir">下一篇 →</span><span class="fn">doc_16_arch_agents</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

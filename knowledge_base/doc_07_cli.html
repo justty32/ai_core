@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cli_spec.md · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_07_cli.md · 83 行</div>
+<hr />
+<h2>來源: core_nature/cli_spec.md（75 行）
+狀態: 定案規範
+一行摘要: CLI 介面契約——CLI 呼叫即 Lisp 風格函式呼叫（keyword pair → dict / positionals → array）、argparse 解析、本規範取捨與 --metadata 新增項。</h2>
+<blockquote>
+<p>軸定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；library 契約（含 --metadata 攔截）見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>；正式核心實作狀態見 <a href="code_01_core_library.html">code_01_core_library.md</a>。</p>
+</blockquote>
+<h1>cli_spec.md</h1>
+<p>本規範對 CLI 的標準定義。以 <code>terminal_model.md</code> §1 為基礎，記錄本規範的選擇與新增項目。</p>
+<hr />
+<h2>§2 本規範的 CLI 標準</h2>
+<h3>2.0 概念模型：回到 Lisp</h3>
+<p>CLI 呼叫本質上是一個 <strong>Lisp 風格的函式呼叫</strong>，只是用不同語法序列化：</p>
+<pre><code class="language-lisp">; Lisp
+(program pos1 pos2 :key1 val1 :key2 val2)
+
+; CLI 等價形式
+program pos1 pos2 --key1 val1 --key2 val2
+</code></pre>
+<p>對應關係：</p>
+<table>
+<thead>
+<tr>
+<th>CLI 元素</th>
+<th>Lisp 對應</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一個 word（程式名）</td>
+<td><code>car</code></td>
+<td>函式本體</td>
+</tr>
+<tr>
+<td>Positional args</td>
+<td>list 的 bare cdr 元素</td>
+<td>沒有 key 裝飾的純值</td>
+</tr>
+<tr>
+<td><code>--key value</code></td>
+<td>keyword pair（<code>:key value</code>）</td>
+<td>嵌入 list 的 key-value pair</td>
+</tr>
+</tbody>
+</table>
+<p>整個 argv（去掉程式名後）是一個線性 list，裡面混雜著 bare 元素（positionals）與 pair（flags）。實作時把 pair 部分彙聚成 dict，bare 部分保留為 array——這只是實作層的便利形式，概念上仍是同一個 list。</p>
+<pre><code>argv cdr = [pos1, pos2, (:key1, val1), (:key2, val2)]
+           ↓ 實作時分拆
+positionals = [pos1, pos2]
+flags       = {key1: val1, key2: val2}
+</code></pre>
+<p><code>--</code> 前綴就是 Lisp 的 <code>:</code> 前綴——標示「這是 keyword，不是 bare value」。</p>
+<hr />
+<h3>2.1 解析工具</h3>
+<ul>
+<li><strong>Python</strong>：<code>argparse</code>（標準庫，零外部相依）</li>
+<li>解析結果透過 <code>vars(parser.parse_args())</code> 取得 dict，可直接 <code>json.dumps()</code></li>
+<li>短旗標透過 <code>add_argument('-x', '--flag', ...)</code> 宣告為長旗標的別名</li>
+</ul>
+<h3>2.2 解析結果結構</h3>
+<p>各旗標的值型別由 <code>argparse</code> 宣告決定：</p>
+<table>
+<thead>
+<tr>
+<th>宣告方式</th>
+<th>value 型別</th>
+<th>範例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>action='store_true'</code></td>
+<td><code>bool</code></td>
+<td><code>--verbose</code> → <code>True</code></td>
+</tr>
+<tr>
+<td><code>type=str</code>（預設）</td>
+<td><code>str</code></td>
+<td><code>--output a.txt</code> → <code>&quot;a.txt&quot;</code></td>
+</tr>
+<tr>
+<td><code>nargs='+'</code></td>
+<td><code>list[str]</code></td>
+<td><code>--files a.txt b.txt</code> → <code>[&quot;a.txt&quot;, &quot;b.txt&quot;]</code></td>
+</tr>
+<tr>
+<td><code>nargs='*'</code></td>
+<td><code>list[str]</code>（可空）</td>
+<td>同上，允許零個</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>2.3 本規範的取捨</h3>
+<p><strong>不採用</strong>（argparse 不原生支援或本規範排除）：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-abc</code>（短旗標合併）</td>
+<td>argparse 不原生支援</td>
+</tr>
+<tr>
+<td><code>--flag=value</code>（等號形式）</td>
+<td>argparse 支援但不強制，規範不要求</td>
+</tr>
+</tbody>
+</table>
+<p><strong>新增</strong>（超出 <code>terminal_model.md</code> 的本系統規定）：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--metadata</code></td>
+<td>所有工具必須實作，回傳 JSON 描述自身（執行時間、記憶體用量、格式等）</td>
+</tr>
+</tbody>
+</table>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_06_lib_contract.html"><span class="dir">← 上一篇</span><span class="fn">doc_06_lib_contract</span></a>
+<a class="next" href="doc_08_composite.html"><span class="dir">下一篇 →</span><span class="fn">doc_08_composite</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

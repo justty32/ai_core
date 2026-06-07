@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_02 — 系統的整體隱喻 · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l3);background:rgba(0,0,0,.25)">③ 歷史</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_02_metaphors.md · 107 行</div>
+<h1>note_02 — 系統的整體隱喻</h1>
+<ul>
+<li><strong>來源</strong>：<code>other.md</code>（檔名「隨想筆記」），其中「牢籠與猴子」「滑坡軌道與球」兩節（2026-05-21）</li>
+<li><strong>狀態</strong>：歷史隨想筆記（2026-05-21）；部分想法未完成（標「待續／待補」）。隱喻仍有啟發價值；與現行衝突時以 <code>roadmap.md</code> / <code>core_nature/</code> 為準。</li>
+<li><strong>一行摘要</strong>：用「牢籠與猴子」描述硬編碼邏輯如何框限 LLM，用「滑坡軌道與球」描述函數執行形式（one-shot / multi-shot / persist / state）的本質類比。</li>
+</ul>
+<blockquote>
+<p>相關：跨環境與執行狀態分類的思考見 <a href="note_03_cross_environment.html">note_03_cross_environment.md</a>；執行形式的規範定案見 core_nature（<code>execution_forms.md</code> / <code>axis_spec.md</code>）。</p>
+</blockquote>
+<hr />
+<h2>一、牢籠與猴子：系統的整體隱喻</h2>
+<p>我預期要做的東西，是一個由<strong>無數細線編織出的牢籠</strong>。</p>
+<h3>細線 = 硬編碼邏輯</h3>
+<p><strong>細線 = 硬編碼邏輯（符號主義的象徵）。</strong> 之所以說是「細」線，是因為相比於 LLM 的不可知性與龐大的可能性空間，那些硬編碼邏輯就像細線一樣——單獨一條微不足道，但編織起來能成形。</p>
+<p><strong>整個運作過程 = 猴子在牢籠中玩耍。</strong> 猴子就是 LLM（及其行為）。</p>
+<h3>出入口：本質是一個函數</h3>
+<p>牢籠有出入口，<strong>出入口本質上是一個函數，目標是處理猴子</strong>。出入口同樣用細線編織出特定的形狀，只讓<strong>特定狀態的猴子</strong>通過：</p>
+<ul>
+<li><strong>入口 = 篩選</strong>（對輸入的 filter）</li>
+<li><strong>出口 = 最後的處理</strong>（對輸出的 post-processing）</li>
+</ul>
+<h3>牢籠 = 邊界</h3>
+<p>牢籠表示了猴子的<strong>邊界</strong>。雖然仍有一些毛髮細屑會通過（少量洩漏無法完全杜絕），但至少<strong>不會讓整隻猴子通過</strong>——即不會整體失控。</p>
+<p>牢籠的邊界可能是<strong>多層嵌套</strong>的，代表多個沙盒作為安全措施。</p>
+<p>這些邊界是用<strong>工業編織</strong>的：代表這方面通常死板但嚴謹可靠，無需人工處理細項——是自動化、標準化的部分。</p>
+<h3>空中纜線：手工設置的欄杆與導航</h3>
+<p>牢籠中會用<strong>粗線手工設置空中纜線</strong>，這就像是欄杆和導航，能讓猴子抓住欄杆前往出口。</p>
+<ul>
+<li>猴子仍然可能<strong>手滑抓不住</strong>——這代表 LLM 的隨機出錯性。</li>
+<li>所以手工設置時需要<strong>精心設計</strong>，兩個目標：
+<ol>
+<li>讓猴子能很好地找到下一根<strong>牢固且容易抓握</strong>的纜繩；</li>
+<li>盡可能讓纜繩的<strong>數量減少</strong>——這是為了減少人類的手工心力。</li>
+</ol>
+</li>
+</ul>
+<blockquote>
+<p>我的一些新想法：越強的 LLM，就代表更聰明的猴子。但 LLM 的本質決定了它仍然是猴子，仍然會做出不可預期的行為。</p>
+</blockquote>
+<h3>最終目標：飛輪</h3>
+<p>精心設計關卡，讓猴子在牢籠中<strong>經過訓練後，能自行編織纜繩</strong>，建立另一個更好的牢籠，最終實現<strong>飛輪</strong>——猴子一代比一代聰明。</p>
+<p>猴子本身的記憶，就像是 agent 的記憶或 skill。</p>
+<hr />
+<h2>二、滑坡軌道與球：執行形式的本質隱喻</h2>
+<p>關於 one-shot、multi-shot 這些用來描述「可執行的東西」之形式的字詞，它們的本質是什麼？可以類比為一顆球在<strong>滑坡軌道</strong>上，從頂端滑落到底端的過程。</p>
+<ul>
+<li><strong>軌道 = 函數</strong></li>
+<li><strong>球在頂端的狀態 = 輸入</strong></li>
+<li><strong>球在底端的狀態 = 輸出</strong></li>
+</ul>
+<h3>最基本形式</h3>
+<p>什麼都沒有——球乖乖滑到底之後，什麼都沒變。（無狀態、無副作用的純通過）</p>
+<h3>one-shot</h3>
+<p>在滑道中央添加一些<strong>噴漆口</strong>，球經過之後會被上色。這就是最簡單的 one-shot 函數。</p>
+<h3>multi-shot</h3>
+<p>在滑道之外立一個標示：</p>
+<blockquote>
+<p>「此滑道可供已上色的球使用，結果是球的顏色會愈變愈深。」</p>
+</blockquote>
+<p>使用者當然可以每次都拿沒上色的球去滑，但也可以拿已經上色的球去滑。</p>
+<p>而真正的精髓在於，滑道又另外立了一個牌子說明：</p>
+<blockquote>
+<p>「此滑道的目的就是加深球的顏色，尚未被上色的球不會受影響。」</p>
+</blockquote>
+<p>那麼雖然使用者仍可以放入未上色的球，但……（想法未完成，待續）</p>
+<h3>記憶體與執行時間管理</h3>
+<p>這些都可以很簡單地想出相應的比喻。（待補）</p>
+<h3>persist 函數</h3>
+<p>球在正常情況下會<strong>一直卡在滑道中等待互動</strong>。</p>
+<h3>異常狀況：錯誤與強制終止</h3>
+<p>額外要說明的兩種情況：</p>
+<ul>
+<li><strong>球滑出滑道外</strong> → 代表錯誤（escape / 例外）</li>
+<li><strong>使用者在球正在滑落時，手動阻止球滑落</strong> → 代表使用者強行終止（interrupt）</li>
+</ul>
+<h3>自有儲存狀態的變體</h3>
+<p>球每經過滑道一次，<strong>滑道本身</strong>就會做一些變化或計數。這種與 multi-shot 類似，但其函數狀態是<strong>自有儲存</strong>的（state 存在函數自己身上，而非由球攜帶）。</p>
+<h3>範疇延伸</h3>
+<p>現在講的都是<strong>單一函數</strong>的狀況。之後我們要進入<strong>多個函數</strong>的狀況——也就是 hub、router、indexer 等等。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="note_01_vision_and_origin.html"><span class="dir">← 上一篇</span><span class="fn">note_01_vision_and_origin</span></a>
+<a class="next" href="note_03_cross_environment.html"><span class="dir">下一篇 →</span><span class="fn">note_03_cross_environment</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

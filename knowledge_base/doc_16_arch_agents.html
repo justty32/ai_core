@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_16_arch_agents · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_16_arch_agents.md · 123 行</div>
+<h1>doc_16_arch_agents</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/07_agents.md</code>（§15 Agent 整合與文檔策略）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 Agent 整合策略——文檔分層（手寫設計 vs 自動產生能力）、<code>AGENTS.md</code> 模板、hub <code>--export</code> 六種格式、自動文檔更新三觸發點、Self-Sufficiency 三階段演進路徑、與現成 agent 的接入 hint。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li>此版以 <code>ai-core-hub --gen-*</code> / <code>--export</code> 自動產生 agent 文檔（AGENTS.md、FUNCTIONS.md、claude-skill、tools.openai/anthropic.json、server.mcp.json）。現行 Function Hub 規範未定（見 <a href="doc_13_arch_hub.html">doc_13_arch_hub.md</a>），這些 export/gen 旗標屬參考設計。</li>
+<li>Self-Sufficiency 三階段（Agent-assisted → Function-rich → Self-sufficient）與 roadmap 的「LLM 退縮到翻譯層 + 模糊前沿、其餘確定性碼」終點形狀概念相容，方向一致。</li>
+<li>本版提到的 <code>docs/EVOLUTION.md</code> 當時尚未建立。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§15. Agent 整合與文檔策略</h2>
+<p>ai_core 初期使用方式是「人類 + 現成 AI agent（Claude Code / Cline / Cursor / Aider / ...）+ ai_core function」三方協作。<strong>長期目標是 function 集合成熟到能替代 agent 的部分功能</strong> — 這條演進路徑要求文檔系統從一開始就把 agent 當一級讀者。</p>
+<h3>15.1 文檔分層</h3>
+<pre><code>ai_core/
+├── README.md              # 人類入口；快速上手 + 用例
+├── CLAUDE.md              # Claude Code 專用入口（已存在）
+├── AGENTS.md              # 通用 agent 入口；任何 agent 進專案先讀這個
+├── docs/
+│   ├── ARCHITECTURE.md    # 設計導覽入口（指向 architectures/）
+│   └── architectures/     # 詳細設計（本目錄）
+└── auto/                  # 由 ai-core-hub 產生 / 更新，不手寫
+    ├── FUNCTIONS.md       # 所有 function 清單與用法（人類 + agent 兩用）
+    ├── CHAINS.md          # 常見 calling chain pattern
+    ├── tools.openai.json  # OpenAI tools schema export
+    ├── tools.anthropic.json
+    ├── server.mcp.json    # MCP server descriptor
+    └── skills/            # Claude Code skills 格式
+        └── &lt;func_name&gt;/
+            └── SKILL.md
+</code></pre>
+<p><strong>手寫 vs 自動產生</strong>：手寫文件描述「設計與哲學」（少變動）；自動產生文件描述「目前能力」（隨 function 集合變動）— 兩者分開避免手動同步。</p>
+<h3>15.2 AGENTS.md 結構</h3>
+<p>新增專案根目錄的 <code>AGENTS.md</code> 作為通用 agent 入口（不只給 Claude Code，所有 agent 都看這個）。建議模板：</p>
+<pre><code class="language-markdown"># AI Core — Agent Guide
+
+## 你能用 ai_core 做什麼
+- 呼叫 LLM             → ai-core-call --entry &lt;model&gt; --input X --output Y
+- 列出可用 function    → ai-core-hub --build-list   或   GET hub-server /funcs
+- 製作新 function      → ai-core-author --spec spec.json
+
+## 進入專案後的建議流程
+1. 跑 `ai-core-hub --build-list` 拿到當前 function 清單
+2. 對任一 function 不確定用法時：`&lt;func&gt; --metadata`
+3. 需要 LLM 推理：呼 `ai-core-call`
+4. 需要新能力且確定要寫 function：呼 `ai-core-author`，**不要直接手寫到 funcs/**
+
+## 行為規範
+- 每個 function 都應遵守 --metadata 協議；不確定先看 metadata
+- 錯誤訊息走 stderr；機器可解析錯誤加 `--json-errors` 旗標
+
+## Tool calling schema（給支援 native tool calling 的 agent）
+- OpenAI format    → auto/tools.openai.json
+- Anthropic format → auto/tools.anthropic.json
+- MCP server       → auto/server.mcp.json
+</code></pre>
+<p><code>AGENTS.md</code> 由 <code>ai-core-hub --gen-agent-md &gt; AGENTS.md</code> 產生，並在 function 集合變動時可重新跑。</p>
+<h3>15.3 Hub <code>--export</code> 支援的 agent 格式</h3>
+<table>
+<thead>
+<tr>
+<th>格式</th>
+<th>用途</th>
+<th>對應 agent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openai-tools</code></td>
+<td>OpenAI tools schema</td>
+<td>GPT、Cursor、Aider 等</td>
+</tr>
+<tr>
+<td><code>anthropic-tools</code></td>
+<td>Anthropic tools schema</td>
+<td>Claude API</td>
+</tr>
+<tr>
+<td><code>mcp</code></td>
+<td>MCP server descriptor</td>
+<td>Claude Desktop、MCP-aware client</td>
+</tr>
+<tr>
+<td><code>claude-skill</code></td>
+<td>Claude Code skills（<code>SKILL.md</code> + frontmatter）</td>
+<td>Claude Code</td>
+</tr>
+<tr>
+<td><code>agent-md</code></td>
+<td>通用 markdown agent guide（產生 AGENTS.md）</td>
+<td>任何 agent</td>
+</tr>
+<tr>
+<td><code>functions-md</code></td>
+<td>函式清單 markdown（產生 auto/FUNCTIONS.md）</td>
+<td>任何 agent / 人類</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">ai-core-hub --export openai-tools ./funcs/* &gt; auto/tools.openai.json
+ai-core-hub --export claude-skill ./funcs/* --out auto/skills/
+ai-core-hub --gen-agent-md &gt; AGENTS.md
+ai-core-hub --gen-functions-md &gt; auto/FUNCTIONS.md
+</code></pre>
+<p>Server 版（<code>ai-core-hub-server</code>）對應端點：<code>GET /export?format=...</code>、<code>GET /agents-md</code>、<code>GET /functions-md</code>。</p>
+<h3>15.4 自動文檔更新時機</h3>
+<p>設計三個觸發點：</p>
+<ol>
+<li><strong>手動</strong>：使用者 / agent 跑 <code>ai-core-hub --gen-*</code></li>
+<li><strong>註冊時觸發</strong>：<code>ai-core-author</code> 註冊新 function 後自動跑 <code>--gen-functions-md</code> 與 <code>--gen-agent-md</code>，讓 auto/ 永遠最新</li>
+<li><strong>CI / pre-commit</strong>（可選）：把 <code>auto/</code> 視為產出物，<code>pre-commit</code> hook 驗證它與當前 funcs/ 一致</li>
+</ol>
+<h3>15.5 Self-Sufficiency 演進路徑</h3>
+<p>詳細路線圖待後續展開（規劃寫成 <code>docs/EVOLUTION.md</code>，目前尚未建立）。本節先給概念輪廓：</p>
+<table>
+<thead>
+<tr>
+<th>階段</th>
+<th>狀態</th>
+<th>agent 角色</th>
+<th>ai_core 重點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Agent-assisted</td>
+<td>function 集合稀少</td>
+<td>主導；人類提需求、agent 直接做</td>
+<td>提供 LLM 入口、author 工具</td>
+</tr>
+<tr>
+<td>2. Function-rich</td>
+<td>function 豐富、多數任務有對應 function</td>
+<td>orchestrator；決定組哪些 function</td>
+<td>calling chain template、語意搜尋</td>
+</tr>
+<tr>
+<td>3. Self-sufficient</td>
+<td>常用任務有 chain template</td>
+<td>輕薄 router 或不需要</td>
+<td>chain 自動萃取、ai-core-author 自動發現重複模式</td>
+</tr>
+</tbody>
+</table>
+<p>第一版（M0–M6）專注階段 1。階段 2 / 3 等真實使用模式累積後再設計，不預先過度工程。</p>
+<h3>15.6 與現成 agent 的整合 hint</h3>
+<p>ai_core 不深度耦合任何特定 agent，但提供慣例配置降低接入摩擦：</p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>整合方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude Code</td>
+<td>已有 <code>CLAUDE.md</code>；可選 <code>auto/skills/</code> 載入為 skills</td>
+</tr>
+<tr>
+<td>Cursor</td>
+<td><code>.cursorrules</code> 指向 <code>AGENTS.md</code></td>
+</tr>
+<tr>
+<td>Aider</td>
+<td><code>.aider.conf.yml</code> 把 <code>AGENTS.md</code> 加進 context</td>
+</tr>
+<tr>
+<td>Cline</td>
+<td>同 Cursor，讀 <code>AGENTS.md</code></td>
+</tr>
+<tr>
+<td>MCP client</td>
+<td>啟動 <code>ai-core-hub-server</code> 並用 <code>auto/server.mcp.json</code></td>
+</tr>
+</tbody>
+</table>
+<p>這些是文件層的接入；底層 function 不變。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_15_arch_project_milestones.html"><span class="dir">← 上一篇</span><span class="fn">doc_15_arch_project_milestones</span></a>
+<a class="next" href="doc_17_arch_changelog.html"><span class="dir">下一篇 →</span><span class="fn">doc_17_arch_changelog</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

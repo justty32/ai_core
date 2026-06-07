@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_20 — LLM 隨機性馴化框架（把唯一非確定性函式轉成可靠複合函式） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_20_taming_framework.md · 152 行</div>
+<h1>doc_20 — LLM 隨機性馴化框架（把唯一非確定性函式轉成可靠複合函式）</h1>
+<ul>
+<li><strong>來源</strong>：<code>try_implement/docs/llm_taming_framework.md</code></li>
+<li><strong>狀態</strong>：原型概念文件（部分已扶正 / 部分暫緩）。其中 <code>nondeterministic</code> 已扶正為<strong>第九軸（定案）</strong>；本文部分開放問題（軸推導、重試前置契約是否入規範）對應 A4 等議題仍⏸暫緩至 v0。</li>
+<li><strong>一行摘要</strong>：把整個 ai_core 重讀成一台機器——把「LLM 這個唯一的非確定性函式」轉成「可靠、可組合、可重現的複合函式」；五層框架（契約 / 確定化 / 驗證 / 聚合 / 編排）各層皆對應已實作零件。</li>
+</ul>
+<blockquote>
+<p>對應實作見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>（<code>lib/llm_call.py</code>、<code>lib/compose.py</code>、<code>lib/memoize.py</code>）與 <code>tools/hub.py</code>、<code>tools/router.py</code>、<code>tools/switch.py</code>。組合維度與交互模型見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>。八軸/第九軸定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>。</p>
+</blockquote>
+<hr />
+<h2>0. 一句話</h2>
+<p><strong>整個 ai_core 可以重新讀成一台機器：把「LLM 這個唯一的非確定性函式」，轉成「可靠、可組合、可重現的複合函式」。</strong> 八軸、複合規範、組合維度，全都是這台機器的零件。</p>
+<hr />
+<h2>1. 問題：LLM 是唯一的非確定性函式</h2>
+<p>ai_core 把一切都當函式 <code>f(str)-&gt;str</code>。絕大多數函式是確定的（同輸入同輸出）。<strong>只有 LLM 不是</strong>：<code>llm(prompt)</code> 每次可能不同。隨機性有兩面——</p>
+<ul>
+<li><strong>壞處</strong>：不可靠、不可重現、難驗證、難除錯。</li>
+<li><strong>好處</strong>：多樣性、創造力、能跳出固定套路。</li>
+</ul>
+<p>所以目標<strong>不是消滅隨機性</strong>，而是：<strong>在需要確定的地方確定，在需要多樣的地方多樣。</strong> 「馴化」是給隨機性裝上閥門，不是拔掉它。</p>
+<blockquote>
+<p><strong>扶正狀態</strong>：本文標記 LLM 為「唯一的非確定性函式」這一洞見，已成為<strong>第九軸 <code>nondeterministic</code></strong> 的設計來源（定案）。第九軸值：<code>true</code> ＝未認證隨機；<code>{model, test_set, stability}</code> ＝證書。詳見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>。</p>
+</blockquote>
+<hr />
+<h2>2. 框架：五個層次</h2>
+<p>由內而外，每層把上一層的隨機性再收一點。每層都對應 try_implement 已實作的零件。</p>
+<h3>L0 契約層 — 收窄介面，讓隨機性無處可藏</h3>
+<p>隨機性的傷害與<strong>輸出空間大小</strong>成正比。自由作文有無限種寫法；「回 yes 或 no」只有兩種。</p>
+<ul>
+<li><code>--metadata</code> + typed I/O 通道（八軸 §1）把函式介面固定下來。</li>
+<li>要求 LLM 輸出<strong>結構化格式</strong>（JSON / 固定枚舉 / 受限語法），把作文題變成填空題。</li>
+<li>對應實作：<code>llm_call.bind(suffix=&quot;只回 JSON，schema 為…&quot;)</code> 把格式要求綁進 prompt。</li>
+</ul>
+<blockquote>
+<p>原則：<strong>能用枚舉就不要用自由文字。</strong> 輸出空間越小，後面幾層越省力。</p>
+</blockquote>
+<h3>L1 確定化層 — 在該確定的地方強制確定</h3>
+<ul>
+<li><strong>memoize</strong>（<code>lib/memoize.py</code>）：同輸入直接回快取 → 對重複輸入，LLM 變成確定函式。快取即是「凍結的隨機性」。這也是省錢/省算力的主力。</li>
+<li>temperature=0 / 固定 seed（透過 <code>llm_call(..., temperature=0)</code> 傳給 backend）：降方差。</li>
+<li>與 §6 <code>guarantee: idempotent</code> 呼應：memoized 的函式天然冪等（重跑不再呼叫 LLM）。</li>
+</ul>
+<h3>L2 驗證層 — 抽到不合格就重抽或修</h3>
+<p>把「LLM 偶爾給出對的答案」變成「保證對，否則明確失敗」。</p>
+<ul>
+<li><code>compose.retry_until_valid(f, validate, retries)</code>：<strong>拒絕採樣</strong>——重抽到通過驗證為止。</li>
+<li><code>compose.guard(f, validate, repair)</code>：<strong>驗證→修復</strong>——壞輸出交給 repair（可以是另一次 LLM 呼叫：「你上次的輸出不合格，原因是…，請修正」）。</li>
+<li>驗證器 <code>validate</code> 可以是確定的（regex、JSON parse、語法檢查），也可以是另一個 LLM（LLM-as-judge，見 §4）。</li>
+</ul>
+<blockquote>
+<p>前置條件（接組合維度 §3）：<code>retry_until_valid</code> 要求被包的函式無累積副作用，否則重試會出事。這是「組合對被組合者的契約」的具體案例。詳見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a> §3 與 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<h3>L3 聚合層 — 多次抽樣 + 統計，把方差換成穩定</h3>
+<p>單次抽樣有方差；抽很多次再統計，方差會被平均掉。</p>
+<ul>
+<li><code>compose.vote(f, n)</code>：<strong>自一致（self-consistency）</strong>——同問題抽 N 次取多數。</li>
+<li><code>compose.best_of(f, n, score)</code>：抽 N 次取最高分（用 scorer 把「好壞」可計算化）。</li>
+<li><code>compose.fanout_reduce(fns, reducer)</code>：用<strong>不同角度的函式</strong>（不同 prompt/模型）跑同輸入，再彙整——多視角降偏誤。</li>
+</ul>
+<blockquote>
+<p>L3 反而<strong>善用</strong>隨機性：沒有隨機性，抽 N 次都一樣，投票毫無意義。這是「在需要多樣的地方多樣」的正面用法。</p>
+</blockquote>
+<h3>L4 編排層 — 約束「能做什麼」，而非只看「說了什麼」</h3>
+<p>最外層：不在輸出端救火，而在<strong>動作空間</strong>就設限。</p>
+<ul>
+<li><strong>hub</strong>（<code>tools/hub.py</code>）：給 LLM 一份有界、有描述、大小受控的 skill 清單。LLM 只能從清單裡挑工具 → 動作空間從「無限文字」收成「有限工具集」。</li>
+<li><strong>router / switch</strong>：把「LLM 自由發揮」換成「LLM 在固定分支裡選一個」。</li>
+<li><strong>decompose</strong>（<code>compose.decompose</code>）：大模糊任務拆成小而受限的子任務，每個子任務輸出空間更小、更易驗證（回到 L0）。</li>
+</ul>
+<blockquote>
+<p>L4 的精神：<strong>與其要 LLM 直接產出最終結果，不如讓它選擇/編排確定的工具來產出結果。</strong> LLM 負責「決策」，確定函式負責「執行」。</p>
+</blockquote>
+<hr />
+<h2>3. 層次總表</h2>
+<table>
+<thead>
+<tr>
+<th>層</th>
+<th>手段</th>
+<th>把「？」變成「！」</th>
+<th>實作零件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0 契約</td>
+<td>結構化輸出、typed I/O</td>
+<td>縮小輸出空間</td>
+<td><code>llm_call.bind</code>、八軸 §1</td>
+</tr>
+<tr>
+<td>L1 確定化</td>
+<td>memoize、temp=0</td>
+<td>重複輸入→確定</td>
+<td><code>lib/memoize</code>、§6 idempotent</td>
+</tr>
+<tr>
+<td>L2 驗證</td>
+<td>retry / guard</td>
+<td>偶爾對→保證對或明確失敗</td>
+<td><code>compose.retry_until_valid</code> / <code>guard</code></td>
+</tr>
+<tr>
+<td>L3 聚合</td>
+<td>vote / best_of</td>
+<td>單次方差→多次穩定</td>
+<td><code>compose.vote</code> / <code>best_of</code> / <code>fanout_reduce</code></td>
+</tr>
+<tr>
+<td>L4 編排</td>
+<td>hub / route / decompose</td>
+<td>自由發揮→有界選擇</td>
+<td><code>tools/hub</code>、<code>router</code>、<code>switch</code>、<code>compose.decompose</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 不只是防呆：更好地「利用」LLM</h2>
+<p>馴化框架反過來看，也是榨取 LLM 價值的框架：</p>
+<ol>
+<li>
+<p><strong>LLM-as-judge / critic</strong>：L2 的 <code>validate</code>、L3 的 <code>score</code> 本身可以是 LLM 函式。生成函式（actor）+ 評審函式（critic）形成交互（見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a> §5）。一個 LLM 生成、另一個 LLM（或同一個換 prompt）挑錯，比單次生成可靠得多。</p>
+</li>
+<li>
+<p><strong>冷熱分工</strong>：把任務拆成兩種 LLM 函式——</p>
+<ul>
+<li><strong>熱函式</strong>（高 temperature、求多樣）：負責發想、生成候選。</li>
+<li><strong>冷函式</strong>（低 temperature、嚴格）：負責篩選、驗證、收斂。
+用 <code>best_of(熱函式, n, score=冷函式)</code> 一行接起來：熱的多生幾個，冷的選最好。</li>
+</ul>
+</li>
+<li>
+<p><strong>便宜→貴的升級路徑</strong>：<code>memoize</code>（命中就免費）→ 不命中才呼叫 LLM（貴）→ <code>guard</code> 驗證 → 存回 cache。下次同問題免費且確定。成本與可靠性一起改善。</p>
+</li>
+</ol>
+<hr />
+<h2>5. 端到端範例：一個「可靠的程式碼問答函式」</h2>
+<p>把五層串起來（全部用已實作的零件）：</p>
+<pre><code class="language-python">from lib import llm_call, compose, memoize
+
+ask = llm_call.bind(                                  # L0：綁定角色 + 要求帶程式碼區塊
+    system=&quot;你是資深工程師，回答務必包含一段 ```python 程式碼區塊&quot;,
+    backend=...,                                       # 真接 API 時換成 Http backend
+)
+ask = compose.retry_until_valid(                       # L2：沒有程式碼區塊就重抽
+    ask, validate=lambda o: &quot;```python&quot; in o, retries=3,
+)
+ask = compose.guard(                                   # L2：語法錯就請它修
+    ask,
+    validate=lambda o: _py_syntax_ok(o),
+    repair=llm_call.bind(prefix=&quot;以下程式碼有語法錯，請只回修正後的版本：\n&quot;),
+)
+# L1：同一個問題不重算（memoize 包在最外，命中就完全不碰 LLM）
+mz = memoize.Memoizer(&quot;code_qa&quot;)
+def code_qa(question: str) -&gt; str:
+    out, _hit = mz.cached_call(lambda: ask(question), stdin=question)
+    return out
+</code></pre>
+<p><code>lib_smoke_test.py</code> 的 <code>test_compose</code> / <code>test_llm_call</code> 已用 ScriptedBackend 驗證了其中每個零件（retry/vote/best_of/guard/bind）的行為——上面只是把它們串成一條。</p>
+<blockquote>
+<p><strong>✅ 已做可跑 demo</strong>：<code>demos/reliable_code_qa.py</code> 把上面五層完整串起來並自我測試。跑 <code>python3 demos/reliable_code_qa.py</code> 會看到：retry 抽 2 次（第 1 次無程式碼被拒）、guard 觸發 1 次修復（語法錯被修）、memoize 第二次命中完全不碰 backend——每一層都被斷言驗證確實生效。這是整套馴化框架「真的能組起來動」的端到端證據。</p>
+</blockquote>
+<hr />
+<h2>6. 與規範的關係 / 開放問題</h2>
+<ol>
+<li>這套五層框架，是否該成為複合規範家族的一支「LLM 馴化慣例」？</li>
+<li>哪些該進 metadata 軸？候選：
+<ul>
+<li><code>nondeterministic: true</code>（標記這函式是隨機的——本文撰寫時八軸無此概念，但它是<strong>觸發整套馴化框架的根</strong>；類似 memoized 缺對應軸值的處境，見 <code>lib/memoize</code> 決策 3）。
+<blockquote>
+<p><strong>✅ 已扶正</strong>：此候選已定案為<strong>第九軸 <code>nondeterministic</code></strong>。值 <code>true</code> ＝未認證隨機；<code>{model, test_set, stability}</code> ＝證書（治理原則「拒絕為預設 + 憑證准入」的落地）。詳見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>。</p>
+<p>對照：<code>memoized</code> 最終<strong>不入軸</strong>（維持純 runtime 概念），與本候選的結局不同。</p>
+</blockquote>
+</li>
+<li>是否暴露 temperature / sampling 參數為標準 metadata。（仍開放）</li>
+</ul>
+</li>
+<li>L2 的「重試前置條件＝被包函式須無累積副作用」要不要寫成正式契約（接組合維度 §3）。詳見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a> §3 與 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</li>
+<li>LLM-as-judge 形成的 actor-critic 交互，需要 blackboard driver 才能乾淨表達——本文與 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a> §5 在此交會。</li>
+</ol>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_17_arch_changelog.html"><span class="dir">← 上一篇</span><span class="fn">doc_17_arch_changelog</span></a>
+<a class="next" href="doc_21_composition_dimension.html"><span class="dir">下一篇 →</span><span class="fn">doc_21_composition_dimension</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

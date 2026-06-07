@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>00_INDEX — ai_core 知識庫總索引 · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-00">INDEX 總索引</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">00_INDEX.md · 156 行</div>
+<h1>00_INDEX — ai_core 知識庫總索引</h1>
+<blockquote>
+<p><strong>這是什麼</strong>：把原本散落在 <code>roadmap.md</code> / <code>core_nature/</code> / <code>try_implement/</code> / <code>docs/</code> / <code>thinking*.md</code> / <code>other.md</code>／甚至 git 歷史中的<strong>所有筆記、想法、文檔、程式成果</strong>，做一次<strong>無損壓縮</strong>整合到本資料夾。去除了跨檔重複，但<strong>保留每一個獨特的想法、定義、數字、理由與決策</strong>。</p>
+<p><strong>整理原則</strong>：以較新者為標準事實（newer = truth）。較舊或已被取代的內容仍完整保留，但會在檔頭明確標註其狀態與「現行對應檔」。</p>
+<p><strong>建立日期</strong>：2026-06-07。本索引由主代理彙整，內容檔由 12 個並行子代理產出（共 31 個內容檔）。</p>
+<p><strong>原始檔未被更動</strong>：本資料夾只「新增」整合檔；<code>roadmap.md</code>、<code>core_nature/</code>、<code>try_implement/</code> 等原始檔一律保留原狀。</p>
+</blockquote>
+<hr />
+<h2>1. 三大分類（檔名前綴）</h2>
+<table>
+<thead>
+<tr>
+<th>前綴</th>
+<th>類別</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>note_</code></td>
+<td><strong>筆記與想法</strong></td>
+<td>願景、初心、隱喻、跨環境思考、歷史思考演化、決策清單、未決題、舊版設計世系</td>
+</tr>
+<tr>
+<td><code>doc_</code></td>
+<td><strong>文檔 / 規範 / 架構</strong></td>
+<td>正式規範（九軸、library 契約、CLI、複合）、舊版架構文件、原型概念文件</td>
+</tr>
+<tr>
+<td><code>code_</code></td>
+<td><strong>程式成果</strong></td>
+<td>正式核心 library、原型工具 / lib / demos / 測試的說明</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>使用者明確要求：<strong>文檔、筆記想法、程式成果三者待在不同檔案中</strong>。本資料夾即依此三類分檔。</p>
+</blockquote>
+<hr />
+<h2>2. 權威 / 新舊分層（讀任何檔前先內化）</h2>
+<p>理解這個分層，才知道哪些是「定案事實」、哪些是「歷史脈絡」：</p>
+<table>
+<thead>
+<tr>
+<th>層級</th>
+<th>可信度</th>
+<th>對應檔</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>① 最新事實（定案）</strong></td>
+<td>判斷「該怎麼做」的尺</td>
+<td><code>note_01</code>（願景/北極星）、<code>note_06</code>（決策）、<code>doc_05~08</code>（核心規範：九軸/契約/CLI/複合）、<code>doc_01~04</code>（本質/執行形式）、<code>code_01</code>（正式核心程式碼）</td>
+</tr>
+<tr>
+<td><strong>② 原型 / 提案（非定案）</strong></td>
+<td>可跑，但多數尚未扶正成規範</td>
+<td><code>code_02~04</code>（try_implement 程式）、<code>doc_20~21</code>（馴化框架 / 組合維度概念）</td>
+</tr>
+<tr>
+<td><strong>③ 歷史思考（已被①取代，保留供溯源）</strong></td>
+<td>理解演化脈絡用，非現況</td>
+<td><code>note_02~05</code>（隱喻、跨環境、早期分層/元件思考）</td>
+</tr>
+<tr>
+<td><strong>④ 舊版架構文件（部分已被①取代）</strong></td>
+<td>另一條設計支線，獨特設計仍有參考價值</td>
+<td><code>doc_10~17</code>（原 <code>docs/architectures/</code>，以 ai-core-* CLI + FastAPI 為骨幹）</td>
+</tr>
+<tr>
+<td><strong>⑤ 舊版設計世系（已被完全覆蓋）</strong></td>
+<td>僅供溯源，與現行衝突一律以①為準</td>
+<td><code>note_07~09</code>（git 歷史 <code>684082c</code>：process hub / LISP 組合 / litellm 依賴）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>衝突裁決規則</strong>：① &gt; ②/③/④/⑤。任何 ③④⑤ 與 ① 矛盾處，以 ① 為準。</p>
+<hr />
+<h2>3. 一句話定義（來自 note_01 / roadmap）</h2>
+<blockquote>
+<p>ai_core = <strong>一個讓 LLM 退縮到「意圖翻譯」與「模糊前沿」兩介面的基底；它以「拒絕為預設、憑證准入」治理 LLM 的領地，並用飛輪持續把模糊地帶固化成確定性程式碼。</strong></p>
+</blockquote>
+<p>第一目標問題：<strong>程式碼輔助助手</strong>（上層聰明模型讀框架生資產＝結構化抽取；下層笨模型在精準標記位置填碼＝受約束生成）。</p>
+<p>設計哲學（前提的邏輯必然，非美學）：<strong>KISS / Lightweight / No wheel-remake / Least dependency</strong>；硬約束=只用 Python 3.11+ 標準庫、<code>dependencies=[]</code>、目標平台 POSIX（Windows 不考慮）。</p>
+<hr />
+<h2>4. 建議閱讀順序</h2>
+<p><strong>想懂「為什麼做、做什麼」</strong> → <code>note_01</code>（願景/北極星）→ <code>note_06</code>（決策與未決題）→ <code>note_02</code>（隱喻，幫助直覺）</p>
+<p><strong>想懂「規範現況」</strong> → <code>doc_01</code>（本質）→ <code>doc_03</code>（執行形式）→ <code>doc_05</code>（九軸）→ <code>doc_06</code>（library 契約）→ <code>doc_07</code>（CLI）→ <code>doc_08</code>（複合）</p>
+<p><strong>想懂「程式做到哪了」</strong> → <code>code_01</code>（正式核心）→ <code>code_02~04</code>（原型工具/lib/demos）</p>
+<p><strong>想懂「規劃中的五大元件」</strong> → <code>doc_12</code>（Entry Manager）/ <code>doc_13</code>（Hub）/ <code>doc_14</code>（author+SFC）（注意：④舊版架構，命名與現行不同）+ <code>doc_20</code>（馴化框架）</p>
+<p><strong>想懂「演化脈絡 / 被放棄的構想」</strong> → <code>note_03~05</code>（歷史思考）→ <code>note_07~09</code>（更早的舊版世系）</p>
+<hr />
+<h2>5. 完整檔案目錄</h2>
+<h3>note_ 筆記與想法</h3>
+<table>
+<thead>
+<tr>
+<th>檔</th>
+<th>狀態</th>
+<th>一行摘要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a></td>
+<td>① 定案/北極星</td>
+<td>初心、演化鏈、時間維度、終點兩介面、拒絕為預設治理、第一目標、v0 切片；<strong>附錄含使用者原話逐字</strong></td>
+</tr>
+<tr>
+<td><a href="note_02_metaphors.html">note_02_metaphors.md</a></td>
+<td>③ 歷史</td>
+<td>兩大隱喻：牢籠與猴子（細線/邊界/纜線/飛輪）、滑坡軌道與球（執行形式的本質）</td>
+</tr>
+<tr>
+<td><a href="note_03_cross_environment.html">note_03_cross_environment.md</a></td>
+<td>③ 歷史</td>
+<td>規範本質（對不確定性建模+引導缺損智能）、跨環境統一管理願景、執行狀態跨環境性</td>
+</tr>
+<tr>
+<td><a href="note_04_thinking_layers_model.html">note_04_thinking_layers_model.md</a></td>
+<td>③ 歷史</td>
+<td>早期：HL 基礎設施定位、用途/執行模型分類、OOP 對應、multi-shot 狀態目錄</td>
+</tr>
+<tr>
+<td><a href="note_05_thinking_components.html">note_05_thinking_components.md</a></td>
+<td>③ 歷史</td>
+<td>早期元件思考：Routing 家族、SFC Layer 0~4、rma 資源監控、production、pending §1-6</td>
+</tr>
+<tr>
+<td><a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a></td>
+<td>① 定案/活文件</td>
+<td>已收斂決策、A/B/C/D 區待決、候選新軸、roadmap §7 篩子表、§8 七大開放問題</td>
+</tr>
+<tr>
+<td><a href="note_07_legacy_system_design.html">note_07_legacy_system_design.md</a></td>
+<td>⑤ 舊版世系</td>
+<td>舊版兩世代：抽象世代（LISP 組合/make_model→bind→take）+ process 世代（hub/AI 自我擴展）</td>
+</tr>
+<tr>
+<td><a href="note_08_legacy_readme_usage_arch.html">note_08_legacy_readme_usage_arch.md</a></td>
+<td>⑤ 舊版世系</td>
+<td>舊版操作面：hub CLI、--metadata 約定、AI 六步擴展、planner+chain 編排、五條不變式</td>
+</tr>
+<tr>
+<td><a href="note_09_legacy_processes_agents.html">note_09_legacy_processes_agents.md</a></td>
+<td>⑤ 舊版世系</td>
+<td>舊版 44 個 process 全清單（含大宗 go_* Go 輔助）、AGENTS.md tag 分群</td>
+</tr>
+</tbody>
+</table>
+<h3>doc_ 文檔 / 規範 / 架構</h3>
+<table>
+<thead>
+<tr>
+<th>檔</th>
+<th>狀態</th>
+<th>一行摘要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="doc_01_nature_overview.html">doc_01_nature_overview.md</a></td>
+<td>① 規範(部分待填)</td>
+<td>設計模式本質定位、為何從 terminal 出發、目標平台</td>
+</tr>
+<tr>
+<td><a href="doc_02_terminal_model.html">doc_02_terminal_model.md</a></td>
+<td>① 規範</td>
+<td>從 terminal 出發的執行模型：命令解析、CLI 慣例、subcommand</td>
+</tr>
+<tr>
+<td><a href="doc_03_execution_forms.html">doc_03_execution_forms.md</a></td>
+<td>① 規範</td>
+<td>執行形式（§0 九軸表 + 各形式 + 觸發機制）</td>
+</tr>
+<tr>
+<td><a href="doc_04_data_format.html">doc_04_data_format.md</a></td>
+<td>① 規範</td>
+<td>JSON 為通用格式、argv→JSON 工具</td>
+</tr>
+<tr>
+<td><a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a></td>
+<td>① 規範</td>
+<td><strong>九軸完整規範</strong>：entries/lifecycle/state/state_dirs/resources/interruptible/guarantee/dry_run/nondeterministic</td>
+</tr>
+<tr>
+<td><a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a></td>
+<td>① 規範</td>
+<td><strong>library 契約</strong>（最長 829 行）：register/register_subcommand/register_subcommand_resolver/intercept</td>
+</tr>
+<tr>
+<td><a href="doc_07_cli.html">doc_07_cli.md</a></td>
+<td>① 規範</td>
+<td>CLI 即 Lisp 函式呼叫（keyword pair→dict）、argparse</td>
+</tr>
+<tr>
+<td><a href="doc_08_composite.html">doc_08_composite.md</a></td>
+<td>① 規範</td>
+<td>複合慣例：標準狀態目錄（.config/.cache/.state/.data）、中斷恢復（recovery.json）</td>
+</tr>
+<tr>
+<td><a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a></td>
+<td>④ 舊版架構</td>
+<td>設計原則、Singleton Pattern 兩亞型、架構圖、技術選型、四元件表</td>
+</tr>
+<tr>
+<td><a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a></td>
+<td>④ 舊版架構</td>
+<td>舊版 metadata 協議（io/examples/errors/dependencies/entrydata/server）、--json-errors</td>
+</tr>
+<tr>
+<td><a href="doc_12_arch_entry_manager.html">doc_12_arch_entry_manager.md</a></td>
+<td>④ 舊版架構</td>
+<td>LLM Entry Manager：queue/rate limit/timeout/streaming/token 認證</td>
+</tr>
+<tr>
+<td><a href="doc_13_arch_hub.html">doc_13_arch_hub.md</a></td>
+<td>④ 舊版架構</td>
+<td>Function Hub：one-shot+server 雙形態、掃描策略、SFC 展開、LLM 摘要自舉</td>
+</tr>
+<tr>
+<td><a href="doc_14_arch_author_sfc.html">doc_14_arch_author_sfc.md</a></td>
+<td>④ 舊版架構</td>
+<td>ai-core-author（generate→dry-run→register）、Small Function Center</td>
+</tr>
+<tr>
+<td><a href="doc_15_arch_project_milestones.html">doc_15_arch_project_milestones.md</a></td>
+<td>④ 舊版架構</td>
+<td>目錄樹、CLI、config.json、里程碑 M0–M6、跨平台</td>
+</tr>
+<tr>
+<td><a href="doc_16_arch_agents.html">doc_16_arch_agents.md</a></td>
+<td>④ 舊版架構</td>
+<td>Agent 整合、AGENTS.md 模板、export 格式、Self-Sufficiency 路徑</td>
+</tr>
+<tr>
+<td><a href="doc_17_arch_changelog.html">doc_17_arch_changelog.md</a></td>
+<td>④ 舊版架構</td>
+<td>舊版完整變更紀錄（2026-04-28 ~ 05-18）</td>
+</tr>
+<tr>
+<td><a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a></td>
+<td>② 原型概念</td>
+<td>LLM 隨機性馴化五層框架（契約/確定化/驗證/聚合/編排）對應已實作零件</td>
+</tr>
+<tr>
+<td><a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a></td>
+<td>② 原型概念</td>
+<td>組合維度（與軸正交）、軸推導規則、組合 vs 交互、blackboard 交互模型</td>
+</tr>
+<tr>
+<td><a href="doc_30_html_dashboard.html">doc_30_html_dashboard.md</a></td>
+<td>④/展示</td>
+<td>HTML 儀表板（8 頁）；捕捉其獨特內容（HL 角色對照表、2026-05-25 現況快照、各模組進度標記），其餘交叉引用</td>
+</tr>
+</tbody>
+</table>
+<h3>code_ 程式成果</h3>
+<table>
+<thead>
+<tr>
+<th>檔</th>
+<th>狀態</th>
+<th>一行摘要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="code_01_core_library.html">code_01_core_library.md</a></td>
+<td>① 正式核心</td>
+<td><code>src/ai_core/_core.py</code> API、九軸驗證、pyproject、測試覆蓋（test_core.py = 65 passed）</td>
+</tr>
+<tr>
+<td><a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a></td>
+<td>② 原型</td>
+<td>indexer/router/switch/sfc/hub/llm_entry_manager/chain 各工具職責、CLI、狀態</td>
+</tr>
+<tr>
+<td><a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a></td>
+<td>② 原型</td>
+<td>lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta</td>
+</tr>
+<tr>
+<td><a href="code_04_prototype_demos_tests.html">code_04_prototype_demos_tests.md</a></td>
+<td>② 原型</td>
+<td>3 個 demo、兩套煙霧測試（72+68=140 全綠）、範例函式、store seed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. 整合時發現的衝突與校正（重要）</h2>
+<p>子代理在無損整合過程中發現以下<strong>跨檔不一致</strong>。一律記錄，不擅自抹平；現況事實以此處裁決為準：</p>
+<ol>
+<li>
+<p><strong>測試數字三套並存（非矛盾，是不同範圍）</strong>：</p>
+<ul>
+<li><code>tests/test_core.py</code> = <strong>65 passed</strong>（正式核心 register/intercept/九軸；已實機確認，見 <code>code_01</code>）。</li>
+<li><code>pytest -q</code> 全收集 = <strong>82 passed</strong>（CLAUDE.md 數字；含 <code>tests/</code> 下其他測試檔，差額 17）。</li>
+<li>原型煙霧測試 = <code>smoke_test.py</code> <strong>72</strong> + <code>lib_smoke_test.py</code> <strong>68</strong> = <strong>140</strong>（已實機確認，見 <code>code_04</code>）。</li>
+<li>→ 三個數字都對，指的是不同東西。引用時請註明範圍。</li>
+</ul>
+</li>
+<li>
+<p><strong>「八軸」vs「九軸」</strong>：<code>roadmap.md</code>（含使用者原話）多處仍寫「八軸」，但現行定案已是<strong>九軸</strong>——第九軸 <code>nondeterministic</code> 於 2026-05-26 扶正（承載「拒絕為預設+憑證准入」治理）。<code>note_01</code> 依無損保留 roadmap 的「八軸」原措辭；<strong>現行事實以 <code>doc_05</code> / <code>code_01</code> 的九軸為準</strong>。</p>
+</li>
+<li>
+<p><strong>舊版架構（④）根本沒有「軸」概念</strong>：<code>doc_10~17</code>（原 docs/architectures）用的是扁平 metadata key（name/summary/io/examples/errors/dependencies…），<strong>連八軸都沒有</strong>，是比 roadmap 更早的另一條設計支線；且引入 litellm/fastapi/uvicorn 等外部相依，與現行「零相依」硬約束衝突。詳細衝突清單見 <code>doc_11</code> 與 <code>doc_17</code> 檔頭。</p>
+</li>
+<li>
+<p><strong>舊版世系（⑤）與現行的戲劇性反轉</strong>：<code>note_07~09</code> 的舊版<strong>明確拒絕</strong>常駐 LLM server / queue / rate limit / SFC dispatcher——而這些正是現行<strong>規劃中的五大元件</strong>。舊版核心隱喻「LLM 即 tokens→tokens 純函數 + AI 自我擴展門檻越低越好」也與現行「LLM 退縮為兩介面 + 拒絕為預設」相反。同名 <code>core.py</code> 但與現行 <code>_core.py</code> 完全無關（舊版依賴 litellm）。</p>
+</li>
+<li>
+<p><strong>執行狀態術語落差</strong>：<code>other.md</code>（③）用 one-shot/multi-shot/persistent/singleton 四態；現行 <code>lifecycle</code> 軸只有 <code>one_shot</code>/<code>persistent</code> 兩值，<code>state</code> 軸用 <code>stateless</code>/<code>stateful_external</code>。對應關係：multi-shot→<code>state</code> 軸的有狀態、singleton→「重量級函式變 server / 單例資源」概念。</p>
+</li>
+<li>
+<p><strong>早期 <code>register()</code> 語意已漂移</strong>：<code>thinking_oop</code>（③）的 <code>register()</code> 兼做 registry 登記 + CLI dispatch 生成、且「只能呼叫一次否則 raise」；現行 <code>register()</code> 是<strong>純宣告、零副作用、last-write-wins</strong>。勿混淆。<code>Function(ABC)</code> 繼承路線亦已廢棄，改純宣告函式。</p>
+</li>
+<li>
+<p><strong>MEMORY.md 索引已過時</strong>：使用者的自動記憶 <code>MEMORY.md</code> 仍指向 <code>SYSTEM_DESIGN*.md</code> / <code>README.md</code> / <code>MICROSERVICES_GUIDE.md</code> 等——這些是<strong>舊版世系</strong>檔，已於 commit <code>7b9b8e3</code> 被覆蓋、不在工作目錄。其內容已由本知識庫 <code>note_07~09</code> 無損保留。（<code>MICROSERVICES_GUIDE.md</code> / <code>SHELL_FUNCTIONS_GUIDE.md</code> 兩檔在 git 歷史 <code>684082c</code> 樹中未出現，疑為更早被刪或從未提交；若使用者確知其存在，需另行指認 commit。）</p>
+</li>
+</ol>
+<hr />
+<ol start="8">
+<li>
+<p><strong>HTML 儀表板（已處理）</strong>：repo 內有一組 8 頁的展示型網站（<code>overview.html</code> + <code>html/*.html</code> + <code>_shared.css</code>），是把 roadmap/core_nature/DECISIONS/docs 重編排成的 dark-theme 儀表板。其文字內容絕大多數是既有 markdown 的呈現版；獨特部分（元件→Heuristic Learning 角色對照表、2026-05-25 現況快照數據、各 <code>src/ai_core/</code> 子模組的完成/最小/YAGNI 進度標記、頁尾索引）已無損捕捉於 <code>doc_30</code>。注意：儀表板停在較早狀態——全程稱「<strong>8 軸</strong>」並把 <code>nondeterministic</code> 當「候選 C1」（現行為 9 軸）、且 D 組決策數內部不一致（以 <code>note_06</code> 為準）。<code>_shared.css</code> 為純樣式、無文字內容，未整合。</p>
+</li>
+<li>
+<p><strong>未整合的零星檔（均為非內容性或已被概念涵蓋，列此存查）</strong>：</p>
+<ul>
+<li><code>progress.md</code>：僅一行 <code>claude --resume &lt;uuid&gt;</code> 的 session 續接指標，無設計內容，不整合。</li>
+<li><code>funcs/echo.sh</code>：頂層範例函式，但實為<strong>骨架 stub</strong>（函式體幾乎全是註解，描述「解析旗標 / <code>--metadata</code> 模式印 §4.5 JSON / 一般執行寫 input→output」之意圖，尚未實作完整）；其 <code>--metadata</code> 協議範例意涵已由 <code>doc_11</code>（協議）與 arch echo.sh metadata 範例涵蓋。</li>
+<li><code>routes.json</code> / <code>switch.json</code> / <code>chain_demo.json</code> / <code>store/functions.json</code> / <code>store/index.json</code>：原型的設定/種子資料，其結構與內容已於 <code>code_02</code>（routes/switch/chain）與 <code>code_04</code>（store seed：shout / wc_words）說明。</li>
+<li><code>CLAUDE.md</code>：專案給 AI 的工作指引（非待整合的筆記/文檔），維持原狀作為 repo 入口；見下節。</li>
+<li><code>pyproject.toml</code>：打包設定，已於 <code>code_01</code> 說明（hatchling、<code>dependencies=[]</code>、<code>&gt;=3.11</code>、<code>[dev]</code>）。</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2>7. 與原始 repo 的關係</h2>
+<ul>
+<li>本知識庫是<strong>整合視圖</strong>，原始檔（<code>roadmap.md</code>、<code>core_nature/</code>、<code>try_implement/</code>、<code>docs/</code>、<code>thinking*.md</code>、<code>other.md</code>）仍是各自領域的「正本」，未被更動。</li>
+<li>若日後要以本知識庫<strong>取代</strong>散落的原始檔，可逐類驗證後再刪除原檔——但這需使用者明確指示，本次未執行。</li>
+<li><code>CLAUDE.md</code>（專案給 AI 的工作指引）仍為 repo 的入口說明，與本知識庫並行；本知識庫補足「把所有散落筆記收攏在一處」這件 CLAUDE.md 未涵蓋的事。</li>
+</ul>
+
+</main>
+<footer class="pager">
+<span class="ph"></span>
+<a class="next" href="code_01_core_library.html"><span class="dir">下一篇 →</span><span class="fn">code_01_core_library</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

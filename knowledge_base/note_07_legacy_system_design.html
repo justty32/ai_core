@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_07 — 舊版設計世系：系統設計三世代 · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l5);background:rgba(0,0,0,.25)">⑤ 舊世系</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_07_legacy_system_design.md · 395 行</div>
+<h1>note_07 — 舊版設計世系：系統設計三世代</h1>
+<blockquote>
+<ul>
+<li><strong>來源</strong>：git commit <code>684082c</code> 之 <code>SYSTEM_DESIGN.md</code> + <code>SYSTEM_DESIGN_EXTRA.md</code> + <code>old/SYSTEM_DESIGN_1.md</code> + <code>old/SYSTEM_DESIGN_2.md</code> + <code>old/SYSTEM_DESIGN_3.md</code></li>
+<li><strong>狀態</strong>：<strong>舊版設計世系</strong>（已於 commit <code>7b9b8e3</code>「以 ai_core 框架/規範版完全覆蓋本 repo」被完全覆蓋；僅供溯源，非現行事實）</li>
+<li><strong>一行摘要</strong>：舊版 ai_core 的設計演化三世代——從「LISP 純函數 + BaseFunction/Registry/Server 重抽象」（old/1、old/2、old/3）演進到「process + <code>--metadata</code> 一條約定、依託 OS、AI 自我擴展」（SYSTEM_DESIGN.md、EXTRA）。</li>
+<li><strong>現行事實見</strong> <a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a> 與 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、<a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a>、<a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>。</li>
+</ul>
+</blockquote>
+<hr />
+<h2>⚠️ 閱讀前必讀：這是歷史，不是現況</h2>
+<p>本檔保留的是 ai_core <strong>已被完全覆蓋的舊版設計</strong>。它與現行設計有大量名稱衝突（同名異義）與理念分歧。<strong>凡與現行衝突，一律以現行為準</strong>。最重大的分歧整理於本檔末節「舊版 vs 現行：重大設計分歧」。</p>
+<p>舊版設計本身就分成「兩個世代」——這點對理解很關鍵：</p>
+<ul>
+<li><strong>舊版的「舊版」（<code>old/</code> 目錄，2026-04-25 前後）</strong>：重抽象路線。<code>BaseFunction</code> 抽象類、<code>FunctionRegistry</code>、<code>CoreEnvironment</code>、<code>Client-Server</code>、LISP S-expression 組合、依賴 LiteLLM。</li>
+<li><strong>舊版的「現版」（<code>SYSTEM_DESIGN.md</code> / <code>EXTRA</code>，2026-04-26）</strong>：對上述路線的自我否定，回歸「process + <code>--metadata</code>」極簡約定，棄用所有重抽象。</li>
+</ul>
+<p>即使是舊版「現版」這個 process 路線，也已被 commit <code>7b9b8e3</code> 的現行框架/規範版（roadmap.md + core_nature/ + 九軸 + 拒絕為預設治理）整個取代。</p>
+<hr />
+<h1>第一部分：舊版「現版」——Process-Based Architecture</h1>
+<blockquote>
+<p>出自 <code>SYSTEM_DESIGN.md</code>（updated 2026-04-26，標「主要設計文檔」）與 <code>SYSTEM_DESIGN_EXTRA.md</code>（設計總結與待決策）</p>
+</blockquote>
+<h2>核心理念（舊版「現版」）</h2>
+<p>ai_core 是一個極簡的 AI 系統，核心三句話：</p>
+<pre><code>process = 可執行文件 + --metadata 約定
+hub     = 一次性的索引工具
+session = 一個有持久化的 dict
+AI      = 持續生成新 process 來擴展系統
+</code></pre>
+<p>明確宣示「沒有 BaseFunction，沒有 Registry class，沒有 server，沒有 REST API」——這正是對 <code>old/</code> 世代的否定。</p>
+<p><strong>為什麼選 process？</strong> 「OS 已經有完美的 process 管理機制」：</p>
+<ul>
+<li>函數定義 → executable file</li>
+<li>函數參數 → CLI args</li>
+<li>I/O → stdin / stdout</li>
+<li>註冊表 → 文件系統</li>
+<li>組合 → pipe / subprocess</li>
+<li>元數據 → <code>--metadata</code> 約定</li>
+</ul>
+<p><strong>唯一的共同約定</strong>（像 <code>--help</code> / <code>--version</code> 的 CLI convention）：</p>
+<pre><code class="language-bash">./any_process --metadata    # 輸出 JSON，描述自己
+./any_process &quot;input&quot;       # 正常執行
+</code></pre>
+<p><strong>AI 自我擴展是核心驅動力</strong>：「約定越簡單 → AI 實作門檻越低 → 系統擴展越快」。整個系統只有 <code>--metadata</code> 一條規則，是刻意的——讓 AI 寫 process 的負擔最小。</p>
+<blockquote>
+<p>註：「AI 自我擴展」概念在現行已被更精細的「拒絕為預設 + 憑證准入」治理取代；現行不鼓勵 AI 無門檻佔據環節。</p>
+</blockquote>
+<h2>系統元件（舊版「現版」）</h2>
+<h3>1. Process</h3>
+<p>最基本單位。任何遵守 <code>--metadata</code> 約定的可執行文件。</p>
+<p>舊版 <strong>Metadata 格式</strong>（注意與現行九軸完全不同）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;translate&quot;,
+  &quot;description&quot;: &quot;將文字翻譯成目標語言&quot;,
+  &quot;version&quot;: &quot;1.0&quot;,
+  &quot;tags&quot;: [&quot;translate&quot;, &quot;language&quot;],
+  &quot;input&quot;: &quot;text&quot;,
+  &quot;output&quot;: &quot;text&quot;
+}
+</code></pre>
+<p><strong>I/O 約定</strong>：小輸入用 CLI arg；大輸入用 file → stdin；大輸出用 stdout → file。</p>
+<p>舊版獨有的 <strong>Process 五型（依實作方式分）</strong>：</p>
+<ul>
+<li><strong>LLM 入口</strong> — 直接呼叫 LLM（如 <code>gemini-2.5-flash.py</code>）</li>
+<li><strong>Context 綁定包</strong> — 預設 system prompt 後呼叫 LLM 入口（如 <code>senior-engineer.py</code>）</li>
+<li><strong>輸出解析包</strong> — 解析或轉換另一個 process 的輸出（如 <code>arrange-output.py</code>）</li>
+<li><strong>組合 process</strong> — 串接多個 process（內部 subprocess 或讓使用者用 shell pipe）</li>
+<li><strong>任何其他</strong> — shell script、純計算、外部工具 wrapper 等</li>
+</ul>
+<blockquote>
+<p>對照現行：現行的型態分類用「九軸」（lifecycle/state/guarantee/nondeterministic…），與此五型分類無對應關係。</p>
+</blockquote>
+<h3>2. Hub</h3>
+<p>一次性工具，<strong>不是 server</strong>：</p>
+<pre><code class="language-bash">./hub --build-list ./processes/   # 掃描目錄，呼叫每個 --metadata，寫入 list.json
+./hub --search-func &quot;translate&quot;   # 讀 list.json，回傳匹配的 process
+</code></pre>
+<ul>
+<li><strong>list.json</strong> 用 atomic write（先寫 tmp 再 rename）。</li>
+<li><strong>為什麼不是 server</strong>：無狀態、無 socket/port/並發問題、失敗代價小、文件系統即儲存。</li>
+<li><strong>未來</strong>：<code>--search-func</code> 目前精確/關鍵字匹配，未來可加模糊/語意（LLM 或向量）。</li>
+</ul>
+<h3>3. Session Library</h3>
+<p>幫 process 管理多輪 session 狀態，<strong>運作模型像回合制 RPG</strong>：</p>
+<pre><code>使用者行動（輸入文字、按 Enter）
+  → 機器開始執行（呼叫 process、LLM、運算）
+  → 機器完成，等待下一輪使用者行動 → 重複
+</code></pre>
+<p>邊界：✅ 只負責 dict 讀寫與持久化；❌ 不處理 UI 邏輯（slash command、args、file save UI 屬上層）。最簡實作就是一個會把 dict 寫回 JSON 的 <code>Session</code> 類。</p>
+<h3>4. cli_lib（未來）</h3>
+<p>建在 session library 之上的互動層：slash command（<code>/reset</code>、<code>/save</code>、<code>/history</code>）、args 支援、file save UI、big I/O control。可選引入。</p>
+<h3>5. func_center（未來）</h3>
+<p>輕量 server，管理簡單的 LLM+context 包，避免每次啟動 Python interpreter 的開銷：</p>
+<pre><code class="language-bash">./func_center --func llm_summarize &quot;input text&quot;
+</code></pre>
+<h2>舊版「現版」設計原則</h2>
+<p>✅ 依託 OS ✅ 約定極簡 ✅ 無狀態核心 ✅ AI 自我擴展 ✅ 回合制模型 ✅ 延遲優化（func_center / cli_lib 都是「之後」）</p>
+<h2>SYSTEM_DESIGN_EXTRA.md 獨有內容</h2>
+<h3>從前一版（old/）演進的對照表</h3>
+<table>
+<thead>
+<tr>
+<th>之前（old/ 世代）</th>
+<th>現在（process 世代）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BaseFunction 類別</td>
+<td>任何 executable file</td>
+</tr>
+<tr>
+<td>FunctionRegistry 類別</td>
+<td>文件系統 + list.json</td>
+</tr>
+<tr>
+<td>Closure / Context 物件區分</td>
+<td>process 自己決定</td>
+</tr>
+<tr>
+<td>Server 持續運行</td>
+<td>hub 一次性執行</td>
+</tr>
+<tr>
+<td>REST API / Module / Pipe</td>
+<td>stdin / stdout / args</td>
+</tr>
+<tr>
+<td>Layer 1 / 2 / 3</td>
+<td>一個約定（--metadata）</td>
+</tr>
+</tbody>
+</table>
+<p>「關鍵頓悟：OS 已經有完美的函數機制。」</p>
+<h3>已決策清單（2026-05-18 端到端驗證後）— 舊版定案</h3>
+<ul>
+<li><strong><code>--metadata</code> schema</strong>：必填 <code>name</code>、<code>description</code>；選填 <code>version</code>、<code>tags</code>、<code>input</code>、<code>output</code>。缺欄位的 process 被跳過並寫 stderr；未知欄位給 warn-only 提示。</li>
+<li><strong>失敗格式</strong>：non-zero exit + stderr；stdout 只給成功結果（<code>chain.py</code> 依賴此契約）。</li>
+<li><strong>大輸入觸發</strong>：小字串（單行、&lt;4KB）用 CLI args；多行/大文字用 stdin；process 必須同時支援兩者：<code>text = sys.argv[1] if len(sys.argv) &gt; 1 else sys.stdin.read()</code>。</li>
+<li><strong>模糊搜尋</strong>：先 defer，現為大小寫不敏感子字串匹配（name+description+tags 合併）。空 query 直接 error。</li>
+<li><strong>processes 目錄結構</strong>：扁平，44 個還可控；超過 ~100 再分子目錄。</li>
+<li><strong>list.json 版本管理</strong>：不做（<code>--build-list</code> 是一次性 atomic rename，重跑等於 reset）。</li>
+<li><strong>session 持久化</strong>：每次 <code>set()</code> 立即寫盤（atomic rename）。</li>
+<li><strong>多 process 共享 session</strong>：不支援，每個 process 自己擁有 session 文件。</li>
+<li><strong>session 位置慣例</strong>：<code>~/.ai_core/&lt;process_name&gt;/session.json</code>。</li>
+<li><strong>AI 生成 process 的標準測試流程（六步）</strong>：① <code>hub --search-func</code> 確認不重複 → ② 寫 <code>processes/&lt;name&gt;.py</code>（含 METADATA + <code>--metadata</code> 入口 + stdin/args 雙入口）→ ③ <code>chmod +x</code> → ④ <code>hub --validate &lt;path&gt;</code> → ⑤ 跑煙霧測試 → ⑥ <code>hub --build-list</code> 重建索引。</li>
+</ul>
+<h3>明確棄用清單（舊版「不再追求的東西」）</h3>
+<p>❌ 統一 BaseFunction 類別 ❌ 中央 FunctionRegistry ❌ Closure vs Context 形式區分 ❌ Server 持續運行（除 func_center 未來）❌ 多種通信協議 ❌ 複雜依賴解析/版本管理 ❌ 跨機器分散式。</p>
+<h3>「已吸收」（2026-05-18，源自兄弟版本 ai_core/）— 六項</h3>
+<p>比對 <code>../pas/others/ai_core</code> 那份更繁複的版本後，挑了六項與「無狀態核心」相容者納入：</p>
+<ol>
+<li><strong><code>io</code> 結構化欄位</strong>（選填，與 <code>input</code>/<code>output</code> 字串並存）：<code>{&quot;io&quot;: {&quot;input&quot;: &quot;stdin|file|args|none&quot;, &quot;output&quot;: &quot;stdout|file|none&quot;, &quot;format&quot;: {&quot;input&quot;: &quot;text|json|binary&quot;, &quot;output&quot;: &quot;...&quot;}}}</code>，<code>--validate</code> 對未知值 warn-only。</li>
+<li><strong>metadata 容錯降級而非 skip</strong>：<code>list.json</code> 每筆有 <code>_status: &quot;ok|partial|absent&quot;</code>；<code>partial</code>/<code>absent</code> 含 <code>_warning</code>；<code>search-func</code> 跳過 <code>absent</code> 仍返回 <code>partial</code>。</li>
+<li><strong>examples + 自動 dry-run</strong>：<code>--validate</code> 把 <code>metadata.examples</code> 逐一餵 stdin 比對 stdout（當回歸測試）。</li>
+<li><strong><code>--json-errors</code> 全域旗標</strong>：stderr 改吐 <code>{&quot;type&quot;,&quot;message&quot;,&quot;hint&quot;,&quot;retriable&quot;}</code> 單行 JSON。</li>
+<li><strong><code>hub --export &lt;fmt&gt;</code></strong>：第一版支援 <code>openai-tools</code> / <code>anthropic-tools</code>。</li>
+<li><strong><code>auto/AGENTS.md</code> + <code>auto/FUNCTIONS.md</code> 自動產出</strong>：<code>--gen-agents-md</code> / <code>--gen-functions-md</code>。</li>
+</ol>
+<p><strong>舊版明確不採用</strong>：常駐 LLM entry server、queue、rate limit、token auth、author 一站式 dry-run pipeline、Small Function Center dispatcher——理由是「這些都假設框架是中心，與 OS 是中心、hub 一次性衝突」。</p>
+<blockquote>
+<p>⚠️ 注意此處與現行的劇烈反轉：舊版<strong>明確拒絕</strong>的「常駐 LLM entry server、queue、rate limit、Small Function Center dispatcher」，正是<strong>現行五大規劃元件</strong>（LLM Entry Manager、Function Hub、SFC…）。詳見末節分歧表。</p>
+</blockquote>
+<hr />
+<h1>第二部分：old/SYSTEM_DESIGN_1.md — Advanced Concepts</h1>
+<blockquote>
+<p>出自 <code>old/SYSTEM_DESIGN_1.md</code>，標 type=project，自述「衍生層，更基礎概念應在 system_design_2」。<strong>全屬重抽象世代，多為待決策腦力激盪。</strong></p>
+</blockquote>
+<h2>1. S-Expression 風格的函數組合（Chained Calling）</h2>
+<p>不同於線性管道，主張<strong>樹狀/圖狀</strong>函數組合，採 S-expression 形式。</p>
+<p>LISP 風格表示：</p>
+<pre><code class="language-lisp">(call_llm
+  (contextualize
+    (denoise_voice tokens metadata)
+    session_id)
+  user_profile)
+</code></pre>
+<p>嵌套字典（Python）表示：用 <code>{&quot;func&quot;: ..., &quot;args&quot;: [...]}</code> 巢狀，變數以 <code>$tokens</code> / <code>$metadata</code> / <code>$session_id</code> / <code>$user_profile</code> 表示。</p>
+<p>特點：多輸入函數、樹狀執行（順序由依賴決定）、並行可能性。
+待決策：樹狀結構如何評估（自上/自下）、<code>$變數</code> 解析來源、哪些可並行、失敗如何恢復。</p>
+<h2>2. 調度與資源管理（OS-Style Scheduling）</h2>
+<p>背景：LLM 處理耗時（秒到數十秒），不應阻塞其他會話。主張像 <strong>OS 進程調度器</strong>一樣工作（多會話時間片示意）。</p>
+<p><strong>任務狀態機</strong>（舊版反覆出現的核心構件）：</p>
+<pre><code>pending ──→ running ──→ waiting ──→ completed
+            │                        ↑
+            └────→ suspended ────────┘
+</code></pre>
+<ul>
+<li>pending=等待調度；running=在 CPU 上執行；waiting=等資源（如 LLM API 回應）；suspended=被調度器暫停讓出 CPU；completed=完成。</li>
+</ul>
+<p><strong>時間統計用途</strong>：函數 metadata 的時間統計用來做<strong>預測性調度</strong>（短操作立即執行；長操作如 LLM 檢查配額與優先級）。</p>
+<p>**利用 OS 機制（不自己實現調度器）**三方案：A 多進程 <code>multiprocessing</code>（真並行、開銷大）；B 非同步 <code>asyncio</code>（輕量、單核）；C Coroutine（最輕量、需 runtime 支持）。資源限制用 <code>asyncio.Semaphore(N)</code> 限制 LLM 同時請求數。</p>
+<h2>3. 函數定義 vs 實例化分離</h2>
+<p>採編譯/運行時分離模型：<strong>Definition Time</strong>（函數類定義含邏輯與 metadata）→ <strong>Instantiation Time</strong>（每次執行創建新實例，類似 OS 創進程）→ <strong>Runtime</strong>（實例執行）→ <strong>Cleanup</strong>（釋放資源）。</p>
+<p>範例以 <code>function_definitions[&quot;denoise_voice_v1&quot;]()</code> 為各 Session 創建獨立實例（各有自己的棧/本地變數，互不污染）。
+優點：重用性（定義共用、省記憶體）、隔離性、資源管理、真並行、狀態追蹤。</p>
+<h2>4. 利用操作系統系統函數（對照表）</h2>
+<table>
+<thead>
+<tr>
+<th>OS 機制</th>
+<th>Python 實現</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>進程調度</td>
+<td><code>multiprocessing</code></td>
+<td>真正的並行</td>
+</tr>
+<tr>
+<td>事件循環</td>
+<td><code>asyncio</code></td>
+<td>輕量任務調度</td>
+</tr>
+<tr>
+<td>Coroutine</td>
+<td><code>async/await</code></td>
+<td>語言級任務管理</td>
+</tr>
+<tr>
+<td>信號量</td>
+<td><code>threading.Semaphore</code></td>
+<td>資源限制</td>
+</tr>
+<tr>
+<td>互斥鎖</td>
+<td><code>threading.Lock</code></td>
+<td>同步訪問</td>
+</tr>
+<tr>
+<td>管道</td>
+<td><code>os.pipe()</code></td>
+<td>進程間通信</td>
+</tr>
+<tr>
+<td>共享記憶體</td>
+<td><code>multiprocessing.SharedMemory</code></td>
+<td>進程間數據共享</td>
+</tr>
+</tbody>
+</table>
+<p>設計原則：「讓 OS 做它擅長的事，我們專注於業務邏輯。」</p>
+<h2>5. 集成流程圖（舊版完整設想）</h2>
+<pre><code>S-expression 組合 → 評估樹狀結構 → 生成任務圖（DAG）→ 調度器決策
+（短任務→立即執行；長任務→檢查資源條件執行；並行任務→用 OS 機制並行）
+→ 實例化函數 → 執行（同步/異步）→ 狀態轉移 → 清理資源
+</code></pre>
+<p>仍待決策：S-expression 評估方向、<code>$變數</code> 解析、並行粒度、資源配額、錯誤恢復、可觀測性。</p>
+<hr />
+<h1>第三部分：old/SYSTEM_DESIGN_2.md — Complete Core Architecture</h1>
+<blockquote>
+<p>出自 <code>old/SYSTEM_DESIGN_2.md</code>（updated 2026-04-25）。<strong>舊版最完整、最重抽象的一份</strong>，自述「核心代碼 ~200 行」。</p>
+</blockquote>
+<h2>願景：LLM 即純函數 + 三層核心抽象（舊版最具代表性的獨特構想）</h2>
+<p>基本哲學：把 <strong>LLM 視為純函數 <code>llm : tokens → tokens</code></strong>；「沒有魔法，只有 closure 與 transform」。</p>
+<p>三層 closure 抽象（<strong>make_model → bind → take</strong>，舊版招牌）：</p>
+<ul>
+<li><strong><code>make_model(model, temperature, top_k, ...)</code></strong> — 把模型名與參數封進 closure，回傳純 <code>tokens → tokens</code> 函數。</li>
+<li><strong><code>bind(context, model_fn)</code></strong> — 偏函數應用，把 system prompt / few-shot 預先綁入，回傳更專化的函數。</li>
+<li><strong><code>take(schema, fn)</code></strong> — 解析輸出，把原始 token 轉成結構化資料。</li>
+</ul>
+<p>組合範例：</p>
+<pre><code class="language-python">agent = take(json_schema,
+         bind(system_prompt,
+         make_model(&quot;claude-sonnet-4-6&quot;, temperature=0.7, top_k=40)))
+result = agent(&quot;使用者的輸入&quot;)
+</code></pre>
+<h2>極簡架構（舊版自稱）：核心四職責 + 唯一依賴 LiteLLM</h2>
+<p>關鍵轉變：「不要把工具/框架/Agent 納入核心，而是看作外部『左右臂』，透過標準 OS 層通信。」核心只保留：Task Router、Session Manager、Function Registry、LiteLLM Client（唯一框架依賴）。</p>
+<p><strong>核心四大職責</strong>：</p>
+<ol>
+<li><strong>Task Router</strong> — <code>determine_function(tokens, metadata) -&gt; str</code>，唯一智能決策點，可用 LiteLLM 做簡單分類（範例用 <code>if &quot;optimize&quot; in text</code> 等啟發式）。</li>
+<li><strong>Session Manager</strong> — <code>sessions: session_id → context</code>，<code>get_or_create_session</code> / <code>cleanup_session</code>。</li>
+<li><strong>Function Registry</strong> — <code>register(func_id, func_config)</code>，config 含 <code>type: shell|python|api|llm</code> 與 <code>path</code>/<code>endpoint</code>/<code>model</code>/<code>instance</code>。</li>
+<li><strong>LiteLLM Client</strong> — 「核心唯一的框架依賴」，統一 LLM 調用接口。</li>
+</ol>
+<p>舊版自稱優勢：極簡（~200 行）、單一依賴、松耦合、易擴展、成本透明、語言無關、輕量部署。</p>
+<h2>函數的四種類型（依執行載體分；與第一部分的「五型」不同分類）</h2>
+<ol>
+<li><strong>Shell 命令（外部進程）</strong> — 輸入 JSON（命令行參數），輸出 JSON（stdout）；核心用 <code>subprocess.run([&quot;bash&quot;, path, json.dumps(task)])</code> 執行。</li>
+<li><strong>本地 Python 函數（進程內）</strong> — 繼承 <code>BaseFunction</code>，<code>__call__(tokens, metadata) -&gt; (tokens, metadata)</code>；config <code>type: python</code> + <code>instance</code>。</li>
+<li><strong>外部 API（框架微服務）</strong> — 框架（LangChain/DSPy）作為獨立 FastAPI 服務，核心用 <code>requests.post(endpoint, json=task)</code> 調用。</li>
+<li><strong>LiteLLM 調用</strong> — config <code>type: llm</code> + <code>model</code> + <code>params</code>，核心呼 <code>llm_client.call(...)</code>。</li>
+</ol>
+<h2>通信方式 &amp; OS 層（四種）</h2>
+<ol>
+<li><strong>Shell（進程 + JSON）</strong>：語言無關，但進程/序列化開銷。</li>
+<li><strong>IPC（Pipe/Queue）</strong>：給長期運行工具（如 Aider）用 <code>multiprocessing.Pipe()</code>；低開銷、支持流式，但需維護工具進程生命週期。</li>
+<li><strong>HTTP API（微服務）</strong>：完全解耦、易部署，但有網絡延遲。</li>
+<li><strong>文件系統（簡單狀態共享）</strong>：寫 <code>task.json</code> → 工具處理 → 寫 <code>result.json</code> → 核心讀；最簡單但效率低。</li>
+</ol>
+<h2>多客戶端架構（Token + Metadata 統一接口）</h2>
+<p>核心<strong>完全解耦於具體 I/O 實現</strong>；CLI / Desktop / Web / Android 各自處理 I/O，透過統一 <code>{tokens, metadata}</code> 與核心通信。</p>
+<p><strong>Input Metadata 設計</strong>（獨特欄位）：<code>source</code>(voice/text/file/api)、<code>client_id</code>、<code>session_id</code>、<code>user_signal</code>(important/normal/background)、<code>timestamp</code>、<code>context_objects</code>、<code>encoding</code>、<code>source_characteristics</code>(has_noise/language/confidence)。</p>
+<p><strong>Output Metadata 設計</strong>（獨特欄位）：<code>format</code>、<code>priority</code>、<code>urgency</code>(immediate/batch/deferred)、<code>target_session</code>、<code>recommended_clients</code>、<code>voice_length</code>、<code>importance_score</code>、<code>can_batch</code>、<code>ttl</code>、<code>requires_user_attention</code>。</p>
+<p>多會話並行示例：使用者同時開 Desktop(primary) / Web(secondary_1) / CLI(secondary_2)，輸入流帶 session_id 進核心，輸出流依 priority 分發到不同客戶端。</p>
+<h2>Layer 1 數據結構</h2>
+<ul>
+<li><strong>通信格式</strong>：<code>Request = {tokens: bytes, metadata: dict}</code>、<code>Response = {tokens: bytes, metadata: dict}</code>。</li>
+<li><strong>Token 表示 bytes</strong>：理由「更接近原始文本、支持多內容、分詞責任交給 LLM、客戶端自選粒度」。</li>
+<li><strong>Metadata 用 dict 而非 dataclass</strong>：理由「dict 夠靈活、可動態加欄位、符合 LISP 精神（數據與代碼對稱）」。函數可動態加 <code>denoised</code>、<code>confidence</code> 等欄位。</li>
+</ul>
+<h2>Layer 1 函數定義：BaseFunction 基類（舊版重抽象核心）</h2>
+<p><code>BaseFunction(ABC)</code> 帶 <code>id</code>/<code>type</code>/<code>version</code>、<code>resource_profile</code>（memory: self/running/peak；time: startup/actual_work/teardown）、可發現性 metadata（grouping/tags/expanded_name）、<code>input_requirements</code>（source_type/required_fields/preconditions）、<code>output_produces</code>。</p>
+<ul>
+<li>抽象方法簽名：<code>__call__(tokens: bytes, metadata: dict) -&gt; (bytes, dict)</code>。</li>
+<li><code>should_execute(metadata)</code>：檢查 source_type 與必需欄位，決定是否執行（<strong>舊版 self-filtering 機制</strong>）。</li>
+<li><code>get_signature()</code>：回傳函數簽名資訊。</li>
+<li>具體範例 <code>DenoiseVoiceFunction</code>：<code>source_type=&quot;voice&quot;</code>、<code>output_produces[&quot;denoised&quot;]=True</code>、<code>resource_profile</code> 標 5MB / 100ms。</li>
+</ul>
+<h2>函數元數據與自動組合（舊版招牌構想之一）</h2>
+<p>元數據多維度：資源消耗（resource_profile）、可發現性（id/type/expanded_name/tags/grouping）、語義分類（conceptual_purpose/grouping/domain）。</p>
+<p><strong>自動函數組合系統</strong>（自動鏈接）：</p>
+<pre><code>Single Root Input (tokens + metadata)
+  → Function Registry (all functions with metadata)
+  → Automatic Composition Engine
+  → Optimized Function Chain (auto-linked by output→input matching)
+  → Execution Pipeline (sync + chained)
+</code></pre>
+<p>核心概念：「投資」建很多小函數（清晰簽名 + 完整 metadata）、「自動鏈接」（輸出類型匹配下一函數輸入類型）、「智能選擇」（多函數符合時依資源/語義優先級選）。
+待釐清：多選擇決策邏輯、鏈終止條件、環形依賴處理。</p>
+<h2>執行模型 &amp; 調度（V1→V4 路線圖）</h2>
+<ul>
+<li><strong>V1（當前）：同步 + 串聯</strong>——<code>for func in func_chain: tokens, metadata = func(tokens, metadata)</code>。</li>
+<li><strong>函數鏈選擇</strong>：依 <code>metadata.source</code> 查預定義鏈，例：<code>voice</code> → <code>[denoise_voice_v1, contextualize_v1, call_llm_v1, format_output_voice_v1]</code>；<code>text</code> / <code>file</code> 各有預定義鏈；再用 <code>should_execute</code> 過濾。</li>
+<li>V1 特性：同步、串聯（UNIX pipe 哲學）、自動選擇。</li>
+<li><strong>路線圖</strong>：V1 同步串聯 → V2 並行（DAG、多鏈並行、多會話）→ V3 非同步（async/await、高吞吐）→ V4 動態調度（依負載選策略、自適應、分佈式）。</li>
+<li>任務狀態機同 old/1（pending→running→waiting→completed，可 suspended）。</li>
+</ul>
+<h2>會話管理：CoreEnvironment（LISP 風格執行環境）</h2>
+<p>類似 LISP REPL，維護全局函數註冊表 + 多會話本地上下文 + 執行狀態。獨特機制：<code>type_index</code> / <code>tag_index</code> 提供 O(1) 按類型/標籤查找；<code>register_function</code> 同步建索引；<code>get_or_create_session</code> / <code>cleanup_session</code>；<code>process(request)</code> 主入口（會話管理 → 選鏈 → 執行 → 視 <code>session_end</code> 清理）。</p>
+<h2>實現優先級（週計畫）</h2>
+<ul>
+<li><strong>P1（第一週）</strong>：BaseFunction 基類、CoreEnvironment、簡單選鏈、同步串聯執行。</li>
+<li><strong>P2（第二週）</strong>：具體函數（DenoiseVoice / Contextualize / CallLLM / FormatOutput）、單元測試、metadata 設計驗證。</li>
+<li><strong>P3（第三週）</strong>：多會話管理、性能測試、決策是否優化為非同步。</li>
+<li><strong>P4（後續）</strong>：DAG 執行、動態函數選擇（性能/偏好/AB）、分佈式執行。</li>
+</ul>
+<h2>設計原則（六條）</h2>
+<p>LISP 風格、元數據驅動、簡潔至上、Python 優先（後期可遷 Rust）、測試驅動、極簡核心。</p>
+<h2>成本管理（舊版立場：核心不管成本）</h2>
+<p>核心<strong>不</strong>統計資源/算成本/管預算/追蹤消費；交由<strong>用戶</strong>監控（範例 <code>UserCostManager</code> 包裝核心調用並計數 litellm/api/shell）。</p>
+<h2>框架的位置（完全外部）</h2>
+<p>LangChain / DSPy / CrewAI → 作為 HTTP Service 部署，核心 API 調用；Aider → Shell/subprocess 調用；<strong>LiteLLM → 唯一在核心內的框架</strong>。</p>
+<h2>完整核心代碼框架（<code>core.py</code> 極簡版）</h2>
+<p>舊版附了完整 <code>core.py</code>：<code>BaseFunction(ABC)</code> + <code>CoreEnvironment</code>（<code>register_function</code> / <code>register_function_object</code> 建 type/tag 索引、<code>process_request</code>、<code>_execute_function</code> 依 type 分派到 <code>_call_shell</code> / <code>_call_python</code> / <code>_call_api</code> / <code>_call_llm</code>、<code>_determine_function</code> 啟發式路由、<code>_get_or_create_session</code> / <code>_cleanup_session</code>）。依賴 <code>subprocess</code> / <code>json</code> / <code>requests</code> / <code>litellm</code>。</p>
+<blockquote>
+<p>⚠️ 此 <code>core.py</code> 與現行唯一正式核心 <code>src/ai_core/_core.py</code>（<code>register()</code> / <code>intercept()</code> + 九軸驗證、零外部相依）<strong>完全無關</strong>——同名「core」但設計、依賴、API 全異。</p>
+</blockquote>
+<h2>結語（舊版承諾）</h2>
+<p>「把 LLM 視為純函數，通過元數據驅動的自動組合，在多客戶端架構下，以簡潔優雅的方式架構 AI 應用。」核心特性：極簡（~200 行）、單一依賴（LiteLLM）、松耦合、易擴展、成本透明、語言無關、開放生態。</p>
+<hr />
+<h1>第四部分：old/SYSTEM_DESIGN_3.md — Context Management Core</h1>
+<blockquote>
+<p>出自 <code>old/SYSTEM_DESIGN_3.md</code>（updated 2026-04-25）。從<strong>會話上下文管理</strong>角度切入的核心設計。</p>
+</blockquote>
+<h2>設計出發點</h2>
+<p>不從架構圖而從<strong>實際使用場景</strong>出發：使用者在終端輸入文字、同時多會話（<code>/session XXX</code> 切換）、每會話有獨立對話歷史/臨時數據/本地函數定義、所有會話共享 LLM client/全局函數/系統資源。
+核心問題：<strong>多會話如何各管上下文不互相干擾，同時共享單例資源（尤其 LLM）？</strong> 理念類比：全局函數=系統庫、會話=進程、LLM client=CPU（共享資源但先不做複雜調度）。</p>
+<h2>Session：會話三層上下文（獨特設計）</h2>
+<p><code>Session(session_id, persistent)</code> 含：</p>
+<ul>
+<li><strong>Layer 1: history</strong> — LLM 對話歷史 <code>[{&quot;role&quot;,&quot;content&quot;}]</code>（長度影響 context 成本）。</li>
+<li><strong>Layer 2: local_functions</strong> — 本地函數環境，<strong>可覆蓋全局函數</strong>。</li>
+<li><strong>Layer 3: local_vars</strong> — 臨時變量/狀態（如 <code>/set var value</code>）。</li>
+<li>metadata: created_at / last_accessed / state(active/suspended/destroyed/persisted)。</li>
+</ul>
+<h2>函數查找層級：Lexical Scope（舊版獨特機制）</h2>
+<p><code>resolve_function</code> 查找順序：① 會話 local_functions（最高優先，可 <strong>shadow</strong> 全局）→ ② global_functions → ③ 報 <code>FunctionNotFoundError</code>。類比 Python 作用域（local → global → built-ins）。不支援跨會話函數調用（會話隔離）。</p>
+<h2>CoreEnvironment（此版）</h2>
+<p>管理 <code>global_functions</code> + 單例 <code>llm_client = LiteLLMClient()</code> + <code>sessions</code> + <code>active_session_id</code>。提供 <code>create_session</code> / <code>switch_session</code>（切換時把舊會話標 suspended）/ <code>process</code>。</p>
+<h2>LLM 作為共享單例</h2>
+<p><code>call_llm(user_input, session)</code>：把輸入加入該會話 history → 用會話完整 history 呼 LLM（<code>model=&quot;claude-sonnet-4-6&quot;</code>）→ 回應追加回 history。<strong>單例 client、會話私有 history</strong>。</p>
+<h2>會話生命週期</h2>
+<pre><code>create → active ←→ suspended（切換到另一會話）
+                → destroyed（臨時會話，進程結束）
+                → persisted（持久會話，寫磁盤）
+</code></pre>
+<p>臨時會話 <code>persistent=False</code>（進程結束消失）；持久會話 <code>persistent=True</code>（<code>save_session</code>/<code>load_session</code>）。</p>
+<h2>Context 長度警告機制（舊版獨特立場：只警告不截斷）</h2>
+<p>核心<strong>只負責監控</strong>：<code>_estimate_tokens</code>（粗估＝字符數/4）→ 超閾值就在 output metadata 附警告，<strong>不自動截斷或 summarize</strong>（讓用戶決定）。建議用戶命令：<code>/compress</code>（LLM 摘要舊對話）、<code>/clear</code>（清空）、<code>/forget N</code>（遺忘最舊 N 條）。</p>
+<h2>待決策問題（old/3）</h2>
+<p>持久化存儲格式（JSON/SQLite/MessagePack？如何序列化函數對象）、函數定義語言（只 Python？還是 Shell/其他？如何註冊自定義）、會話間是否共享狀態（目前完全隔離）、LLM 並發調用（排隊 vs 併發）。</p>
+<p>設計原則：簡潔、隔離、共享、可恢復、用戶中心。</p>
+<hr />
+<h1>舊版 vs 現行：重大設計分歧（供主代理寫入總索引）</h1>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>舊版設計世系（本檔）</th>
+<th>現行（以此為準）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>核心隱喻</strong></td>
+<td>LLM 即純函數 <code>tokens→tokens</code>；make_model→bind→take 三層 closure（old/2）</td>
+<td>LLM 退縮為「意圖翻譯層 + 模糊前沿暫時處理者」，其餘是確定性程式碼（roadmap）</td>
+</tr>
+<tr>
+<td><strong>核心程式碼</strong></td>
+<td><code>core.py</code>：BaseFunction(ABC) + CoreEnvironment，依賴 litellm/requests（old/2）</td>
+<td><code>src/ai_core/_core.py</code>：<code>register()</code>/<code>intercept()</code> + 九軸，<strong>零外部相依</strong></td>
+</tr>
+<tr>
+<td><strong>metadata 模型</strong></td>
+<td><code>name/description/version/tags/input/output</code>（+ 後加 <code>io</code>/<code>examples</code>）</td>
+<td><strong>九軸</strong>：entries/lifecycle/state/state_dirs/resources/interruptible/guarantee/dry_run/nondeterministic</td>
+</tr>
+<tr>
+<td><strong>依賴立場</strong></td>
+<td>old/ 世代依賴 LiteLLM（「唯一框架依賴」）、requests</td>
+<td><strong>只用 Python 3.11+ 標準庫，<code>dependencies = []</code></strong></td>
+</tr>
+<tr>
+<td><strong>AI 的角色</strong></td>
+<td>AI 自我擴展為核心驅動力，門檻越低越好</td>
+<td><strong>拒絕為預設 + 憑證准入</strong>：LLM 預設零領地，需過必要性+穩定性兩道閘門領證</td>
+</tr>
+<tr>
+<td><strong>組合模型</strong></td>
+<td>S-expression 樹/DAG 自動組合引擎、自動鏈接（old/1、old/2）</td>
+<td>複合/組合規範（core_nature/composite_spec），shell pipe 為一等公民</td>
+</tr>
+<tr>
+<td><strong>常駐 server / queue / rate limit / SFC</strong></td>
+<td>舊版「現版」<strong>明確拒絕</strong>（與「OS 為中心」衝突）</td>
+<td>現行<strong>規劃中的五大元件</strong>正包含 LLM Entry Manager(queue/rate)、Function Hub、SFC dispatcher</td>
+</tr>
+<tr>
+<td><strong>多客戶端 + bytes token + 豐富 I/O metadata</strong></td>
+<td>old/2 大篇幅設計（priority/urgency/voice_length…）</td>
+<td>現行未採此路線；資料格式見 core_nature/data_format</td>
+</tr>
+<tr>
+<td><strong>成本管理</strong></td>
+<td>核心不管，交用戶（old/2 UserCostManager）</td>
+<td>LLM Entry Manager 集中管理 consume rate（token/金錢/GPU）</td>
+</tr>
+<tr>
+<td><strong>調度</strong></td>
+<td>OS-style 任務狀態機 + V1→V4（同步→DAG→async→動態調度）</td>
+<td>不在現行主線；現行強調 one-shot / persistent lifecycle 軸</td>
+</tr>
+<tr>
+<td><strong>平台</strong></td>
+<td>old/2 含 Windows-agnostic 多客戶端（Android 等）</td>
+<td><strong>POSIX only，Windows 不在考慮範圍</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>一句話總結分歧：舊版是「<strong>把 LLM 當函數、用重抽象/自動組合/多客戶端把它包成系統</strong>」（old/ 世代）以及其反動「<strong>只靠一條 <code>--metadata</code> 約定 + AI 自我擴展</strong>」（SYSTEM_DESIGN.md 世代）；現行則是「<strong>拒絕為預設的治理 + 九軸契約 + 零相依標準庫核心</strong>」，並且把舊版「現版」明確拒絕的常駐元件重新納為規劃。</p>
+</blockquote>
+<p>舊版的 README / usage / architecture 見 <a href="note_08_legacy_readme_usage_arch.html">note_08_legacy_readme_usage_arch.md</a>；舊版的 43~44 個 process 清單與 agents 生態見 <a href="note_09_legacy_processes_agents.html">note_09_legacy_processes_agents.md</a>。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="note_06_decisions_and_open_questions.html"><span class="dir">← 上一篇</span><span class="fn">note_06_decisions_and_open_questions</span></a>
+<a class="next" href="note_08_legacy_readme_usage_arch.html"><span class="dir">下一篇 →</span><span class="fn">note_08_legacy_readme_usage_arch</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

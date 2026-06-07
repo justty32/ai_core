@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_08 — 舊版設計世系：README / usage / architecture · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l5);background:rgba(0,0,0,.25)">⑤ 舊世系</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_08_legacy_readme_usage_arch.md · 218 行</div>
+<h1>note_08 — 舊版設計世系：README / usage / architecture</h1>
+<blockquote>
+<ul>
+<li><strong>來源</strong>：git commit <code>684082c</code> 之 <code>README.md</code> + <code>usage.md</code> + <code>architecture.md</code>（外加舊 <code>CLAUDE.md</code> 的願景段，作為對照）</li>
+<li><strong>狀態</strong>：<strong>舊版設計世系</strong>（已於 commit <code>7b9b8e3</code> 被完全覆蓋；僅供溯源，非現行事實）</li>
+<li><strong>一行摘要</strong>：舊版的「使用方式」與「架構視角」——process + <code>--metadata</code> 約定、hub 一次性索引、session 回合制、AI 六步擴展流程、hub 完整 CLI 命令、planner+chain 編排、元件邊界與不變式。</li>
+<li><strong>現行事實見</strong> <a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a> 與 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、<a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a>。本檔同屬 <a href="note_07_legacy_system_design.html">note_07_legacy_system_design.md</a> 的舊版世系。</li>
+</ul>
+</blockquote>
+<hr />
+<h2>⚠️ 閱讀前必讀</h2>
+<p>本檔是舊版 ai_core（process 世代）的操作面文件。其 <code>--metadata</code> schema、hub 命令、目錄結構<strong>皆已被現行覆蓋</strong>。凡與現行（roadmap.md / core_nature/ / 九軸）衝突，以現行為準。重大分歧表見 <a href="note_07_legacy_system_design.html">note_07_legacy_system_design.md</a> 末節。</p>
+<hr />
+<h1>一、舊 CLAUDE.md 的願景與核心理念（對照用）</h1>
+<p>舊版專案願景三句：</p>
+<pre><code>process = 可執行文件 + --metadata 約定
+hub     = 一次性的索引工具
+session = 一個有持久化的 dict
+AI      = 持續生成新 process 來擴展系統
+</code></pre>
+<p>「沒有 BaseFunction 類別，沒有 Registry class，沒有 server，沒有 REST API。把 OS 已有的 executable / CLI args / stdin-stdout / 文件系統當成函數系統來用。」</p>
+<p>舊版<strong>必要元件</strong>：process、hub（<code>--build-list</code> 掃描、<code>--search-func</code> 查詢）、session library（回合制 dict 持久化）。
+舊版<strong>未來元件</strong>：cli_lib（slash command/args/UI/big I/O control）、func_center（輕量 LLM 包的 server，避免 interpreter 啟動開銷）。</p>
+<p>舊版設計原則（打勾）：依託 OS、約定極簡、AI 自我擴展、無狀態核心、延遲優化、回合制模型。
+使用者資訊：繁體中文母語、語音輸入只支援英文、一律以繁體中文回覆。</p>
+<hr />
+<h1>二、README.md（舊版）</h1>
+<h2>Setup（注意：舊版需 LiteLLM，與現行零相依相反）</h2>
+<ul>
+<li>需 Python 3.10+（測試在 3.12）；<code>python -m venv .venv</code> + <code>pip install -r requirements.txt</code>。</li>
+<li><strong>重要</strong>：所有命令用 <code>.venv/bin/python</code> 跑——hub 會把 <code>sys.executable</code> 傳給子 process，讓 process 拿到 venv 裡的依賴（<code>litellm</code> 等）。</li>
+<li>LLM process 需設 API key，例：<code>export GEMINI_API_KEY=...</code>（預設 model <code>gemini/gemini-2.5-flash</code>）或 <code>LLM_MODEL=openai/gpt-4o-mini</code> + <code>OPENAI_API_KEY=...</code>。</li>
+</ul>
+<h2>快速試用</h2>
+<pre><code class="language-bash">.venv/bin/python hub --build-list ./processes/        # 1. 建索引
+.venv/bin/python hub --search-func &quot;translate&quot;        # 2. 搜尋
+echo &quot;Hello, World!&quot; | .venv/bin/python processes/slugify.py   # 3. 跑 process → hello-world
+.venv/bin/python -m pytest tests/ -q                  # 4. 跑測試
+</code></pre>
+<h2>Process 約定：<code>--metadata</code> 必填/選填表（舊版 schema，非現行九軸）</h2>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>必填</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>✅</td>
+<td>process 名稱（與檔名一致）</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>✅</td>
+<td>一句話描述功能</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td></td>
+<td>預設無</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td></td>
+<td>字串陣列，幫助搜尋</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td></td>
+<td>輸入型態描述</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td></td>
+<td>輸出型態描述</td>
+</tr>
+<tr>
+<td><code>examples</code></td>
+<td></td>
+<td><code>[{&quot;input&quot;,&quot;output&quot;}]</code>；<code>hub --validate</code> 會逐一執行並比對輸出</td>
+</tr>
+<tr>
+<td><code>io</code></td>
+<td></td>
+<td><code>{&quot;input&quot;: stdin|file|args|none, &quot;output&quot;: stdout|file|none, &quot;format&quot;: {&quot;input&quot;: text|json|binary, &quot;output&quot;: ...}}</code>；給 orchestrator/export 用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>錯誤與 I/O 契約</strong>：成功 exit 0 寫 stdout；失敗 non-zero exit 寫 stderr；小輸入用 CLI args；大/多行輸入用 stdin，process 必須兩種都能讀：</p>
+<pre><code class="language-python">text = sys.argv[1] if len(sys.argv) &gt; 1 else sys.stdin.read()
+</code></pre>
+<p><strong>最小骨架</strong>（舊版範式）：含 <code>METADATA</code> dict + <code>if &quot;--metadata&quot; in sys.argv: print(json.dumps(METADATA))</code> 否則執行 <code>run()</code>。</p>
+<h2>AI 寫 process 的標準流程（六步）</h2>
+<pre><code class="language-bash">./hub --search-func &quot;&lt;keyword&gt;&quot;                     # 1. 確認沒重複
+# 2. 寫 processes/&lt;name&gt;.py（依骨架）
+chmod +x processes/&lt;name&gt;.py                        # 3. 設執行權限
+.venv/bin/python hub --validate processes/&lt;name&gt;.py # 4. 驗證契約 + 跑 examples
+echo &quot;...&quot; | .venv/bin/python processes/&lt;name&gt;.py   # 5.（可選）煙霧測試
+.venv/bin/python hub --build-list ./processes/      # 6. 重建索引
+</code></pre>
+<p><code>hub --validate</code> 檢查：執行權限、<code>--metadata</code> 能跑、輸出是合法 JSON 物件、含必填欄位、退出碼 0。若含 <code>examples</code> 則逐一把 input 餵 stdin、比對 output（examples 即自動煙霧測試）。</p>
+<h2>Hub 完整命令（舊版 CLI 介面）</h2>
+<pre><code class="language-bash">hub --build-list &lt;dir&gt; [--output &lt;file&gt;]    # 掃描目錄建索引
+hub --search-func &lt;query&gt; [--list &lt;file&gt;]   # 子字串搜尋 (name/description/tags)
+hub --validate &lt;process_path&gt;               # 檢查契約 + 跑 examples（若有）
+hub --gen-agents-md [--output &lt;file&gt;]       # 產出給 AI 讀的入口文件
+hub --gen-functions-md [--output &lt;file&gt;]    # 產出完整 process 清單
+hub --export &lt;fmt&gt; [--output &lt;file&gt;]        # 輸出 tool schemas: openai-tools | anthropic-tools
+</code></pre>
+<ul>
+<li>預設 <code>&lt;file&gt;</code> 是 <code>./list.json</code>，預設 <code>&lt;dir&gt;</code> 是 <code>./processes</code>。</li>
+<li>所有 <code>--gen-*</code> / <code>--export</code> 無 <code>--output</code> 時直接印 stdout（pipe-friendly）。</li>
+<li><strong>全域旗標 <code>--json-errors</code></strong>：把 stderr 錯誤改成單行 JSON <code>{&quot;type&quot;,&quot;message&quot;,&quot;hint&quot;,&quot;retriable&quot;}</code>，給 orchestrator（planner/chain）程式化處理。</li>
+<li><strong>list.json 條目格式</strong>：每 entry 含 <code>_status: &quot;ok|partial|absent&quot;</code>；<code>partial</code>＝metadata 解析了但缺必填；<code>absent</code>＝<code>--metadata</code> 整個失敗；search-func 跳過 <code>absent</code> 但仍返回 <code>partial</code>。</li>
+</ul>
+<h2>編排：planner + chain（舊版兩個 meta-process）</h2>
+<pre><code class="language-bash"># planner：自然語言任務 → JSON 執行計劃
+.venv/bin/python processes/planner.py &quot;review my Go code and write release notes&quot;
+# chain：吃 planner 的 JSON，依序執行每一步
+.venv/bin/python processes/planner.py &quot;...&quot; | \
+  .venv/bin/python processes/chain.py --input my_code.go
+</code></pre>
+<p>每一步中間結果存到 <code>~/.ai_core/chain/session.json</code>。</p>
+<h2>舊版目錄（README 版）</h2>
+<pre><code>ai_core/
+├── hub                 ← 索引工具（可執行）
+├── list.json           ← hub --build-list 的輸出
+├── processes/          ← 所有 process（扁平、44 個）
+├── auto/               ← 自動產出：AGENTS.md / FUNCTIONS.md / tools.*.json
+├── session_lib/        ← Session library 原始碼
+├── tests/              ← pytest 測試
+├── SYSTEM_DESIGN.md / SYSTEM_DESIGN_EXTRA.md / architecture.md / usage.md / CLAUDE.md
+</code></pre>
+<hr />
+<h1>三、usage.md（舊版，使用者視角）</h1>
+<p>核心概念：所有功能都是 process，process 就是一個可執行文件（shell script / .py / binary），<code>process = 可執行文件 + CLI args</code>。</p>
+<h2>Process 範例（usage.md 獨有的四種具體寫法）</h2>
+<ul>
+<li><strong>LLM 入口</strong> <code>gemini-2.5-flash.py</code>：直接 <code>litellm.completion(model=&quot;gemini/gemini-2.5-flash&quot;, temperature=1.2)</code>，吃 argv/stdin，print 結果。</li>
+<li><strong>Context 綁定包</strong> <code>senior-engineer.py</code>：post = &quot;you are a senior engineer&quot;，用 <code>subprocess.run([&quot;python&quot;,&quot;gemini-2.5-flash.py&quot;, post+&quot;\n&quot;+input])</code> 呼叫 LLM 入口。</li>
+<li><strong>輸出解析包</strong> <code>arrange-output.py</code>：<code>json.loads(stdin)</code> 後 <code>print(data[&quot;result&quot;])</code>。</li>
+<li><strong>串接組合</strong> <code>analysis_article.py</code>：內部依序 subprocess 呼 senior-engineer → arrange-output；或直接 shell pipe <code>cat article.txt | python senior-engineer.py | python arrange-output.py</code>。</li>
+</ul>
+<h2>Session Library（usage.md 版）</h2>
+<p>回合制 RPG 模型：使用者行動 → 機器執行 → 等待下一輪。session 狀態主要在記憶體，其餘由 process 設計者決定。邊界：只負責 dict 讀寫與持久化，不處理 UI（slash command/args/file save UI 屬上層）。<code>Session</code> 類最簡實作（<code>get</code>/<code>set</code>，<code>set</code> 即寫回 JSON）；process 使用範例為每輪讀 history → append user → call_llm → append assistant → <code>session.set(&quot;history&quot;, ...)</code>。</p>
+<h2>cli_lib / func_center（usage.md 版「之後」）</h2>
+<p>cli_lib：slash command（<code>/reset</code>/<code>/save</code>/<code>/history</code>）、args 支援、file save UI、big I/O control（file→stdin、stdout→file）。func_center：輕量 server 管理簡單 LLM+context 包，避免每次啟動 interpreter，<code>./func_center --func llm_summarize &quot;input text&quot;</code>。</p>
+<h2>AI 驅動的自我擴展（usage.md 版）</h2>
+<p>使用者說「幫我做一個能做 XXX 的 process」→ AI ① 理解意圖 ② 實作符合約定的 process ③ 放進 processes 目錄 ④ <code>hub --build-list</code> 更新索引 ⑤ 從此可被呼叫/組合。「系統不是人工填充，而是透過 AI 不斷生長，每個新 process 都成為之後可組合的積木。」</p>
+<hr />
+<h1>四、architecture.md（舊版，結構視角）</h1>
+<h2>元件總覽</h2>
+<p>所有元件（processes / hub / session_lib）都坐落在 OS（executable, CLI args, stdin/stdout, filesystem, pipe）之上，彼此獨立，透過 OS 機制與文件互動；共用一個 <code>list.json</code>（索引文件）。</p>
+<h2>元件職責表（architecture.md 獨有）</h2>
+<table>
+<thead>
+<tr>
+<th>元件</th>
+<th>形式</th>
+<th>職責</th>
+<th>不負責</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>process</strong></td>
+<td>executable file</td>
+<td>執行單一功能、輸出 metadata</td>
+<td>知道其他 process、管理會話</td>
+</tr>
+<tr>
+<td><strong>hub</strong></td>
+<td>one-shot CLI tool</td>
+<td>掃描索引、查詢匹配</td>
+<td>持續運行、執行 process</td>
+</tr>
+<tr>
+<td><strong>session_lib</strong></td>
+<td>Python library</td>
+<td>dict 讀寫與持久化</td>
+<td>UI 邏輯、process 排程</td>
+</tr>
+<tr>
+<td><strong>list.json</strong></td>
+<td>JSON file</td>
+<td>儲存所有 process 的 metadata 索引</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2>四個資料流（architecture.md 獨有）</h2>
+<ol>
+<li><strong>建立索引</strong>：<code>hub --build-list ./processes/</code> → 掃描 → 對每個檔 <code>subprocess(file --metadata)</code> → 彙整 → <code>list.json.tmp</code> → rename → <code>list.json</code>。</li>
+<li><strong>查詢與呼叫</strong>：<code>hub --search-func &quot;translate&quot;</code> → 讀 list.json → 回傳路徑 → 使用者/AI <code>subprocess(./processes/translate &quot;input&quot;)</code> → process 讀 stdin/args 執行寫 stdout。</li>
+<li><strong>多輪 session</strong>：回合 1 與回合 2 都透過 <code>session.get/set</code> 經 <code>session.json</code> 橋接（session.json 是回合之間的橋）。</li>
+<li><strong>AI 自我擴展</strong>：使用者意圖 → AI（search 確認不重複 → 寫檔 → chmod +x → build-list）→ 新 process 進系統 → 未來可被搜尋/呼叫/組合。</li>
+</ol>
+<h2>文件系統佈局（architecture.md 版）</h2>
+<pre><code>ai_core/
+├── hub
+├── processes/   (gemini-2.5-flash.py / senior-engineer.py / arrange-output.py / ...)
+├── list.json
+├── session_lib/session.py
+└── ~/.{process_name}/session.json   ← 各 process 的 session 文件
+</code></pre>
+<p><code>processes/</code> 扁平，太多再分類。</p>
+<h2>元件邊界（architecture.md 詳述）</h2>
+<ul>
+<li><strong>Process</strong>：負責自己的功能邏輯、<code>--metadata</code>、stdin/args 解析、stdout、自己的 session；不負責知道其他 process、排程選擇呼叫誰、UI。例外：組合 process 用 subprocess 呼別人但仍透過 OS。</li>
+<li><strong>Hub</strong>：負責掃描、收集 metadata、讀寫 list.json、查詢；不負責執行 process、管 session、持續運行。</li>
+<li><strong>Session Library</strong>：負責 dict 讀寫與 JSON 持久化；不負責 UI 邏輯、多 process 共享協調、排程。</li>
+</ul>
+<h2>Process 內部結構（兩入口共用一檔）</h2>
+<pre><code class="language-python">def metadata(): return {...}
+def run(input_text): return output_text
+if __name__ == &quot;__main__&quot;:
+    if &quot;--metadata&quot; in sys.argv: print(json.dumps(metadata()))
+    else:
+        input_text = sys.argv[1] if len(sys.argv) &gt; 1 else sys.stdin.read()
+        print(run(input_text))
+</code></pre>
+<p>兩入口共用同檔是約定不是強制。</p>
+<h2>通信機制表（architecture.md 獨有）</h2>
+<table>
+<thead>
+<tr>
+<th>場景</th>
+<th>機制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>process ↔ process（一次性組合）</td>
+<td>shell pipe 或 subprocess</td>
+</tr>
+<tr>
+<td>process ↔ session 狀態</td>
+<td>session.json 文件</td>
+</tr>
+<tr>
+<td>hub ↔ process（取 metadata）</td>
+<td>subprocess（呼叫 <code>--metadata</code>）</td>
+</tr>
+<tr>
+<td>hub ↔ list.json</td>
+<td>文件讀寫（atomic rename）</td>
+</tr>
+<tr>
+<td>使用者/AI ↔ 任何元件</td>
+<td>CLI args + stdin/stdout</td>
+</tr>
+</tbody>
+</table>
+<p><strong>沒有</strong>：socket、HTTP、IPC、shared memory、message queue。</p>
+<blockquote>
+<p>⚠️ 此處與 old/2 的「四種通信方式（含 HTTP/IPC/文件）」自相矛盾——正是 process 世代對 old/ 世代的否定。現行則又把常駐 server 納回規劃（見 note_07 分歧表）。</p>
+</blockquote>
+<h2>五條關鍵不變式（architecture.md 獨有）</h2>
+<ol>
+<li>Process 必須支援 <code>--metadata</code>，否則無法被索引。</li>
+<li>list.json 用 atomic rename 寫入，否則讀寫會撞。</li>
+<li>Session 狀態屬於單一 process，多 process 不共享同一份 session。</li>
+<li>Hub 不持有任何狀態，重跑 <code>--build-list</code> 等同重置索引。</li>
+<li>每個 process 是黑盒，互不知曉、互不依賴。</li>
+</ol>
+<h2>與「更舊」架構的對應表（architecture.md 自記，指向 old/ 世代）</h2>
+<table>
+<thead>
+<tr>
+<th>舊（已棄用，指 old/）</th>
+<th>新（指 process 世代）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BaseFunction class</td>
+<td>executable file</td>
+</tr>
+<tr>
+<td>FunctionRegistry class</td>
+<td>filesystem + list.json</td>
+</tr>
+<tr>
+<td>Closure 物件</td>
+<td>process 內部變數</td>
+</tr>
+<tr>
+<td>Context 物件</td>
+<td>session.json</td>
+</tr>
+<tr>
+<td>Server / REST API</td>
+<td>hub one-shot + stdin/stdout</td>
+</tr>
+<tr>
+<td>Layer 1 / 2 / 3</td>
+<td>process / hub / session_lib</td>
+</tr>
+<tr>
+<td>architecture.md 註：「舊架構的程式碼還在 <code>src/</code> 和 <code>old/</code>，但已不是當前設計。」（此「當前」指舊版內部的 process 世代，整體仍已被現行覆蓋。）</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>舊版的系統設計三世代見 <a href="note_07_legacy_system_design.html">note_07_legacy_system_design.md</a>；舊版 process 清單與 agents 生態見 <a href="note_09_legacy_processes_agents.html">note_09_legacy_processes_agents.md</a>。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="note_07_legacy_system_design.html"><span class="dir">← 上一篇</span><span class="fn">note_07_legacy_system_design</span></a>
+<a class="next" href="note_09_legacy_processes_agents.html"><span class="dir">下一篇 →</span><span class="fn">note_09_legacy_processes_agents</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

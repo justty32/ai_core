@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_03_execution_forms · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_03_execution_forms.md · 321 行</div>
+<h1>doc_03_execution_forms</h1>
+<ul>
+<li><strong>來源</strong>：<code>core_nature/execution_forms.md</code></li>
+<li><strong>狀態</strong>：定案規範（部分待填）</li>
+<li><strong>一行摘要</strong>：函式執行形式在 terminal 中的對應——§0 多維描述軸（含第九軸 nondeterministic）、§4 各執行形式定義（one-shot / multi-shot / persistent / singleton / streaming / lazy / detached / fan-out / idempotent / suspendable / wizard / transactional / memoized / dry-run / hook / ephemeral / proxy / agentic）、§5 觸發機制正交軸。</li>
+</ul>
+<blockquote>
+<p>交叉引用：九軸詳規見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>、terminal 執行模型見 <a href="doc_02_terminal_model.html">doc_02_terminal_model.md</a>、複合/組合規範見 <a href="doc_08_composite.html">doc_08_composite.md</a>。</p>
+</blockquote>
+<hr />
+<p>函式執行形式在 terminal 中的對應。這套分類本質上是跨環境的，terminal 只是最純粹的起點。</p>
+<hr />
+<h2>§0 分類框架：多維描述軸</h2>
+<p>執行單元的描述空間是<strong>多維的</strong>。§4 的平鋪清單是毛料——把各軸上的概念先攤出來——後續重組時應以下列軸為基礎，而非繼續往清單裡追加。</p>
+<table>
+<thead>
+<tr>
+<th>軸</th>
+<th>描述的問題</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>I/O 型態</strong></td>
+<td>輸入從哪來、輸出往哪去、是否需要執行途中的互動</td>
+<td>無輸入、stdin、互動式（中途需 stdin）、streaming push、streaming pull</td>
+</tr>
+<tr>
+<td><strong>生命週期</strong></td>
+<td>執行單元從啟動到結束的持續模式</td>
+<td>one-shot、persistent、lazy/warm、detached</td>
+</tr>
+<tr>
+<td><strong>跨呼叫狀態</strong></td>
+<td>單次執行以外是否保有、影響或累積狀態</td>
+<td>stateless、stateful-external、stateful-internal</td>
+</tr>
+<tr>
+<td><strong>資源特性</strong></td>
+<td>對計算資源的消耗或佔用（含時間）</td>
+<td>執行時間、記憶體、CPU、GPU；對應 <code>--metadata</code> 的聲明內容</td>
+</tr>
+<tr>
+<td><strong>可中斷性</strong></td>
+<td>是否可以被暫停、暫停後可否恢復、恢復後副作用為何</td>
+<td>不可中斷、可暫停（SIGSTOP）、可恢復（checkpoint/restore）</td>
+</tr>
+<tr>
+<td><strong>執行保證</strong></td>
+<td>對系統狀態的承諾，獨立於執行次數或中途失敗</td>
+<td>idempotent、transactional（ACID）、dry-run</td>
+</tr>
+<tr>
+<td><strong>組合模式</strong></td>
+<td>執行單元如何與其他單元構成更大的結構</td>
+<td>fan-out/fan-in、proxy/wrapper、hook/callback、agentic loop</td>
+</tr>
+<tr>
+<td><strong>環境模式</strong></td>
+<td>執行環境是預先存在還是動態建立與銷毀</td>
+<td>固定環境、ephemeral/JIT</td>
+</tr>
+<tr>
+<td><strong>確定性 / 隨機性</strong></td>
+<td>同輸入是否同輸出；隨機環節（LLM）的認證狀態</td>
+<td>deterministic（預設）、nondeterministic（未認證 / 帶證書）；見 <a href="../core_nature/axis_spec.md"><code>axis_spec.md §9</code></a>（亦見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>「確定性 / 隨機性」是繼前八軸之後<strong>新增的第九軸</strong>。前八軸隱含「函式是確定性的」前提，無一能描述
+LLM 這種天生隨機的函式，且此性質無法由任何既有軸隱含——故獨立成軸。它同時承載治理原則的證書
+（見 <code>roadmap.md §3.4</code>）。詳見 <code>axis_spec.md §9</code> 與 <code>lib_spec.md §9</code>（對應 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a> 與 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>）。</p>
+</blockquote>
+<p>同一個執行單元可以在多個軸上各有描述，例如：</p>
+<ul>
+<li><code>terraform apply</code>：one-shot（生命週期）× idempotent + transactional（執行保證）× 固定環境（環境模式）</li>
+<li><code>docker run --rm</code>：one-shot × ephemeral/JIT</li>
+<li>LLM Entry Manager：persistent × singleton × stateful-internal × GPU 資源約束</li>
+</ul>
+<hr />
+<h2>§4 函式形式在 terminal 中的對應</h2>
+<h3>4.1 One-shot</h3>
+<p><strong>定義</strong>：執行一次、產生輸出、結束。無狀態，無副作用（除了明確的輸出）。</p>
+<p>Terminal 表現：</p>
+<ul>
+<li>stdin → process → stdout / stderr</li>
+<li>exit code 0 = 成功，非 0 = 失敗</li>
+<li>大多數 Unix 工具屬此類：<code>grep</code>、<code>sed</code>、<code>awk</code>、<code>jq</code>...</li>
+</ul>
+<p>One-shot 是最基本的形式，也是 pipeline 組合的基礎單元：</p>
+<pre><code class="language-bash">cat file.txt | grep &quot;error&quot; | wc -l
+</code></pre>
+<p>每個節點都是獨立的 one-shot process，stdout 自動接到下一個的 stdin。</p>
+<hr />
+<h3>4.2 Multi-shot</h3>
+<p><strong>定義</strong>：跨多次呼叫保有狀態，本次執行結果影響下次。</p>
+<p>Terminal <strong>沒有原生支援</strong>。Multi-shot 在 terminal 中必須拆解為：</p>
+<blockquote>
+<p><strong>one-shot + 外部狀態管理</strong></p>
+</blockquote>
+<p>狀態的持久化策略（由工具自行定義）：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>做法</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>狀態檔</td>
+<td>每次呼叫讀入 <code>--state-file path</code>，執行後寫回</td>
+<td>最通用，明確可見</td>
+</tr>
+<tr>
+<td>固定路徑慣例</td>
+<td>工具固定讀寫 <code>~/.tool/state</code> 或 <code>./.tool_state</code></td>
+<td>隱式，呼叫者無需指定</td>
+</tr>
+<tr>
+<td>輸出即狀態</td>
+<td>上次 stdout 直接作為下次 stdin 輸入（無副作用）</td>
+<td>最純粹，但狀態大時不方便</td>
+</tr>
+</tbody>
+</table>
+<p><strong>重點</strong>：工具的 <code>--metadata</code> 必須聲明它是 multi-shot，並說明狀態的存放位置與格式，否則呼叫者無從得知如何正確使用。</p>
+<p><strong>狀態所有權的兩種子型：</strong></p>
+<table>
+<thead>
+<tr>
+<th>子型</th>
+<th>說明</th>
+<th>呼叫者介面</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caller-managed</td>
+<td>呼叫者保管狀態，顯式傳入 <code>--state-file path</code></td>
+<td>呼叫者對狀態有完整控制，也需自行處理初始化與清除</td>
+</tr>
+<tr>
+<td>Self-managed</td>
+<td>函數自行決定狀態存放路徑（固定路徑慣例）</td>
+<td>呼叫者直接呼叫，無需傳入狀態參數；狀態對呼叫者透明</td>
+</tr>
+</tbody>
+</table>
+<p>兩者行為語意相同（跨呼叫保有狀態），差別只在<strong>誰持有狀態的所有權</strong>。</p>
+<hr />
+<h3>4.3 Persistent</h3>
+<p><strong>定義</strong>：長期存活，持續等待呼叫，不主動結束。</p>
+<p>Terminal 有兩種子型：</p>
+<h4>子型 A：互動式（Interactive / REPL）</h4>
+<p>從 stdin 讀取輸入，處理後輸出到 stdout，循環直到收到結束訊號（EOF 或特定指令）：</p>
+<pre><code class="language-bash">python3        # REPL
+sqlite3 db     # 互動式 SQL
+</code></pre>
+<p>通訊介面：stdin / stdout（與 one-shot 相同，但 process 不結束）</p>
+<h4>子型 B：Server / Daemon</h4>
+<p>在背景持續運行，透過 IPC 機制等待請求：</p>
+<table>
+<thead>
+<tr>
+<th>IPC 機制</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unix socket</td>
+<td>本機 IPC，效能高，路徑即位址</td>
+</tr>
+<tr>
+<td>TCP port</td>
+<td>可跨機器，HTTP/JSON-RPC 常用此</td>
+</tr>
+<tr>
+<td>Named pipe（FIFO）</td>
+<td>單向，較少用於雙向通訊</td>
+</tr>
+</tbody>
+</table>
+<p>啟動方式：<code>&amp;</code> 置於背景，或由 systemd / init 管理。</p>
+<p><strong>結論</strong>：Persistent 程式建議設計成 server（子型 B），而非互動式。原因：server 可被程式化呼叫，互動式只能給人用。</p>
+<hr />
+<h3>4.4 Singleton</h3>
+<p><strong>定義</strong>：資源受限，系統中同時只能存在一個（或有限數量的）實例。</p>
+<p>Singleton 不是一種「執行形式」，而是一種<strong>資源約束</strong>，可疊加在 persistent 上（最常見）。</p>
+<p>Terminal 的實作慣例：</p>
+<table>
+<thead>
+<tr>
+<th>機制</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PID 檔</td>
+<td>啟動時寫 PID 到 <code>~/.tool/tool.pid</code>，啟動前先檢查是否已有 running 實例</td>
+</tr>
+<tr>
+<td>Lock 檔</td>
+<td><code>flock</code> 取得獨佔鎖，後來的啟動嘗試直接失敗或等待</td>
+</tr>
+<tr>
+<td>OS 服務管理</td>
+<td>交給 systemd，由 OS 保證單例</td>
+</tr>
+</tbody>
+</table>
+<p><strong>典型案例</strong>：LLM Entry Manager——本地 GPU 是有限資源，不允許多個實例同時搶占，因此設計為 singleton persistent server。</p>
+<hr />
+<h3>4.5 Streaming</h3>
+<p>One-shot 的輸出變體：執行期間<strong>邊算邊輸出</strong>，而非等全部完成才輸出。</p>
+<p>Terminal 表現：stdout flush 不緩衝（Python 用 <code>-u</code> 或 <code>sys.stdout.flush()</code>，或 <code>unbuffer</code>）。</p>
+<p>從 process lifecycle 角度仍是 one-shot（執行完就結束），但輸出是增量的。典型例子：<code>tail -f</code>、ping、串流 LLM 回應。</p>
+<p>與 persistent 的區別：persistent 等待多個獨立呼叫，streaming 是<strong>單次呼叫</strong>內產生連續輸出。</p>
+<p><strong>變體：Pull-based / Generator 模型</strong>：上述為 push-based（函數主動推送輸出）。Pull-based 反過來——由 caller 主動拉取一個值，函數在兩次拉取之間暫停。Python generator（<code>yield</code>）是典型例子。在 terminal 層幾乎不可見（shell 管道預設 push），但在程式內部函數中是獨立的概念。</p>
+<hr />
+<h3>4.6 Lazy / Warm</h3>
+<p>介於 one-shot 與 persistent 之間的中間態：<strong>第一次呼叫才啟動，之後在一段時間內保持活躍等待下一次呼叫。</strong></p>
+<table>
+<thead>
+<tr>
+<th>屬性</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>啟動方式</td>
+<td>第一次呼叫時才初始化（非預先常駐）</td>
+</tr>
+<tr>
+<td>存活策略</td>
+<td>呼叫後保持一段 idle 時間（timeout 後自動關閉）</td>
+</tr>
+<tr>
+<td>適用場景</td>
+<td>啟動代價高、但呼叫頻率不固定的工具（如 LLM inference runtime）</td>
+</tr>
+</tbody>
+</table>
+<p>可視為 persistent 的子類（「不預先常駐的 persistent」），或獨立分類——設計上待定。</p>
+<hr />
+<h3>4.7 Detached / Fire-and-Forget（分離式 / 射後不理）</h3>
+<p><strong>定義</strong>：被呼叫後，立即啟動一個背景任務（或將任務交接給系統守護行程），主行程瞬間結束並回傳狀態，不等待實際任務運算完成。</p>
+<p>Terminal 表現：<code>nohup command &amp;</code>、<code>disown</code>，或不帶 <code>--wait</code> 的 <code>systemctl start &lt;service&gt;</code>。</p>
+<p>與 One-shot 的差異：One-shot 會阻塞呼叫者直到任務完成並輸出結果；Detached 立刻釋放控制權，實際任務的輸出通常導向 log 檔、<code>/dev/null</code>，或透過 webhook 異步回傳。</p>
+<p>適用場景：觸發耗時極長的非同步任務（大規模資料遷移、觸發 CI/CD pipeline）。</p>
+<p><strong>變體——Async with Result Retrieval（非同步帶回傳）</strong>：主行程立即結束並回傳 job ID，呼叫者之後透過輪詢（polling）或回調（callback）取回結果。純 Fire-and-Forget 是呼叫者不關心結果；此變體是呼叫者<strong>延遲取回</strong>結果。</p>
+<hr />
+<h3>4.8 Fan-out / Fan-in（散佈與收集）</h3>
+<p><strong>定義</strong>：複合型執行形式。主行程作為協調者（Coordinator），將任務拆解並同時啟動多個子任務（Fan-out），等待所有子任務完成後，將結果聚合（Fan-in）再統一輸出。</p>
+<p>Terminal 表現：<code>GNU parallel</code>、<code>xargs -P</code>、<code>make -j</code>。</p>
+<p>與 One-shot pipeline 的差異：標準 pipeline（<code>A | B | C</code>）是線性串流；Fan-out / Fan-in 是樹狀的平行展開與收斂，本質是為了最大化利用多核資源。</p>
+<hr />
+<h3>4.9 Idempotent（冪等式）</h3>
+<p><strong>定義</strong>：無論執行一次還是連續執行一百次，對系統狀態造成的改變和最終結果都完全相同。可視為「目標狀態導向」的特殊 One-shot：若系統已達目標狀態，則不產生任何副作用操作。</p>
+<p>Terminal 表現：<code>mkdir -p /path</code>、<code>rm -f file</code>、<code>rsync</code>，以及幾乎所有 IaC 工具（Terraform、Ansible）。</p>
+<p>與 Multi-shot 的差異：Multi-shot 的狀態通常是「累加」或「推進」的（如對話歷史）；Idempotent 是確保狀態<strong>收斂</strong>到預期的絕對基準線上。</p>
+<hr />
+<h3>4.10 Suspendable / Resumable（可中斷與恢復）</h3>
+<p><strong>定義</strong>：執行到一半可以被掛起（暫停），釋放當下的運算或網路資源，並在未來某個時間點從中斷處繼續執行，而不是從頭開始。</p>
+<p>Terminal 表現：</p>
+<ul>
+<li>OS 層級：<code>Ctrl+Z</code> 觸發 <code>SIGSTOP</code>，後續以 <code>fg</code> / <code>bg</code> 恢復</li>
+<li>應用層級：支援斷點續傳的工具（<code>wget -c</code>、<code>rsync --partial</code>），或使用 CRIU 保存行程記憶體狀態</li>
+</ul>
+<p>與 Lazy / Warm 的差異：Lazy 是在等待「下一次新的呼叫」；Resumable 是暫停「當前尚未完成的長期任務」。</p>
+<hr />
+<h3>4.11 Interactive Wizard（步進互動式）</h3>
+<p><strong>定義</strong>：以收集參數為目的的短期互動。按順序詢問一系列問題，收集完畢後執行一次性任務，然後結束。</p>
+<p>Terminal 表現：<code>npm init</code>、<code>ssh-keygen</code>、<code>apt-get install</code>（遇到需配置選項時）。</p>
+<p>與 Persistent 子型 A（REPL）的差異：REPL 的生命週期是無窮迴圈（Read-Eval-Print Loop）；Wizard 是有限狀態機，走完特定設定流程後，轉化為 One-shot 執行並結束。</p>
+<hr />
+<h3>4.12 Transactional（事務式）</h3>
+<p><strong>定義</strong>：一系列步驟要麼全部成功（commit），要麼全部回滾到初始狀態（rollback），不留中間殘局。</p>
+<p>Terminal 表現：<code>git commit</code>（all-or-nothing）、資料庫 transaction、<code>rsync</code> 的原子替換（先寫 temp 再 rename）。</p>
+<p>與 Idempotent 的差異：Idempotent 保證「重複執行安全」；Transactional 保證「中途失敗不留殘局」。兩者正交，常一起出現（如 Terraform apply：idempotent + transactional）。</p>
+<hr />
+<h3>4.13 Memoized / Cached（快取式）</h3>
+<p><strong>定義</strong>：同樣的輸入若已計算過，直接回傳快取結果而不重新執行，計算只發生一次（或快取失效前只發生一次）。</p>
+<p>Terminal 表現：<code>ccache</code>（C/C++ 編譯快取）、<code>pip</code> 的 wheel cache、<code>make</code> 的 target 時間戳依賴判斷。</p>
+<p>與 Idempotent 的差異：Idempotent 關注「副作用安全性」（重複執行不造成多餘改變）；Memoized 關注「計算的跳過」（輸入相同則完全略過執行）。前者是 correctness 保證，後者是 performance 最佳化。</p>
+<hr />
+<h3>4.14 Dry-Run / Simulation（模擬執行 / 試運行）</h3>
+<p><strong>定義</strong>：執行完整的邏輯運算與狀態比對，但攔截所有對系統的實際修改（副作用），僅向 stdout 輸出「如果真的執行，將會發生什麼事」。</p>
+<p>Terminal 表現：<code>terraform plan</code>、<code>rsync -n</code>（或 <code>--dry-run</code>）、<code>apt-get install -s</code>。</p>
+<p>與 One-shot 的差異：這是對「有副作用任務」的唯讀鏡像。它回傳的是執行計畫或意圖（Intent），讓呼叫者在實際改變狀態前進行確認，是基礎設施與高風險操作的必備形式。</p>
+<hr />
+<h3>4.15 Hook / Callback（掛鉤 / 生命週期回呼）</h3>
+<p><strong>定義</strong>：不預期由人類使用者直接呼叫。被「註冊」到另一個宿主（Host）應用程式的生命週期中，在特定事件發生時被系統性地觸發。</p>
+<p>Terminal 表現：Git hooks（<code>.git/hooks/pre-commit</code>）、Linux 套件管理器 hooks（pacman hooks）、systemd 服務的 <code>ExecStartPre</code> / <code>ExecStopPost</code>。</p>
+<p>執行約束：I/O 與環境變數完全由宿主提供。Exit code 直接決定宿主行程是否能繼續推進（hook 回傳非 0，git commit 即被強制中斷）。</p>
+<hr />
+<h3>4.16 Ephemeral / JIT Execution（臨時 / 用後即棄執行）</h3>
+<p><strong>定義</strong>：執行前動態拉取依賴、建構環境，執行一次性任務後立刻銷毀整個運行環境，不留任何痕跡。</p>
+<p>Terminal 表現：<code>npx &lt;package&gt;</code>、<code>docker run --rm &lt;image&gt;</code>、<code>nix run</code>。</p>
+<p>與 One-shot 的差異：One-shot（如 <code>grep</code>）假設執行環境與依賴已固定存在；Ephemeral 將「環境的建構與銷毀」封裝進單次呼叫中，保證極致的環境隔離與無狀態性。</p>
+<hr />
+<h3>4.17 Proxy / Wrapper（代理 / 包裝器）</h3>
+<p><strong>定義</strong>：包裝在目標指令外層，攔截、監控或修改其環境變數、I/O 串流或系統呼叫，然後將控制權透傳（Pass-through）給內部實際運作的行程。</p>
+<p>Terminal 表現：<code>time &lt;command&gt;</code>（測量耗時）、<code>strace &lt;command&gt;</code>（追蹤系統呼叫）、<code>sudo &lt;command&gt;</code>（提權）、<code>env VAR=1 &lt;command&gt;</code>。</p>
+<p>與 Pipeline 中介點的差異：Pipeline 節點只處理純資料；Proxy / Wrapper 處理的是「執行環境的殼」。其生命週期與被包裝的子行程（Child Process）完全綁定。</p>
+<hr />
+<h3>4.18 Agentic / Autonomous Loop（自主代理迴圈）</h3>
+<p><strong>定義</strong>：高度動態的 Multi-shot 變體。行程啟動後，根據自身的輸出或外部環境的反饋，自主決定下一步的執行路徑，直到滿足某個終止條件。</p>
+<p>Terminal 表現：AutoGPT 終端介面、具備 Tool-use / Function Calling 的本地端 LLM 代理腳本。</p>
+<p>執行特徵：傳統 Shell Script 或 Pipeline 是預先寫死的有向無環圖（DAG）；Agentic 形式的執行流程是<strong>執行期動態生成</strong>的，具備「觀察 → 思考 → 行動」的非確定性迴圈。</p>
+<hr />
+<h2>§5 觸發機制（正交軸）</h2>
+<p>§4 的執行狀態描述「執行後的行為」；<strong>觸發方式</strong>是另一個正交軸，描述「由什麼啟動執行」。</p>
+<table>
+<thead>
+<tr>
+<th>觸發機制</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>直接呼叫</td>
+<td>§4 各節隱含的預設，caller 主動發起</td>
+</tr>
+<tr>
+<td>Event-driven</td>
+<td>被外部事件推送觸發（message queue、webhook、filesystem watch）</td>
+</tr>
+<tr>
+<td>Scheduled</td>
+<td>由時間觸發（cron、systemd timer）</td>
+</tr>
+</tbody>
+</table>
+<p>兩個軸可自由組合：</p>
+<table>
+<thead>
+<tr>
+<th>組合範例</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scheduled + one-shot</td>
+<td>定時跑的批次任務</td>
+</tr>
+<tr>
+<td>event-driven + persistent</td>
+<td>收到事件才喚醒的常駐服務</td>
+</tr>
+<tr>
+<td>scheduled + multi-shot</td>
+<td>定時累積狀態的定期任務</td>
+</tr>
+</tbody>
+</table>
+<p>Terminal 實作：</p>
+<table>
+<thead>
+<tr>
+<th>觸發機制</th>
+<th>常見工具</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scheduled</td>
+<td><code>cron</code>、<code>systemd timer</code></td>
+</tr>
+<tr>
+<td>Event-driven</td>
+<td><code>inotifywait</code>（filesystem）、消費 message queue 的 consumer process</td>
+</tr>
+</tbody>
+</table>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_02_terminal_model.html"><span class="dir">← 上一篇</span><span class="fn">doc_02_terminal_model</span></a>
+<a class="next" href="doc_04_data_format.html"><span class="dir">下一篇 →</span><span class="fn">doc_04_data_format</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

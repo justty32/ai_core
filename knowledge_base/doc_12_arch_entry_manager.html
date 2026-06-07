@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_12_arch_entry_manager · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_12_arch_entry_manager.md · 224 行</div>
+<h1>doc_12_arch_entry_manager</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/03_entry_manager.md</code>（§6 LLM Entry Manager 完整設計）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 LLM Entry Manager 完整設計——<code>ai-core-server</code>（HTTP）+ <code>ai-core-call</code>（wrapper CLI）雙元件，per-model asyncio queue、rate limit、time_to_wait 逾時、streaming、本機 token 認證。</li>
+<li><strong>與現行差異提示</strong>：
+<ul>
+<li>此版元件名 <code>ai-core-server</code> / <code>ai-core-call</code> 是「entry-managing singleton」首例，與 roadmap/CLAUDE.md 的「LLM Entry Manager 原型 <code>try_implement/tools/llm_entry_manager.py</code>」對應同一概念但<strong>實作體系不同</strong>：本版用 FastAPI + litellm + HTTP（外部相依），現行硬約束為純標準庫。以現行為準時，HTTP/asyncio/litellm 細節僅為參考設計。</li>
+<li>「LLM 是單例資源 → 佇列模式 → 集中管 consume rate」這個<strong>核心概念與現行一致</strong>（見 roadmap / <a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a>），可信。差異在於落地的協議與相依。</li>
+<li>本版的 <code>--entry-metadata</code> / entrydata 介面屬此架構家族特有，現行九軸體系無對應；見 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4.7。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§6. LLM Entry Manager 設計</h2>
+<blockquote>
+<p><a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a> §1「Singleton Resource Manager Pattern」的首個實例 — server (<code>ai-core-server</code>) + wrapper CLI (<code>ai-core-call</code>) 雙元件。</p>
+</blockquote>
+<h3>6.1 為什麼必須常駐 server</h3>
+<ul>
+<li>本地模型（ollama / lm studio）連線昂貴，不該每次 fork 重連</li>
+<li>queue 與 rate limit 是有狀態的</li>
+<li>多個並行 caller 共享 quota</li>
+</ul>
+<h3>6.2 Queue 與呼叫流程</h3>
+<pre><code>caller shell:
+    ai-core-call --entry gemini-flash --input prompt.txt --output result.txt
+        │
+        ▼ POST /call（wrapper 翻成 HTTP）
+    ai-core-server:
+        ├─ 檢查 entry 是否存在  ──失敗→ 422 + error JSON ──→ wrapper stderr
+        ├─ 檢查 quota / rpm    ──失敗→ 429 + error JSON ──→ wrapper stderr
+        ├─ 檢查輸入合法性      ──失敗→ 400 + error JSON ──→ wrapper stderr
+        └─ 進入該 model 的 queue（附帶 enqueue_ts + time_to_wait_ms）
+                │
+                ├─ worker 取出前若 now − enqueue_ts &gt; time_to_wait_ms
+                │       → 408 + error JSON → wrapper stderr + 非 0 exit
+                ▼ worker 取出（FIFO 串行，未超時）
+            litellm 呼叫對應 backend
+                │
+                ▼ 完成
+            結果回傳 wrapper，wrapper 寫入 --output 指定路徑
+            wrapper exit 0
+</code></pre>
+<p><strong><code>--output</code> 必填</strong>。檔案 I/O 由 wrapper 端負責，server 不直接觸碰 caller 的檔案系統（跨機器或容器化時更乾淨）。</p>
+<h3>6.3 同步 vs 非同步</h3>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>行為</th>
+<th>適用情境</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>預設（同步）</td>
+<td>wrapper 阻塞等到 server 處理完，寫檔後 exit</td>
+<td>shell 管道、自然語意</td>
+</tr>
+<tr>
+<td><code>--async</code></td>
+<td>wrapper POST 後立刻返回 task_id 到 stdout</td>
+<td>高併發、批次發 N 個工作</td>
+</tr>
+</tbody>
+</table>
+<p><code>--async</code> 模式下後續可用 <code>ai-core-call --task &lt;id&gt; --output result.txt</code> 收結果。</p>
+<h3>6.4 通訊端點</h3>
+<ul>
+<li>HTTP on <code>127.0.0.1:5577</code>（預設可配置）</li>
+<li><code>POST /call</code> → 建立 task；<code>{model, messages, options, async, time_to_wait_ms?}</code></li>
+<li><code>GET /tasks/&lt;id&gt;</code> → 查詢狀態</li>
+<li><code>GET /tasks/&lt;id&gt;/result</code> → 取結果</li>
+<li><code>GET /status</code> → 所有 queue 與 quota 狀態</li>
+<li><code>GET /entries</code> → 列出所有 entry</li>
+<li><code>GET /entries/&lt;name&gt;</code> → 單一 entry 的 metadata（給 <code>--entry-metadata</code> 用）</li>
+<li>本機 token 認證（詳見 §6.13）</li>
+</ul>
+<h3>6.5 <code>--metadata</code> vs <code>--entry-metadata</code></h3>
+<p><code>ai-core-call</code> 同時提供兩個 metadata 介面：</p>
+<table>
+<thead>
+<tr>
+<th>旗標</th>
+<th>描述對象</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--metadata</code></td>
+<td>wrapper CLI 自身</td>
+<td>summary、usage、I/O 慣例（<a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §4）</td>
+</tr>
+<tr>
+<td><code>--entry-metadata</code></td>
+<td>server 底下的個別 entry（model）</td>
+<td>每個 model 的特性、限制、目前用量</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">ai-core-call --entry-metadata                       # 所有 entry 的陣列
+ai-core-call --entry-metadata --entry gemini-flash  # 單一 entry
+</code></pre>
+<p><code>--entry-metadata</code> 輸出範例：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;gemini-flash&quot;,
+  &quot;backend&quot;: &quot;gemini&quot;,
+  &quot;model&quot;: &quot;gemini-2.0-flash&quot;,
+  &quot;summary&quot;: &quot;輕量快速、適合短答與分類&quot;,
+  &quot;is_local&quot;: false,
+  &quot;context_window&quot;: 1000000,
+  &quot;expected_latency_ms&quot;: 800,
+  &quot;cost&quot;: {
+    &quot;input_per_1k_tokens_usd&quot;: 0.000075,
+    &quot;output_per_1k_tokens_usd&quot;: 0.0003
+  },
+  &quot;limits&quot;: {&quot;rpm&quot;: 15, &quot;tokens_per_day&quot;: 1000000, &quot;cost_per_day&quot;: 5.0},
+  &quot;concurrency&quot;: 5,
+  &quot;current_usage&quot;: {&quot;tokens_today&quot;: 12345, &quot;cost_today&quot;: 0.42, &quot;queue_length&quot;: 0, &quot;active_workers&quot;: 2, &quot;rpm_remaining&quot;: 13}
+}
+</code></pre>
+<p><strong><code>--entry-metadata</code> 內部 schema 也是自由的</strong>（僅強制合法 JSON）。此介面屬 <a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a> §1 pattern 的一部分，未來其他 manager 也應提供同名旗標。</p>
+<h3>6.6 Queue 實作</h3>
+<ul>
+<li>每個 model 一條 <code>asyncio.Queue</code></li>
+<li>每條 queue 配 <strong>N 個 worker</strong>（N = entry config 的 <code>concurrency</code>，預設 1）共享消費</li>
+<li><code>concurrency: 1</code> 退化為 FIFO 串行（本地模型 / GPU 受限資源的標準場景）</li>
+<li><code>concurrency &gt; 1</code> 適合雲端 stateless API（gemini-flash 等），讓多個請求並行送出，受 §6.7 rate limit 約束</li>
+<li>rate limit 檢查在<strong>入 queue 之前</strong>（§6.7），與 worker 數無關</li>
+<li>worker 例外不終止 worker 本身；錯誤寫進 task 結果，sync 模式 wrapper 收到後噴 stderr</li>
+<li><code>concurrency</code> 為靜態配置：改值需編輯 config + 重啟 server，不支援 runtime 動態調整（KISS）</li>
+</ul>
+<h3>6.7 Rate Limit</h3>
+<p>第一版欄位：<code>rpm</code>、<code>tokens_per_day</code>、<code>cost_per_day</code>。GPU / 電力先在 schema 預留、不實作追蹤。</p>
+<p>超限：請求<strong>不入 queue</strong>，立刻 429 + stderr。</p>
+<h3>6.8 佇列等待逾時（time_to_wait）</h3>
+<p>rate limit 擋在入 queue 之前；<strong>time_to_wait 擋在 queue 內等待期間</strong>，兩者互補。</p>
+<pre><code>caller 呼叫時帶 --wait 3000（ms）
+    → POST /call body: {... &quot;time_to_wait_ms&quot;: 3000}
+    → server 記錄 enqueue_ts
+
+worker 準備取出時：
+    if now() - enqueue_ts &gt; time_to_wait_ms:
+        task.status = &quot;timeout&quot;
+        回傳 408 {&quot;type&quot;: &quot;QueueTimeout&quot;, &quot;message&quot;: &quot;等待超過 3000ms&quot;, &quot;retriable&quot;: true}
+    else:
+        正常呼叫 LLM
+</code></pre>
+<p><strong>CLI 旗標</strong>：<code>ai-core-call --wait &lt;ms&gt;</code>，預設不設逾時（等到 server 處理完為止）。</p>
+<p><strong>適用場景</strong>：</p>
+<ul>
+<li>interactive 呼叫：不想等超過 N 秒，寧可讓使用者知道系統忙</li>
+<li>batch 工作：不重要的項目可設短 timeout 讓位給重要任務</li>
+<li>retry 邏輯：timeout 的 <code>retriable: true</code> 讓 caller 知道重試有意義</li>
+</ul>
+<h3>6.9 Streaming Output</h3>
+<p>LLM 普遍支援 token streaming；互動式情境下，逐 token 看到輸出比等完整回應自然得多。</p>
+<p><strong>CLI 行為</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>旗標組合</th>
+<th>行為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--stream</code></td>
+<td>token 即時吐到 stdout；<code>--output</code> 變為可選</td>
+</tr>
+<tr>
+<td><code>--stream</code> + <code>--output</code></td>
+<td>stdout 即時 stream + 全文寫到 <code>--output</code>（atomic，完成後一次寫入）</td>
+</tr>
+<tr>
+<td>純 <code>--output</code>（無 <code>--stream</code>）</td>
+<td>維持預設：等完成才寫檔，stdout 不輸出</td>
+</tr>
+<tr>
+<td><code>--stream --async</code></td>
+<td><strong>不允許</strong>，wrapper 在送 HTTP 之前就 stderr 報錯（兩者語意衝突）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>HTTP 傳輸</strong>：server 對 streaming task 用 <strong>chunked transfer encoding</strong>（單一 HTTP response，逐塊送 delta token）。SSE 過度，chunked 已足夠且 Python 標準庫好處理。</p>
+<p><strong>與 time_to_wait 的互動</strong>：<code>time_to_wait_ms</code> 只計算 <strong>queue 等待時間</strong>；一旦 worker 取出 task、第一個 token 開始流出，計時就解除。streaming 過程多長都不被 <code>time_to_wait</code> 中斷。</p>
+<p><strong>錯誤處理</strong>：若 streaming 中途失敗（backend 斷線等），stdout 已輸出的部分留著（unix 沒有 unwrite），錯誤訊息進 stderr，exit code 非 0。</p>
+<p><strong><code>--output</code> 不污染原則</strong>：<code>--output</code> 是 atomic 一次寫入（streaming 過程內容只在記憶體 buffer），失敗時直接不寫檔，與 <a href="doc_11_arch_protocol.html">doc_11_arch_protocol.md</a> §5 規則一致。</p>
+<h3>6.10 Wrapper 輸入介面（input contract）</h3>
+<p>底層 <code>POST /call</code> 的核心是 OpenAI 風格的 <code>messages</code> 陣列；但對 wrapper CLI 來說，<strong><code>--input &lt;file&gt;</code> 是唯一強制的輸入介面</strong>。</p>
+<p><strong>核心語意</strong>：<code>--input</code> 檔案內容被 wrapper 自動包成單一 user message：</p>
+<pre><code>messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &lt;檔案內容&gt;}]
+</code></pre>
+<p>「送一個 prompt 取一個回應」這個最常見場景靠這一個旗標就夠用。</p>
+<p><strong>狀態管理由 caller 負責</strong>（呼應 <a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a> §1 stateless 原則）：多輪對話、history、session 等概念<strong>完全不存在於 wrapper 內</strong>。caller 想做多輪對話 → 自己維護 <code>chat.json</code>、自己拼接訊息、自己更新檔案。wrapper 不記任何 session。</p>
+<p><strong>Wrapper 可選提供「語法糖」旗標</strong>——這是 wrapper 實作層的選擇，<strong>不在協議層強制</strong>。常見參考設計：</p>
+<table>
+<thead>
+<tr>
+<th>範例旗標</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--system &lt;text|@file&gt;</code></td>
+<td>自動 prepend system message</td>
+</tr>
+<tr>
+<td><code>--messages &lt;file&gt;</code></td>
+<td>直接送完整 JSON <code>messages</code> 陣列，跳過 wrapper 的單訊息包裝</td>
+</tr>
+<tr>
+<td><code>--append &lt;file&gt;</code></td>
+<td>把 input 接到既有 messages 之後</td>
+</tr>
+</tbody>
+</table>
+<p>這些 sugar 是 wrapper 作者的決定，可全有、全無、或只挑幾個。<code>ai-core-call</code> 第一版實作哪些 sugar，留待 M1 實作階段視真實使用情境決定。</p>
+<p><strong>caller 需要超出 sugar 能力時</strong>：直接 <code>POST /call</code> 送完整 <code>messages</code> 陣列，繞過 CLI 走 HTTP 層即可。</p>
+<h3>6.11 Server 自身 Log</h3>
+<p>server 的啟動訊息、worker 例外、queue 狀態等運作日誌（<strong>非</strong> ledger），走以下規則：</p>
+<table>
+<thead>
+<tr>
+<th>旗標</th>
+<th>行為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>預設</td>
+<td>寫到 stderr（前景執行時最直覺，daemon 化由使用者自行重導）</td>
+</tr>
+<tr>
+<td><code>--log-file &lt;path&gt;</code></td>
+<td>同時寫到指定檔案（適合 tmux / nohup 常駐）</td>
+</tr>
+<tr>
+<td><code>--log-level &lt;level&gt;</code></td>
+<td><code>debug</code> / <code>info</code> / <code>warning</code> / <code>error</code>，預設 <code>info</code></td>
+</tr>
+</tbody>
+</table>
+<p>Log rotation 不由 server 管理：使用者若需要可搭配 <code>logrotate</code>（Linux）或系統工具；第一版不內建 rotation 機制（KISS）。</p>
+<h3>6.12 Server 重啟行為</h3>
+<p>第一版<strong>不 persist 任何 task 到磁碟</strong>，所有 queue 狀態純 in-memory：</p>
+<table>
+<thead>
+<tr>
+<th>情境</th>
+<th>行為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sync wrapper 等待中、server 被 kill</td>
+<td>wrapper 偵測到 <code>ConnectionError</code> → stderr 報錯 + exit 1；caller 自行決定是否重試</td>
+</tr>
+<tr>
+<td>async task id 在 server 重啟後查詢</td>
+<td>server 回 404；caller 視為任務遺失，需重新提交</td>
+</tr>
+<tr>
+<td>正在執行的 LLM 呼叫（worker 已取出）</td>
+<td>中斷，結果丟失；無自動恢復</td>
+</tr>
+</tbody>
+</table>
+<p><strong>設計取捨</strong>：Task persistence 增加複雜度（序列化、crash recovery、ID 衝突），與 KISS 原則相悖。第一版讓 caller 負責重試邏輯；若未來使用場景顯示這是主要痛點，再評估加入。</p>
+<h3>6.13 本機 Token 認證</h3>
+<p>token 只在本機環境（127.0.0.1）使用，安全暴露面低，設計從簡：</p>
+<ul>
+<li><strong>生成時機</strong>：server 首次啟動時自動產生隨機 token（<code>secrets.token_hex(32)</code>），寫入 <code>user_config_dir(&quot;ai_core&quot;)/token</code>，權限設為 <code>0600</code>（Unix）或 ACL 限制當前使用者（Windows）</li>
+<li><strong>Wrapper 讀取方式</strong>：優先讀 <code>AI_CORE_TOKEN</code> 環境變數；未設定則從預設路徑讀檔</li>
+<li><strong>傳遞方式</strong>：<code>Authorization: Bearer &lt;token&gt;</code> HTTP header</li>
+<li><strong>Rotation</strong>：第一版不內建 rotation；需要時手動刪除 token 檔再重啟 server 即可</li>
+</ul>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_11_arch_protocol.html"><span class="dir">← 上一篇</span><span class="fn">doc_11_arch_protocol</span></a>
+<a class="next" href="doc_13_arch_hub.html"><span class="dir">下一篇 →</span><span class="fn">doc_13_arch_hub</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

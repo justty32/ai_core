@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_11_arch_protocol · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l4);background:rgba(0,0,0,.25)">④ 舊架構</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_11_arch_protocol.md · 330 行</div>
+<h1>doc_11_arch_protocol</h1>
+<ul>
+<li><strong>來源</strong>：<code>docs/architectures/02_protocol.md</code>（§4 metadata 協議 + §5 錯誤處理慣例）</li>
+<li><strong>狀態</strong>：舊版架構文件（部分已被 core_nature/roadmap 取代）</li>
+<li><strong>一行摘要</strong>：另一版的 metadata 協議——極簡 JSON 契約、慣例 key（<code>name</code>/<code>summary</code>/<code>io</code>/<code>examples</code>/<code>errors</code>/<code>dependencies</code>/<code>has_entries</code>/<code>entry_interface</code>/<code>server</code>）、容錯降級規則、<code>--json-errors</code> 旗標。</li>
+<li><strong>與現行差異提示（重要，本檔最易與現行九軸規範衝突）</strong>：
+<ul>
+<li><strong>metadata 欄位體系完全不同</strong>。本版以「描述類 + <code>io</code> + <code>examples</code> + <code>errors</code> + <code>dependencies</code>」為慣例 key，<strong>沒有九軸概念</strong>；現行 core_nature 用九軸（<code>entries</code>/<code>lifecycle</code>/<code>state</code>/<code>state_dirs</code>/<code>resources</code>/<code>interruptible</code>/<code>guarantee</code>/<code>dry_run</code>/<code>nondeterministic</code>）。兩套 schema 並存但<strong>不相容</strong>——以九軸（<a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>）為現行事實。</li>
+<li>本版的 <code>io</code>（<code>input</code>/<code>output</code>/<code>format</code> 三態）對應現行九軸的 <code>entries</code>（<code>able_in</code>/<code>able_out</code>/<code>mode</code>/<code>type</code>/<code>channel_constraint</code>…，見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>）。設計目的相近，欄位形狀不同。</li>
+<li>本版<strong>完全沒有第九軸 <code>nondeterministic</code></strong>，也沒有治理原則 / 證書概念。現行九軸中第九軸是治理錨點，見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a> §9。本版可視為「八軸之前」更早的扁平 metadata 觀。</li>
+<li>本版的 <code>--metadata</code> 觸發機制描述為「程式接受旗標、直接輸出」，與現行 library 的「<code>register*</code> 純宣告 + <code>intercept()</code> 顯式攔截拆分」模型不同（見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>）。但「<code>&lt;sub&gt; --metadata</code>、pipe 透明、flag 不可在 <code>--metadata</code> 前」這些 CLI 規則與現行 <a href="doc_07_cli.html">doc_07_cli.md</a> 高度一致，屬可共享的設計細節。</li>
+<li>本版的 <code>has_entries</code> / <code>entry_interface</code> / <code>--entry-metadata</code> 是此架構家族特有的 entrydata 介面（搭配 <a href="doc_12_arch_entry_manager.html">doc_12_arch_entry_manager.md</a>），現行九軸體系無對應欄位。</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>§4. metadata 協議（極簡版）</h2>
+<h3>4.0 metadata 資料格式定義</h3>
+<p><strong>metadata 是一個 JSON 物件。</strong> 這是它的根本定義，一切約束由此推導。</p>
+<h4>文字形式（text form）</h4>
+<p>metadata 在文字狀態下的表現形式是<strong>標準 JSON</strong>，且<strong>鎖定 UTF-8 編碼</strong>。任何以文字輸出的 metadata 都必須：</p>
+<ul>
+<li>可被 JSON parser 無錯誤解析為物件（object，不是 array 或 scalar）</li>
+<li>以 UTF-8 編碼（含或不含 BOM 均可，但建議不含）</li>
+</ul>
+<h4>程式內形式（in-code form）</h4>
+<p>metadata 在程式中的表現形式<strong>無統一規定</strong>——可以是：</p>
+<ul>
+<li>class 上的 <code>gen_metadata()</code> 方法（Python dict、C++ map 等）</li>
+<li>靜態函式（<code>gen_metadata&lt;T&gt;()</code>）</li>
+<li>struct 加上 <code>marshal()</code> / <code>to_json()</code> 方法</li>
+<li>任何語言原生的字典型別</li>
+</ul>
+<p><strong>唯一的約束</strong>：無論用哪種形式，最終必須能序列化為符合上述文字形式規格的 JSON 字串。程式碼中的 metadata 表示與 JSON 格式之間的轉換，由實作者自行負責。</p>
+<h4>命令行介面（CLI contract）</h4>
+<p>在終端機（純文字介面）中，產出 metadata 的方式是：</p>
+<pre><code>&lt;...&gt; --metadata
+</code></pre>
+<p><code>&lt;...&gt;</code> 是<strong>任何能執行的東西</strong>——單一程式、shell script、<strong>或一串 pipe</strong>。例如：</p>
+<pre><code class="language-bash"># 單一程式：全域 metadata
+my_tool --metadata
+
+# 單一程式：subcommand-scoped metadata（類比 git remote --help）
+my_tool subcommand --metadata
+</code></pre>
+<p>觸發後，metadata JSON 輸出到 <strong>stdout</strong>，exit code 為 0。</p>
+<p><strong>Pipe 對 metadata 是透明的。</strong> <code>professor.sh | code_linter.sh --metadata</code> 中，<code>--metadata</code> 只屬於 <code>code_linter.sh</code>；stdout 輸出的是 <code>code_linter.sh</code> 自己的 metadata，與單獨呼叫 <code>code_linter.sh --metadata</code> 結果相同。Pipe 的上游不影響 metadata 的內容。</p>
+<p><strong><code>--metadata</code> 的上下文限制（重要）：</strong></p>
+<p><code>--metadata</code> 前只允許<strong>位置引數（positional arguments，不以 <code>-</code> 或 <code>--</code> 開頭）<strong>出現，例如 subcommand 名稱。以 <code>-</code> 或 <code>--</code> 開頭的 flag 不得與 <code>--metadata</code> 混用——遇到這種情況，程式</strong>必須報錯（exit code 非 0，stderr 說明原因）</strong>。</p>
+<pre><code class="language-bash">my_tool --metadata                    # ✓ 合法：全域 metadata
+my_tool subcommand --metadata         # ✓ 合法：subcommand-scoped metadata
+my_tool --file main.c --metadata      # ✗ 錯誤：flag 不可出現在 --metadata 之前
+my_tool -f main.c --metadata          # ✗ 錯誤：同上
+</code></pre>
+<p>這條規則確保 metadata 只能依 subcommand 結構（靜態的命令層次）改變，而不能依執行期資料（動態的 flag 值）改變。Hub 因此可以安全地用 <code>tool --metadata</code> 或 <code>tool subcommand --metadata</code> 掃描，無需知道任何運行時參數的存在。</p>
+<blockquote>
+<p><strong>注意</strong>：<code>&lt;...&gt; --metadata</code> 是終端機世界的標準入口，但不限制程式<strong>內部</strong>如何表示或產生 metadata。命令行 <code>--metadata</code> 旗標只是把程式內部的 metadata 物件序列化為文字、跨越行程邊界輸出的橋樑。</p>
+</blockquote>
+<hr />
+<p>唯一強制：</p>
+<ol>
+<li>函式接受 <code>--metadata</code> 旗標</li>
+<li>觸發時 stdout 輸出<strong>合法 JSON 物件</strong>（<code>{}</code> 也完全合法）</li>
+<li>exit code 0</li>
+</ol>
+<p>metadata 的 key 沒有任何硬性規定。下列為<strong>慣例 key</strong>（自願遵守、有就用、沒就略），但<strong>強烈建議寫入</strong> — 否則 caller / Hub 無法智慧化呼叫，且 AI 學習成本大增。</p>
+<h3>4.1 描述類</h3>
+<ul>
+<li><code>name</code>：函式識別名（不寫的話 Hub 用檔名 fallback）</li>
+<li><code>summary</code>：一行短摘要（list.txt 過大時 Hub 優先用此欄）</li>
+<li><code>description</code>：給 AI / 人類讀的長描述</li>
+<li><code>usage</code>：人類可讀的呼叫範例字串</li>
+<li><code>tags</code> / <code>category</code>：分類（陣列），方便過濾、搜尋</li>
+</ul>
+<h3>4.2 I/O 慣例（<code>io</code>）</h3>
+<blockquote>
+<p>⚠️ 對應現行九軸的 <code>entries</code>（<a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>）；欄位形狀不同。</p>
+</blockquote>
+<p>宣告函式的標準使用方式 — 輸入從哪來、輸出去哪。</p>
+<pre><code class="language-json">{
+  &quot;io&quot;: {
+    &quot;input&quot;:  &quot;stdin&quot; | &quot;file&quot; | &quot;args&quot; | &quot;none&quot;,
+    &quot;input_flag&quot;:  &quot;--input&quot;,
+    &quot;output&quot;: &quot;stdout&quot; | &quot;file&quot; | &quot;none&quot;,
+    &quot;output_flag&quot;: &quot;--output&quot;,
+    &quot;format&quot;: {
+      &quot;input&quot;:  &quot;text&quot; | &quot;json&quot; | &quot;binary&quot;,
+      &quot;output&quot;: &quot;text&quot; | &quot;json&quot; | &quot;binary&quot;
+    }
+  }
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>含義</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>io.input = &quot;stdin&quot;</code></td>
+<td>函式從 stdin 讀資料</td>
+</tr>
+<tr>
+<td><code>io.input = &quot;file&quot;</code></td>
+<td>函式透過 <code>io.input_flag</code>（預設 <code>--input</code>）指定的旗標接收檔案路徑</td>
+</tr>
+<tr>
+<td><code>io.input = &quot;args&quot;</code></td>
+<td>資料直接以命令列引數傳入</td>
+</tr>
+<tr>
+<td><code>io.input = &quot;none&quot;</code></td>
+<td>函式不需輸入</td>
+</tr>
+<tr>
+<td><code>io.output = &quot;stdout&quot;</code></td>
+<td>結果寫到 stdout</td>
+</tr>
+<tr>
+<td><code>io.output = &quot;file&quot;</code></td>
+<td>結果寫到 <code>io.output_flag</code>（預設 <code>--output</code>）指定的檔案路徑</td>
+</tr>
+<tr>
+<td><code>io.output = &quot;none&quot;</code></td>
+<td>函式無正常輸出（純副作用）</td>
+</tr>
+<tr>
+<td><code>io.format</code></td>
+<td>描述輸入 / 輸出資料格式，<code>text</code> 為預設</td>
+</tr>
+</tbody>
+</table>
+<p><strong>錯誤輸出永遠是 stderr</strong>，不必在 metadata 中宣告。</p>
+<p><strong>各 <code>io</code> 型態補充範例：</strong></p>
+<p><code>io.input = &quot;args&quot;</code>（引數直接傳入）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;greet&quot;,
+  &quot;summary&quot;: &quot;對指定名字輸出問候語&quot;,
+  &quot;io&quot;: {&quot;input&quot;: &quot;args&quot;, &quot;output&quot;: &quot;stdout&quot;},
+  &quot;usage&quot;: &quot;greet.sh --name Alice&quot;
+}
+</code></pre>
+<p><code>io.input = &quot;none&quot;</code>（無需輸入）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;list-models&quot;,
+  &quot;summary&quot;: &quot;列出 ai-core-server 目前已設定的 model 清單&quot;,
+  &quot;io&quot;: {&quot;input&quot;: &quot;none&quot;, &quot;output&quot;: &quot;stdout&quot;, &quot;format&quot;: {&quot;output&quot;: &quot;json&quot;}}
+}
+</code></pre>
+<p><code>io.output = &quot;none&quot;</code>（純副作用，無正常輸出）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;cleanup-cache&quot;,
+  &quot;summary&quot;: &quot;清除本地快取檔案&quot;,
+  &quot;io&quot;: {&quot;input&quot;: &quot;args&quot;, &quot;output&quot;: &quot;none&quot;},
+  &quot;usage&quot;: &quot;cleanup-cache.sh --older-than 30d&quot;
+}
+</code></pre>
+<h3>4.3 範例與錯誤類型（<code>examples</code>、<code>errors</code>）</h3>
+<p><code>examples</code>（<strong>強烈建議</strong>，給 AI 學習用、給 author 工具的 dry-run 比對用）：</p>
+<pre><code class="language-json">{
+  &quot;examples&quot;: [
+    {
+      &quot;input&quot;: &quot;hello world&quot;,
+      &quot;output&quot;: &quot;hello world&quot;,
+      &quot;note&quot;: &quot;原樣輸出&quot;
+    },
+    {
+      &quot;input&quot;: &quot;&quot;,
+      &quot;output&quot;: &quot;&quot;,
+      &quot;note&quot;: &quot;空輸入也回空&quot;
+    }
+  ]
+}
+</code></pre>
+<p><code>errors</code>（可能拋出的錯誤類型清單，給 AI 撰寫 retry / fallback 邏輯）：</p>
+<pre><code class="language-json">{
+  &quot;errors&quot;: [
+    {&quot;type&quot;: &quot;QuotaExceeded&quot;, &quot;when&quot;: &quot;當日 token 用完&quot;, &quot;retriable&quot;: false},
+    {&quot;type&quot;: &quot;BackendDown&quot;,   &quot;when&quot;: &quot;ollama 服務未啟動&quot;, &quot;retriable&quot;: true}
+  ]
+}
+</code></pre>
+<h3>4.4 依賴（<code>dependencies</code>）</h3>
+<p>宣告本函式呼叫了哪些其他函式（讓 hub 建構依賴圖 / 給 AI 預先了解副作用範圍）：</p>
+<pre><code class="language-json">{
+  &quot;dependencies&quot;: [&quot;ai-core-call&quot;, &quot;echo&quot;]
+}
+</code></pre>
+<h3>4.5 完整範例</h3>
+<p><code>echo.sh --metadata</code>：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;echo&quot;,
+  &quot;summary&quot;: &quot;把輸入原樣輸出，用來測試管線&quot;,
+  &quot;description&quot;: &quot;從 --input 指定的檔讀取內容，原樣寫入 --output 指定的檔。&quot;,
+  &quot;usage&quot;: &quot;echo.sh --input src.txt --output dst.txt&quot;,
+  &quot;tags&quot;: [&quot;util&quot;, &quot;test&quot;],
+  &quot;io&quot;: {
+    &quot;input&quot;:  &quot;file&quot;,
+    &quot;input_flag&quot;:  &quot;--input&quot;,
+    &quot;output&quot;: &quot;file&quot;,
+    &quot;output_flag&quot;: &quot;--output&quot;,
+    &quot;format&quot;: {&quot;input&quot;: &quot;text&quot;, &quot;output&quot;: &quot;text&quot;}
+  },
+  &quot;examples&quot;: [
+    {&quot;input&quot;: &quot;abc&quot;, &quot;output&quot;: &quot;abc&quot;}
+  ],
+  &quot;errors&quot;: [
+    {&quot;type&quot;: &quot;InputNotFound&quot;, &quot;when&quot;: &quot;--input 路徑不存在&quot;, &quot;retriable&quot;: false}
+  ],
+  &quot;dependencies&quot;: []
+}
+</code></pre>
+<h3>4.6 容錯與降級（caller / Hub / author 的義務）</h3>
+<p>各元件遇到下列情境時必須 graceful，不能 crash：</p>
+<table>
+<thead>
+<tr>
+<th>情境</th>
+<th>處理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>函式不支援 <code>--metadata</code>（旗標不認得 / 拋例外）</td>
+<td>視為「無 metadata」；Hub 仍列出函式，標 <code>&quot;metadata&quot;: &quot;absent&quot;</code>，提示使用者 <code>--help</code> 或讀 source</td>
+</tr>
+<tr>
+<td><code>--metadata</code> exit code 非 0</td>
+<td>同上</td>
+</tr>
+<tr>
+<td><code>--metadata</code> 輸出非合法 JSON</td>
+<td>同上，外加 stderr 警告</td>
+</tr>
+<tr>
+<td>metadata JSON 合法但缺 <code>io</code></td>
+<td>預設 <code>{&quot;input&quot;: &quot;stdin&quot;, &quot;output&quot;: &quot;stdout&quot;, &quot;format&quot;: &quot;text&quot;}</code>；提示「io contract unknown」</td>
+</tr>
+<tr>
+<td>缺 <code>description</code> / <code>summary</code></td>
+<td>用檔名 / <code>(no description)</code> 替代，Hub list 標記</td>
+</tr>
+<tr>
+<td>缺 <code>examples</code></td>
+<td>author 的 dry-run 退化為「只驗證執行不 crash」，不比對輸出</td>
+</tr>
+</tbody>
+</table>
+<p><code>protocol/metadata.py</code> 提供 Python helper（<code>fetch_metadata(path) -&gt; MetadataView</code>）統一處理這些 case，讓各元件不重寫樣板。</p>
+<h3>4.7 entrydata 介面宣告</h3>
+<p><strong>metadata 是了解一個工具的唯一入口</strong>。但對於 entry-managing singleton（<a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a> §1），工具底下管理多個 entry；每個 entry 也有自己的資料介面，稱為 <strong>entrydata</strong>。</p>
+<p>caller 如何知道某工具有 entrydata 介面？<strong>從 metadata 宣告中得知</strong>：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;ai-core-call&quot;,
+  &quot;has_entries&quot;: true,
+  &quot;entry_interface&quot;: {
+    &quot;flag&quot;: &quot;--entry-metadata&quot;,
+    &quot;http_endpoint&quot;: &quot;GET /entries&quot;,
+    &quot;entry_http_endpoint&quot;: &quot;GET /entries/&lt;name&gt;&quot;,
+    &quot;note&quot;: &quot;每個 entry 代表一個 LLM 後端，entrydata 描述其特性、限制與目前用量&quot;
+  }
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>含義</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>has_entries</code></td>
+<td>布林值；存在且為 true 代表此工具管理多個具名 entry</td>
+</tr>
+<tr>
+<td><code>entry_interface.flag</code></td>
+<td>用來列出 / 查詢 entry 的 CLI 旗標</td>
+</tr>
+<tr>
+<td><code>entry_interface.http_endpoint</code></td>
+<td>查詢全部 entry 的 HTTP 端點</td>
+</tr>
+<tr>
+<td><code>entry_interface.entry_http_endpoint</code></td>
+<td>查詢單一 entry 的 HTTP 端點</td>
+</tr>
+</tbody>
+</table>
+<p><strong>無 <code>has_entries</code>（或值為 false）的工具視為 simple singleton</strong>，只有 <code>--metadata</code>，無 entrydata 介面。</p>
+<p>entrydata 的 schema 完全自由（僅強制合法 JSON）；慣例 key 同 §4 其他小節——寫了就好用，缺了 graceful 降級。</p>
+<h3>4.8 Server 啟用提示（server-backed wrapper 的可選 metadata key）</h3>
+<p>對需要常駐 server 才能運作的 wrapper（<a href="doc_10_arch_overview.html">doc_10_arch_overview.md</a> §1 兩種亞型都適用），metadata 可宣告該 server 的典型啟用狀態與啟動方式，讓 hub 在清單中對 caller 顯示提示：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;ai-core-call&quot;,
+  &quot;has_entries&quot;: true,
+  &quot;server&quot;: {
+    &quot;activation&quot;: &quot;usually-on&quot;,
+    &quot;activation_hint&quot;: &quot;ai-core-server&quot;
+  }
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>含義</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>server.activation</code></td>
+<td><code>&quot;usually-on&quot;</code> / <code>&quot;rarely-on&quot;</code> / <code>&quot;default-off&quot;</code> 三選一；提示此 server 在系統中的典型啟用狀態</td>
+</tr>
+<tr>
+<td><code>server.activation_hint</code></td>
+<td>一行字串，告訴使用者怎麼啟動該 server（命令、文件路徑等任何提示）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>這是純註解，不影響 wrapper 行為</strong>：server 沒啟動時 wrapper 仍照 <a href="doc_12_arch_entry_manager.html">doc_12_arch_entry_manager.md</a> §5.2 規則直接 stderr + exit 1。<code>activation</code> 與 <code>activation_hint</code> 只供 hub 顯示，幫助 caller 評估「呼叫這個 function 前要不要先啟動什麼」。</p>
+<p><strong>設計取捨</strong>：本架構<strong>不</strong>規範 server 的啟動方式（daemon、systemd unit、<code>nohup</code> 等都是使用者選擇），因為跨平台 daemon 化坑多、KISS 原則下不值得在第一版做。<code>ai-core-server</code> 就是一個前景執行的程式，需要常駐請用系統提供的工具（<code>tmux</code>、systemd、Windows Service 等）。</p>
+<hr />
+<h2>§5. 錯誤處理慣例（全系統統一）</h2>
+<table>
+<thead>
+<tr>
+<th>通道</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stdout</td>
+<td>正常結果（或寫入 <code>--output</code> 指定路徑）</td>
+</tr>
+<tr>
+<td>stderr</td>
+<td>錯誤訊息、警告、診斷</td>
+</tr>
+<tr>
+<td>exit code</td>
+<td>成功 <code>0</code>；失敗非 <code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>失敗時不污染 <code>--output</code> 檔</strong>：保留前次內容或不建立檔案。</p>
+<h3>5.1 <code>--json-errors</code> 旗標（給 AI / 程式 caller）</h3>
+<p>預設 stderr 是人類可讀的純文字。caller 加 <code>--json-errors</code> 旗標後，stderr 改輸出單行 JSON：</p>
+<pre><code class="language-json">{&quot;type&quot;: &quot;QuotaExceeded&quot;, &quot;message&quot;: &quot;gemini-flash 今日 token 已用完&quot;, &quot;hint&quot;: &quot;改用 ollama-llama3 或等明天&quot;, &quot;retriable&quot;: false}
+</code></pre>
+<p>所有元件（entry manager wrapper、hub、author、自訂 function 透過 <code>protocol/metadata.py</code> helper）都應支援此旗標。預設關閉以保持人類友善。</p>
+<h3>5.2 Entry Manager 在下列情況直接 stderr 噴錯誤、exit code 非 0</h3>
+<ul>
+<li><strong>server 未啟動</strong>（<code>ai-core-call</code> 無法連線）→ 提示「請先執行 ai-core-server」，exit 1；wrapper 不做 auto-start，保持無副作用</li>
+<li>token / cost / rpm 配額不足</li>
+<li>輸入不合法（例如 messages 格式錯誤）</li>
+<li>未指定 entry / 指定的 entry 不存在</li>
+<li>後端連線失敗且無 fallback</li>
+</ul>
+<p>超限請求<strong>不入 queue</strong>（避免堆積無望的工作）。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_10_arch_overview.html"><span class="dir">← 上一篇</span><span class="fn">doc_10_arch_overview</span></a>
+<a class="next" href="doc_12_arch_entry_manager.html"><span class="dir">下一篇 →</span><span class="fn">doc_12_arch_entry_manager</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

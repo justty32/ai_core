@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_06 — 規範決策清單與未決題 · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_06_decisions_and_open_questions.md · 169 行</div>
+<h1>note_06 — 規範決策清單與未決題</h1>
+<ul>
+<li><strong>來源</strong>：<code>try_implement/DECISIONS.md</code>（全文）＋ <code>roadmap.md §7</code>（目標逼出哪些待決規範）、<code>roadmap.md §8</code>（開放問題 / 待續討論）</li>
+<li><strong>狀態</strong>：<strong>最新事實 · 活文件</strong>。本檔是「決策清單」，較新者為標準事實。狀態標記（✅ 已收斂／⏸ 暫緩至 v0／待追認）各自獨立保留，請勿合併壓平。</li>
+<li><strong>一行摘要</strong>：哪些設計已扶正進真正的 <code>_core.py</code> + <code>core_nature/</code>、哪些刻意暫緩至 v0、哪些待使用者追認，以及 v0 切片會逼出哪些懸案與七大開放問題。</li>
+</ul>
+<blockquote>
+<p>相關檔：軸定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>、複合規範見 <a href="doc_08_composite.html">doc_08_composite.md</a>、馴化框架見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>、組合維度見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>、原型程式見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a>/<a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>、核心 library 見 <a href="code_01_core_library.html">code_01_core_library.md</a>。</p>
+</blockquote>
+<hr />
+<h2>0. DECISIONS.md 的性質與分區</h2>
+<p><code>DECISIONS.md</code> 把散在 README / docs / 各 lib 檔頭的「回饋規範」內容，收斂成一份<strong>決策清單</strong>。</p>
+<p><strong>關鍵前提</strong>：try_implement 的實驗都只是提案 / 原型；<strong>真正的 <code>src/ai_core/_core.py</code> 與 <code>core_nature/</code> 一行都沒動</strong>（指被扶正前的狀態）。下面每項都標明「現況 / 我的建議 / 你要決定什麼」，讓使用者回來能快速行動。</p>
+<p>分四區：</p>
+<ul>
+<li><strong>A</strong> — 已原型待扶正</li>
+<li><strong>B</strong> — 開放方向題</li>
+<li><strong>C</strong> — 候選新軸</li>
+<li><strong>D</strong> — 我已自行拍板待你追認</li>
+</ul>
+<hr />
+<h2>1. ✅ 已收斂（2026-05-26）</h2>
+<p>這一輪把下列項目<strong>扶正進真正的 <code>src/ai_core/_core.py</code> 與 <code>core_nature/</code> 規範</strong>（不再只是 try_implement 原型）：</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>決策</th>
+<th>落地處</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A1 + A2 + A3</strong></td>
+<td>採「<strong>宣告／攔截拆分</strong>」模型：<code>register</code> / <code>register_subcommand</code> / <code>register_subcommand_resolver</code> 純宣告、無副作用；<code>intercept(argv)</code> 顯式攔截（放寬版，支援 <code>&lt;sub&gt; --metadata</code> 與 <code>--store</code> 前綴）。一次解掉 A1（subcommand metadata）、A2（單檔多 lifecycle）、A3/F（import 副作用）。</td>
+<td><code>src/ai_core/_core.py</code>、<code>core_nature/lib_spec.md</code>「register() 與 intercept()」節、<code>tests/test_core.py</code>（65 測試）。<code>meta_core.py</code> 原型已刪，sfc 改接真 library。</td>
+</tr>
+<tr>
+<td><strong>C：<code>nondeterministic</code> 軸</strong></td>
+<td><strong>新增第九軸</strong>。<code>true</code>＝未認證的隨機環節（開機期）；<code>{model, test_set, stability}</code>＝證書（成熟期，可稽核可撤照）。承載 <code>roadmap.md §3.4</code> 治理原則。</td>
+<td><code>src/ai_core/_core.py</code>、<code>lib_spec.md §9</code>、<code>axis_spec.md §9</code>、<code>execution_forms.md §0</code> 表、<code>tests/test_core.py</code>。</td>
+</tr>
+<tr>
+<td><strong>C：<code>memoized</code></strong></td>
+<td><strong>不入軸</strong>，維持純 runtime（<code>lib/memoize.py</code>）。理由：快取是呼叫方/library 的優化決策，且可由「<code>nondeterministic</code> 缺席 + <code>stateless</code>」隱含可快取性——不像 <code>nondeterministic</code> 那樣無既有軸值可隱含。</td>
+<td><code>lib_spec.md</code>「未入軸的決策：memoized」節。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>驗證</strong>：<code>smoke_test.py</code> 72 + <code>lib_smoke_test.py</code> 68 + <code>tests/test_core.py</code> 65 全綠，三個 demo 正常，各工具 <code>--metadata</code> / <code>&lt;sub&gt; --metadata</code> 行為端到端正確。</p>
+<p><strong>仍待你定</strong>：A4（組合軸推導）與 B 系列（B1 語意欄位 / B2 共用模組 / B3 沙箱）依 <code>roadmap.md §7</code> <strong>留給 v0 切片去逼出優先序</strong>（見下方各條的「狀態」）；D 區（我自行拍板的 7 項）仍待你追認。</p>
+<blockquote>
+<p>註：CLAUDE.md 標 <code>tests/test_core.py</code> 為 82 passed，本決策表寫 65 測試（此區為 register/intercept + nondeterministic 扶正當下的數字）；數字差異請以實際測試輸出為準。</p>
+</blockquote>
+<hr />
+<h2>2. A 區 — 已做原型，待你決定是否扶正進規範</h2>
+<h3>A1. <code>--metadata</code> 攔截 vs subcommand CLI（原 Gap A，阻塞級）— ✅ 已扶正</h3>
+<ul>
+<li><strong>現況</strong>：真 <code>_core.py</code> 要求 <code>--metadata</code> 必須是唯一引數，與 <code>sfc &lt;fn&gt; --metadata</code> 不相容。已在 <code>tools/meta_core.py</code> 原型化「放寬攔截 + <code>register_subcommand</code> + resolver」，sfc 已改用，運作正常。</li>
+<li><strong>我的建議</strong>：扶正。把 <code>register_subcommand(name, **meta)</code> + 放寬版攔截納入 <code>_core.py</code>。</li>
+<li><strong>✅ 決策（2026-05-26）</strong>：採 meta_core 的拆分 API 形狀，扶正進 <code>_core.py</code> + <code>lib_spec.md</code>。<code>intercept()</code> 為放寬版（吃 <code>--store</code> 前綴、支援 <code>&lt;sub&gt; --metadata</code>）。<code>meta_core.py</code> 已刪。</li>
+</ul>
+<h3>A2. 單一執行檔多種 lifecycle（原 Gap B）— ✅ 已扶正</h3>
+<ul>
+<li><strong>現況</strong>：<code>sfc</code> 是 one_shot dispatcher、<code>sfc forge</code> 是 persistent。已用 <code>register_subcommand(&quot;forge&quot;, lifecycle=&quot;persistent&quot;)</code> 表達；<code>sfc forge --metadata</code> 回 persistent、頂層回 one_shot。</li>
+<li><strong>我的建議</strong>：採「頂層描述 dispatcher、各 subcommand 各有 scoped metadata」模型（隨 A1 一起）。</li>
+<li><strong>✅ 決策（2026-05-26）</strong>：採 scoped-metadata 模型（隨 A1 一起扶正）。頂層描述 dispatcher 預設、各 subcommand 各有 scoped metadata；不強制拆成不同執行檔。</li>
+</ul>
+<h3>A3. <code>register()</code> 的 import-time 副作用（原 Gap F，新發現）— ✅ 已扶正</h3>
+<ul>
+<li><strong>現況</strong>：<code>register()</code> 放 module 頂層 → 一 import 就讀 argv / 攔截 / 佔旗標 → 工具無法被當 library 重用（hub 想 import indexer 時撞到）。已把 indexer 的 register 移進 <code>main()</code> 修掉。</li>
+<li><strong>我的建議</strong>：規範明訂「register 的副作用應延遲到確定以腳本身分執行」——只在 <code>__main__</code> 呼叫，或 library 提供 lazy 模式。與 A1/A2 同源（都是 register 的 import-time 行為）。</li>
+<li><strong>✅ 決策（2026-05-26）</strong>：由拆分模型<strong>根治</strong>——<code>register*</code> 系列改為純宣告、零副作用，import 即安全；並去掉「只能 register 一次」的全域旗標（last-write-wins）。<code>lib_spec.md</code> 補「register 應在 <code>__main__</code>/<code>main()</code> 呼叫」的慣例（解 module-global 單例的覆寫問題），但不再硬性 enforce。</li>
+</ul>
+<h3>A4. 組合的軸推導規則（候選新概念）— ⏸ 暫緩至 v0</h3>
+<ul>
+<li><strong>現況</strong>：<code>lib/compose_meta.py</code> 原型化「從成員八軸推導複合函式 metadata」：guarantee 取最弱、state/state_dirs 取聯集、persistent 成員列 <code>requires_persistent</code>、fanout 寫衝突偵測；<code>mretry</code> 把「retry 要求被包函式 ≥ idempotent」做成執行期檢查。</li>
+<li><strong>我的建議</strong>：列為複合規範家族議題。若成立，hub 能對臨時組起來的複合函式<strong>自動算 metadata</strong>。</li>
+<li><strong>你要決定</strong>：
+<ol>
+<li>要不要正式收？</li>
+<li>推導範圍——只 guarantee/state，還是含 interruptible 等全軸？</li>
+<li>guarantee 強度序（none &lt; idempotent &lt; transactional）是否接受這個簡化？</li>
+</ol>
+</li>
+<li><strong>⏸ 狀態（2026-05-26）</strong>：依 <code>roadmap.md §7</code> <strong>暫緩</strong>——「優先序待 v0 驗證後再定」。等 v0 真的把資產組成調用鏈、需要複合 metadata 時，再決定推導範圍與是否正式收。原型續留 <code>lib/compose_meta.py</code>。</li>
+</ul>
+<hr />
+<h2>3. B 區 — 開放方向題（還沒有明確最佳解，需你定方向）</h2>
+<blockquote>
+<p><strong>⏸ 本輪未動，留給 v0 切片逼出優先序</strong>（<code>roadmap.md §7</code>）：B1（語意欄位）與 B3（沙箱）在 roadmap §7 表中被列為「v0 一定會撞到」——生資產必撞 B1、跑碼驗證必撞 B3，到時它們從「憑空猜」變「擋路、得解」。B2（共用模組）現況有可用暫定解（各工具單檔自足）。故本輪刻意不決，避免在沒有目標壓力時憑空定標準（方法論翻轉，<code>roadmap.md §4</code>）。</p>
+</blockquote>
+<h3>B1. metadata 缺語意用途欄位（原 Gap C）</h3>
+<ul>
+<li><strong>現況</strong>：八軸只描述執行特性，沒有「這函式做什麼/吃什麼參數」。<code>hub</code> 想產 LLM skill 清單，只能用 <code>_synthesize_summary()</code> 從軸值硬湊「一次性、無副作用」——對 LLM 幾乎沒用。</li>
+<li><strong>選項</strong>：
+<ul>
+<li>(a) 新增 <code>description</code>/<code>summary</code>/<code>parameters</code> 語意軸；</li>
+<li>(b) 明訂由 Indexer 升級版用 AI 補摘要、工具自身不報；</li>
+<li>(c) 接受 skill 清單只能粗略。</li>
+</ul>
+</li>
+<li><strong>你要決定</strong>：走 a / b / c 哪條？（影響 thinking_routing「Indexer 升級版」與 hub 的可行性。）</li>
+</ul>
+<h3>B2. 共用模組 vs 單檔自足（原 Gap D）</h3>
+<ul>
+<li><strong>現況</strong>：<code>resolve_command()</code>（path→argv）在 router / switch / chain <strong>重複了三份</strong>。</li>
+<li><strong>選項</strong>：
+<ul>
+<li>(a) 抽成 <code>lib/exec_target.py</code> 共用（DRY）；</li>
+<li>(b) 維持各工具單檔自足（shell 一等公民取向）。</li>
+</ul>
+</li>
+<li><strong>你要決定</strong>：DRY 還是單檔自足優先？（三份重複已是該抽的訊號，但抽了就破壞單檔可獨立執行。）</li>
+</ul>
+<h3>B3. in-process 的資源隔離（原 Gap E）</h3>
+<ul>
+<li><strong>現況</strong>：python-kind tiny function 是真 in-process（<code>exec</code>），標準庫無法乾淨設記憶體/時間上限。Layer 4 的 <code>--call-timeout</code> 因此<strong>只對 shell-kind 生效</strong>。</li>
+<li><strong>選項</strong>：
+<ul>
+<li>(a) 資源上限只承諾 shell-kind；</li>
+<li>(b) python-kind 要限制時退回 subprocess（失去 in-process 速度）；</li>
+<li>(c) 引入非標準庫沙箱（違背 least dependency）。</li>
+</ul>
+</li>
+<li><strong>你要決定</strong>：Layer 2「真 in-process」與 Layer 4「資源上限」如何取捨？</li>
+</ul>
+<hr />
+<h2>4. C 區 — 候選新 metadata 軸 / 欄位（都牽動軸層，需審慎）</h2>
+<table>
+<thead>
+<tr>
+<th>候選</th>
+<th>來源</th>
+<th>為何可能需要</th>
+<th>決策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nondeterministic</code></td>
+<td>docs/llm_taming_framework</td>
+<td>標記「這函式是隨機的」是整套馴化框架的<strong>觸發根</strong>；八軸無此概念</td>
+<td><strong>✅ 扶正（2026-05-26）為第九軸</strong>。<code>true</code>＝未認證 / <code>{model,test_set,stability}</code>＝證書。落地：<code>lib_spec.md §9</code>、<code>axis_spec.md §9</code>、<code>_core.py</code>。</td>
+</tr>
+<tr>
+<td><code>memoized: {version, ttl}</code></td>
+<td>session_resume 決策3 / lib/memoize</td>
+<td>memoized 沒有既有軸值可隱含（不像中斷恢復有 interruptible/guarantee）→ 可能<strong>真的需要</strong>新欄位</td>
+<td><strong>✅ 決策（2026-05-26）：不入軸、純 runtime</strong>。修正先前判斷——可由「<code>nondeterministic</code> 缺席 + <code>stateless</code>」隱含可快取性，故毋須新欄位。記於 <code>lib_spec.md</code>「未入軸的決策」。</td>
+</tr>
+<tr>
+<td>lifecycle 變體「依賴外部 server」</td>
+<td>compose_meta requires_persistent</td>
+<td>含 persistent 成員的複合函式，其呼叫本身 one_shot 但需 server 在線；八軸無此值</td>
+<td>⏸ 暫緩（隨 A4 組合維度一起待 v0）。</td>
+</tr>
+<tr>
+<td>交互終止條件</td>
+<td>docs/multi_function_interaction §5</td>
+<td>多函數交互需要標準化的終止語意（否則無限互踢）</td>
+<td>⏸ 暫緩（暫由 <code>lib/interact.py</code> 的 <code>max_rounds</code> runtime 承擔）。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>回顧本輪的核心抉擇</strong>：<code>nondeterministic</code> 與 <code>memoized</code> 表面同處「<strong>沒有既有軸值可隱含觸發</strong>」，但仔細看其實不同——<code>nondeterministic</code>（隨機性）真的無從推斷，故<strong>成軸</strong>；<code>memoized</code>（可不可快取）反而可由「<code>nondeterministic</code> 缺席 + <code>stateless</code>」隱含，故與「中斷恢復慣例」同理<strong>不加欄位</strong>。這正是「<strong>能由既有軸推斷的就不膨脹軸層</strong>」原則的一次具體裁決。</p>
+</blockquote>
+<hr />
+<h2>5. D 區 — 我外出期間自行拍板的決策（請追認或推翻）</h2>
+<p>使用者授權自行決定，以下是替使用者拍的板，理由都寫在對應檔案檔頭：</p>
+<table>
+<thead>
+<tr>
+<th>決策</th>
+<th>我選了什麼</th>
+<th>檔案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>記憶化 cache key 組成</td>
+<td>sha256(version + stdin + args + 檔 digest)，由呼叫方明確指定哪些參與</td>
+<td><code>lib/memoize.py</code></td>
+</tr>
+<tr>
+<td>記憶化失效策略</td>
+<td>預設靠 <code>.cache</code> 可隨時刪（無 TTL）；version / ttl 為 opt-in</td>
+<td><code>lib/memoize.py</code></td>
+</tr>
+<tr>
+<td>Hub 的定義</td>
+<td>Hub = 把函式生態轉成「給 LLM 的 skill 清單」的透鏡 + context budget 收斂</td>
+<td><code>tools/hub.py</code></td>
+</tr>
+<tr>
+<td>forge 對外介面</td>
+<td>stdin/stdout NDJSON 行協議（標為暫定，thinking_pending §3 說要重評）</td>
+<td><code>tools/sfc.py</code></td>
+</tr>
+<tr>
+<td>Switch 條件表達</td>
+<td>純資料規則表（equals），值來源 arg/ext，無 DSL/eval</td>
+<td><code>tools/switch.py</code></td>
+</tr>
+<tr>
+<td>Layer 4 錯誤封套</td>
+<td><code>{&quot;ok&quot;:false,&quot;error&quot;:{&quot;type&quot;,&quot;message&quot;,&quot;function&quot;}}</code>，type 分流可重試性</td>
+<td><code>tools/sfc.py</code></td>
+</tr>
+<tr>
+<td>交互安全閥</td>
+<td><code>max_rounds</code> 強制必有，防 actor↔critic 無限互踢</td>
+<td><code>lib/interact.py</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. 建議的處理順序（進度）</h2>
+<ol>
+<li><s><strong>A1+A2+A3</strong>（register 的三個 import-time 問題）一起處理——同源，且 A1 是阻塞級。</s> ✅ 完成（2026-05-26）</li>
+<li><s><strong>C 的 <code>memoized</code> / <code>nondeterministic</code></strong></s> ✅ 完成（2026-05-26）：nondeterministic 成軸、memoized 純 runtime。</li>
+<li><strong>A4 組合軸推導</strong>——⏸ 暫緩至 v0（roadmap §7：優先序待 v0 驗證後再定）。</li>
+<li><strong>B 系列</strong>（方向題）——⏸ 留給 v0 逼出（B1/B3 v0 必撞、B2 有暫定解）。</li>
+<li><strong>D 區 7 項</strong>——仍待你追認（都是 try_implement 原型的低風險拍板，未阻塞）。</li>
+</ol>
+<blockquote>
+<p>下一步建議：規範地基（A/C 該收的已收）已穩，可轉向 <code>roadmap.md §6</code> 的 <strong>v0 垂直切片</strong>——由真實目標去逼出 B1/B3/A4 的優先序，而非繼續在抽象層定標準。</p>
+</blockquote>
+<hr />
+<h2>7. roadmap §7 — 這個目標會逼出哪些待決規範</h2>
+<p>v0 切片會自然撞到 <code>try_implement/DECISIONS.md</code> 裡的幾個懸案，到時它們就從「憑空猜」變成「擋路、得解」：</p>
+<table>
+<thead>
+<tr>
+<th>懸案</th>
+<th>為何被這個目標逼出來</th>
+<th>出處</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>語意 / 用途描述欄位</strong>（Gap C / B1）</td>
+<td>生資產一定撞到——八軸只描述執行特性，沒有「這環節做什麼、吃什麼參數」。</td>
+<td>DECISIONS B1</td>
+</tr>
+<tr>
+<td><strong>in-process 沙箱</strong>（Gap E / B3）</td>
+<td>要跑程式碼 / 測試來驗證笨模型的產出，需要資源與安全隔離邊界。</td>
+<td>DECISIONS B3</td>
+</tr>
+<tr>
+<td><strong>memoize 快取</strong>（候選軸 C）</td>
+<td>便宜≠免費；笨模型也要錢 / 算力。重複輸入該狂快取。</td>
+<td>DECISIONS C</td>
+</tr>
+<tr>
+<td><strong><code>nondeterministic</code> 軸（含證書）</strong></td>
+<td>§3.4 的治理原則需要它落地——不只「這裡隨機」，而是「測試組 / 模型 / 穩定度 %」的證書。</td>
+<td>DECISIONS C</td>
+</tr>
+<tr>
+<td><strong>組合軸推導</strong>（A4）</td>
+<td>資產被組成調用鏈時，複合 metadata 要能自動算。優先序待 v0 驗證後再定。</td>
+<td>DECISIONS A4</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>結論</strong>：<strong>v0 切片本身就是規範的篩子</strong>——跑通它的過程，會告訴我們上面哪幾條是真的擋路、哪幾條可以再放著。</p>
+</blockquote>
+<hr />
+<h2>8. roadmap §8 — 開放問題 / 待續討論</h2>
+<ul>
+<li><strong>固化引擎手動 vs 自動（§3.6）</strong>：v0 要不要把「把 LLM 處理過的模糊案例固化成新 matcher」也做進去？還是 v0 先手動固化、只證明「洞填得準」？— <strong>這題優先</strong>。</li>
+<li>v0 的「一個真實框架」選哪個？（用使用者自己手邊的框架最真實。）</li>
+<li>笨模型用什麼？本地 &lt;10B 具體選型？對照組怎麼設才公平？</li>
+<li>行數助手的形態：獨立 CLI 函式？還是 Claude Code Edit 那種 exact-match 風格？</li>
+<li>「生資產」的 schema 長什麼樣？這直接連到 Gap C 與「證書」該怎麼定。</li>
+<li>「證書」放哪、誰簽發、撤照流程（§3.4）——這是治理原則能不能落地的關鍵。</li>
+<li>A 層（最小工具）與 B 層（規範家族）的開發節奏：v0 期間 B 層只補「擋路的」，其餘凍結？</li>
+</ul>
+<blockquote>
+<p><strong>接續討論時</strong>：先讀 <code>roadmap.md</code> → 再依當下焦點讀 <code>try_implement/DECISIONS.md</code>（懸案清單）或 <code>core_nature/composite_spec.md</code>（規範現況）。</p>
+</blockquote>
+
+</main>
+<footer class="pager">
+<a class="prev" href="note_05_thinking_components.html"><span class="dir">← 上一篇</span><span class="fn">note_05_thinking_components</span></a>
+<a class="next" href="note_07_legacy_system_design.html"><span class="dir">下一篇 →</span><span class="fn">note_07_legacy_system_design</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

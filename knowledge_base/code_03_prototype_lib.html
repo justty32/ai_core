@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>code_03 — 原型 library（try_implement/lib/） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-code">code 程式成果</span>
+  <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
+</nav>
+<main class="md">
+  <div class="filemeta">code_03_prototype_lib.md · 172 行</div>
+<h1>code_03 — 原型 library（try_implement/lib/）</h1>
+<blockquote>
+<p><strong>來源</strong>：<code>try_implement/lib/</code>（state_dirs / recovery / memoize / server / singleton / trace / call / llm_call / compose / interact / compose_meta / <code>__init__.py</code>）
+<strong>狀態</strong>：原型／探索（多為提案，非定案）。全部是 try_implement 的提案／遊樂場實作，<strong>非正式 library</strong>；正式版扶正進 <code>src/</code> 前由使用者定奪。例外脈絡同 code_02。
+<strong>一行摘要</strong>：給工具/函式 import 的純標準庫小 library——複合規範參考實作（state_dirs/recovery/memoize）、基礎設施（server/singleton/trace/call）、LLM 包裝（llm_call）、以及八/九軸之外的組合維度（compose/interact/compose_meta）。</p>
+</blockquote>
+<p>相關交叉引用：使用這些 lib 的工具見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a>；煙霧測試與 demo 見 <a href="code_04_prototype_demos_tests.html">code_04_prototype_demos_tests.md</a>；組合維度概念見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>；馴化框架見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>；軸/metadata 規範見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>。</p>
+<p>這些不是 CLI 工具，而是給工具/函式 <code>import</code> 的小型 library，純標準庫、零外部相依。</p>
+<hr />
+<h2>群組一：複合規範家族的參考實作</h2>
+<h3><code>state_dirs.py</code> — 標準狀態目錄慣例</h3>
+<p>對應 composite_spec「標準狀態目錄慣例（Standard State Directory Convention）」。當程式宣告 <code>state: &quot;stateful_external&quot;</code> 且在 terminal 環境執行時，外部狀態存放在工作目錄下四個位置之一：</p>
+<ul>
+<li><code>.config/&lt;name&gt;/</code> 或 <code>.config/&lt;name&gt;.json</code> — 程式不修改的設定。</li>
+<li><code>.cache/&lt;name&gt;/</code> 或 <code>.cache/&lt;name&gt;.json</code> — 可隨時刪除。</li>
+<li><code>.state/&lt;name&gt;/</code> 或 <code>.state/&lt;name&gt;.json</code> — 程式目前所在 stage，可重置。</li>
+<li><code>.data/&lt;name&gt;/</code> 或 <code>.data/&lt;name&gt;.json</code> — 累積成果，需備份。</li>
+</ul>
+<p><code>class StateDirs(program_name, base=None)</code>：</p>
+<ul>
+<li><code>dir_path(kind)</code> / <code>file_path(kind)</code> — 資料夾形式 <code>.&lt;kind&gt;/&lt;name&gt;/</code> 與單檔形式 <code>.&lt;kind&gt;/&lt;name&gt;.json</code>。<code>KINDS = (&quot;config&quot;,&quot;cache&quot;,&quot;state&quot;,&quot;data&quot;)</code>，與 <code>_core.py</code> 的 <code>_STATE_DIR_VALUES</code> 對齊。</li>
+<li><code>ensure_dir(kind)</code>（lazy mkdir）、<code>child(kind, *parts)</code>（子檔路徑）。</li>
+<li><code>read_json(kind, default)</code> / <code>write_json(kind, obj)</code> — 單檔 JSON 往返（慣例：單檔必須 .json 且內容為 JSON object）。</li>
+<li><code>declared(*kinds)</code> — 產可餵給 <code>register(state_dirs=...)</code> 的片段，如 <code>{&quot;state&quot;:&quot;stateful_external&quot;,&quot;state_dirs&quot;:[&quot;state&quot;,&quot;data&quot;]}</code>。</li>
+</ul>
+<p><strong>設計決策</strong>：base 預設為 cwd（<code>Path(&quot;.&quot;)</code>），是「工作目錄下」而非 <code>$HOME/.config</code>（刻意與 XDG 不同，讓副作用範圍可預期落在當前目錄）；四目錄不強制全存在；lazy 建立。</p>
+<h3><code>recovery.py</code> — 中斷恢復慣例</h3>
+<p>對應 composite_spec「中斷恢復慣例（Interruption Recovery Convention）」。當程式宣告 <code>interruptible ∈ {resumable, rollback, resettable}</code> 或 <code>guarantee: &quot;transactional&quot;</code>，恢復能力統一落地為：</p>
+<ul>
+<li><code>.state/&lt;name&gt;/recovery.json</code> — 恢復記錄 manifest（程式間真正的合約）。</li>
+<li><code>.state/&lt;name&gt;/recovery/</code> — opaque payload（進度資料/journal，選填）。</li>
+</ul>
+<p>manifest 最小欄位：<code>status</code>（<code>in_progress</code>｜<code>done</code>）、<code>mode</code>（<code>resume</code>｜<code>rollback</code>｜<code>reset</code>）、<code>ts</code>（ISO 8601）、<code>payload</code>（選填相對路徑）。</p>
+<p>三種恢復模式：<code>resume</code>（從斷點接續）、<code>rollback</code>（撤銷未提交修改）、<code>reset</code>（重置到安全點）。</p>
+<p><code>class RecoveryManager(program_name, base=None, mode=&quot;resume&quot;)</code>（內部用 <code>StateDirs</code>）：</p>
+<ul>
+<li><code>manifest_path</code> / <code>payload_dir</code> / <code>payload_path(*parts)</code>。</li>
+<li><code>read()</code>、<code>begin(payload, **extra)</code>（status=in_progress）、<code>checkpoint(...)</code>（刷新 ts/payload）、<code>complete(delete=False)</code>（status=done 或刪記錄）。</li>
+<li><code>detect()</code> → <code>(action, manifest)</code>：記錄不存在或已 done → <code>(&quot;clean&quot;, None)</code>；in_progress → 依記錄裡的 mode。</li>
+<li><code>startup(on_resume, on_rollback, on_reset)</code> — composite_spec 的「啟動恢復流程（標準演算法）」：偵測自動（不需 flag），依 action 呼叫對應 handler。</li>
+<li><code>session(payload, **extra)</code> context manager — 進入 begin(in_progress)、正常離開 complete(done)；途中拋例外或被 kill 則停在 in_progress，下輪 startup() 可偵測。<strong>把「崩潰留下半完成記錄」變成預設行為。</strong></li>
+</ul>
+<p><strong>設計決策</strong>：偵測 auto（不需 flag，合規範）；不新增 metadata 欄位（恢復能力由既有軸宣告，本 library 只承擔 on-disk 合約）。</p>
+<h3><code>memoize.py</code> — 記憶化慣例（<strong>尚未定案</strong>）</h3>
+<p>⚠️ 此慣例在 core_nature 中<strong>尚未定案</strong>（session_resume 列為「狀態恢復家族第二條」，留三個開放決策）。使用者外出期間授權自行拍板，本檔是 try_implement 提案，<strong>未動 <code>src/ai_core</code></strong>。</p>
+<p>用 <code>.cache/&lt;name&gt;/&lt;input-hash&gt;</code> 做「輸入→輸出」快取。目的是<strong>效能</strong>（避免重算），非正確性——與 idempotent 的區別：idempotent = 正確性（重跑不累積副作用），memoized = 效能（重跑直接取快取）。</p>
+<p><code>class Memoizer(program_name, base=None, version=&quot;1&quot;, ttl=None)</code>（內部用 <code>StateDirs</code>）：</p>
+<ul>
+<li><code>key(stdin, args, files, extra)</code> — <code>sha256(canonical_json({v, stdin, args, file_digests, extra}))</code>。<code>file_digest(path)</code> 大檔只存 digest 不揉全文。</li>
+<li><code>get(key)</code> / <code>put(key, output)</code> / <code>invalidate(key)</code> / <code>clear()</code>。get 支援 ttl 過期即清。</li>
+<li><code>cached_call(compute, stdin, args, files)</code> → <code>(output, hit)</code>：命中回快取，否則跑 compute 存起來。</li>
+<li><code>declared()</code> — 回<strong>提案中</strong>的 memoized metadata 形狀（如 <code>{&quot;memoized&quot;:{&quot;version&quot;:...}, &quot;state&quot;:&quot;stateful_external&quot;, &quot;state_dirs&quot;:[&quot;cache&quot;]}</code>）。</li>
+</ul>
+<p><strong>三個開放決策（自行拍板，供使用者評估）</strong>：</p>
+<ol>
+<li><strong>cache key 輸入組成</strong>：預設納入 stdin + args，可選納入檔內容 digest；由呼叫方明確指定，不臆測。</li>
+<li><strong>失效策略</strong>：預設靠 .cache「可隨時刪」語意（無 TTL，KISS）；提供兩個 opt-in：<code>version</code>（bump 即整批失效）、<code>ttl</code>（逐筆過期）。</li>
+<li><strong>metadata 欄位（關鍵差異）</strong>：memoized <strong>沒有對應軸值可隱含</strong>（guarantee enum 是 {none,idempotent,transactional}，塞不進 memoized）。建議很可能需要一個新頂層欄位，但這會動到軸層（使用者禁區），故只示範形狀、不塞進真 <code>register()</code>（真 register 目前會以 unknown field 拒收）。這正是給使用者「memoized 純屬 runtime vs 入軸」決策的具體素材。</li>
+</ol>
+<hr />
+<h2>群組二：基礎設施</h2>
+<h3><code>server.py</code> — persistent server 標準 lifecycle</h3>
+<p>對應 thinking_pending §3「持久性程式建議設計成 server」。把 SFC forge 的「啟動→就緒→逐行處理→關閉」迴圈泛化成可重用 library；SFC forge 是此模式的具體實例。</p>
+<p><code>class NDJSONServer(name, route_key=&quot;cmd&quot;)</code>：</p>
+<ul>
+<li>標準 lifecycle：<code>start</code>（on_start 載入資源）→ <code>ready</code>（往 stderr 印一行 ready 訊號可被探測）→ <code>serve</code>（逐行讀 stdin JSON request、dispatch、回一行 JSON response）→ <code>shutdown</code>（收到 shutdown 指令或 EOF，跑 on_shutdown）。</li>
+<li><code>handler(name)</code> 裝飾器 / <code>register(name, fn)</code> / <code>on_start(fn)</code> / <code>on_shutdown(fn)</code>。</li>
+<li>handler 簽名 <code>fn(req: dict) -&gt; dict</code>；回傳包進 <code>{&quot;ok&quot;: true, **result}</code>，拋例外則 <code>{&quot;ok&quot;: false, &quot;error&quot;: &quot;...&quot;}</code>。</li>
+<li>內建指令：<code>ping</code>（→pong）、<code>list</code>（列出 handler）、<code>shutdown</code>。</li>
+<li><code>serve(stdin, stdout, stderr)</code> 接受任意 readable/writable（預設 sys.std*），方便用 <code>io.StringIO</code> 測試。</li>
+</ul>
+<p><strong>設計決策</strong>：介面用 stdin/stdout NDJSON（最 KISS，免 socket/port/http）；thinking_pending §3 指出此選項需重評——保留升 HTTP 的空間（handler 簽名不變，只換傳輸層），標為暫定。</p>
+<h3><code>singleton.py</code> — singleton 資源（queue + consume rate）</h3>
+<p>對應 thinking_pending §4。LLM Entry Manager 是具體實例：資源一次只能處理一個請求，請求者是多個互不認識的 caller → queue + consume rate（token/錢/算力多維度）。抽成三塊：</p>
+<ul>
+<li><code>class RateMeter(limits=None)</code> — 多維度用量累計器（dict 累計任意命名維度，不寫死只有 token）。<code>record(**amounts)</code>、<code>total(dim)</code>、<code>usage()</code>、<code>remaining(dim)</code>、<code>exceeded()</code>（回已超限維度列表）、<code>would_exceed(**amounts)</code>（若再記會超限的維度）。limits 選填，<strong>超限只回報不強制 abort</strong>（policy 與 mechanism 分離）。</li>
+<li><code>class RequestQueue</code> — FIFO，<code>enqueue(payload)</code>→ticket id、<code>dequeue()</code>（跳過已取消）、<code>cancel(tid)</code>（用 ticket id 取消）、<code>pending()</code>。對應 §4「enqueue/dequeue/cancel」標準介面。</li>
+<li><code>class SingletonResource(name, limits=None)</code> — 綁起來：<code>submit</code>/<code>cancel</code>、<code>serve_one(worker, cost_fn)</code>（取一個跑、記 consume）、<code>drain(worker, cost_fn, stop_on_limit=True)</code>（一次處理一個直到 queue 空；超限即停）。</li>
+</ul>
+<p><strong>設計決策</strong>：queue 純記憶體單行（singleton 一次一個，無需多佇列）；多個不同 LLM entry 各自消費由「多個 SingletonResource 實例」表達。</p>
+<h3><code>trace.py</code> — 調用鏈追蹤（輕量方案）</h3>
+<p>對應 thinking_pending §5「調用鏈設計」，採該節的「輕量方案」：每工具在 stderr 輸出結構化 JSON log，成本接近零，由最外層 caller 決定是否收集。調用鏈在 shell 世界 = process 與其子 process / pipeline 前後節點。</p>
+<ul>
+<li><strong>trace id 傳遞</strong>：兩個環境變數——<code>AI_CORE_TRACE</code>（整條鏈共享的 trace id）、<code>AI_CORE_SPAN</code>（呼叫方 span id，本工具 span 以它為 parent）。<code>current_trace()</code>（無則自生 = 鏈頭）、<code>parent_span()</code>、<code>child_env(base=None)</code>（給 subprocess 的環境：帶 trace id + 以目前 span 為 parent）。</li>
+<li><strong>span 事件</strong> <code>span(name, stderr=None, **fields)</code> context manager：印 start（含自身 span id），離開印 end（含 duration）；區塊內把自身設為 <code>AI_CORE_SPAN</code>，spawn 的子 process 以它為 parent，離開還原。</li>
+<li><strong><code>class Collector</code></strong>：<code>add_line</code> / <code>add_text</code> 吃 stderr 文字（非 JSON 行自動略過），<code>tree()</code> 以 span/parent 重建調用樹（容忍亂序與缺漏，缺 end 的標 incomplete），<code>render()</code> 畫成縮排文字（incomplete 加「⚠ incomplete」標記）。</li>
+</ul>
+<p><strong>已實際接進工具</strong>：router 與 sfc forge 的 dispatch 都 trace-aware（見 code_02）。</p>
+<h3><code>call.py</code> — 跨邊界統一呼叫</h3>
+<p>對應 thinking_pending §6 與 thinking_oop。核心立場：HTTP 調用、shell 調用、程式內函數調用本質是同一件事（函式呼叫跨越不同邊界，只是傳遞機制不同）。因 ai_core I/O 都是文字，三種邊界統一收斂成 <code>target.call(text_in: str) -&gt; text_out: str</code>：</p>
+<ul>
+<li><code>class InProcess(fn)</code> — 同 process 直接函式呼叫。</li>
+<li><code>class Subprocess(cmd, check=True)</code> — 開子 process，text 餵 stdin、收 stdout；<strong>自動帶 <code>trace.child_env()</code></strong>（子鏈接上同一條 trace）。</li>
+<li><code>class Http(url, method=&quot;POST&quot;, timeout=30, headers=None)</code> — POST text 當 body、收 response body；用標準庫 <code>urllib</code>，不引入 requests（least dependency）。</li>
+<li><code>from_spec(spec, registry=None)</code> — 由 JSON 設定建 target（kind ∈ subprocess/http/in_process）；呼應「router 不在意 mapping 目標是檔案還是資料庫」，這裡再擴到網路。</li>
+<li><code>call(target, text)</code>（鴨子型別，有 <code>.call</code> 即可）、<code>call_json(target, obj)</code>（兩端 JSON 編解碼傳結構化資料）。</li>
+</ul>
+<p><strong>待設計（誠實標記）</strong>：thinking_pending §6 指出跨網路邊界的<strong>分散式狀態</strong>（一致性、失敗恢復、冪等）與本地調用有本質差異，需專門設計。本 library 只做「呼叫傳遞」，不處理分散式狀態——retry/冪等搭配 <code>lib/memoize</code>、軸值、或上層 <code>compose.retry_until_valid</code>。</p>
+<h3><code>llm_call.py</code> — llm_call 基底 + context packing（CLAUDE.md 元件 2）</h3>
+<p>把 LLM 視為一個（隨機的）函式 <code>llm_call(str) -&gt; str</code>，再疊 context 與 post-processing 形成更具語意的新函式。</p>
+<ul>
+<li><strong>基底</strong> <code>llm_call(prompt, *, backend=None, **opts)</code> — 把 prompt 丟給 backend 回文字；opts（temperature/seed/max_tokens）原樣轉給 backend。</li>
+<li><strong>打包</strong> <code>bind(*, system, prefix, suffix, postprocess, backend, **opts) -&gt; f(str)-&gt;str</code> — 把 system/prefix/suffix/postprocess 疊上去產出新的 str→str（無狀態 one-shot，可直接餵給 <code>compose</code>）。對應 CLAUDE.md 範例：<pre><code class="language-python">coding_q = bind(system=&quot;you are a professor of coding...&quot;,
+                postprocess=lambda o: o + &quot; -- at 20240505&quot;)
+coding_q(&quot;how to sort a list?&quot;)
+</code></pre>
+</li>
+<li><strong>可插拔 backend</strong>：<code>class Backend</code>（介面 <code>complete(prompt, **opts)-&gt;str</code>）；<code>EchoBackend</code>（預設，回 <code>echo: {prompt}</code>）；<code>ScriptedBackend(responses)</code>（依序循環吐出，元素可為字串或 <code>fn(prompt)-&gt;str</code>，<strong>用來在測試模擬「同輸入不同輸出」的隨機性</strong>）；<code>FnBackend(fn)</code>。<code>set_default_backend()</code> 切換全域預設。真接 API 時實作 Backend 子類接 <code>lib/call.Http</code> 或官方 SDK，上層 bind/compose 不變。</li>
+</ul>
+<p><strong>設計立場</strong>：llm_call 是系統裡唯一的非確定性函式；馴化它的手段不寫在這裡，而在 <code>lib/compose</code>（同一套組合任意函式的組合子）。詳見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>。</p>
+<hr />
+<h2>群組三：八/九軸之外的組合維度</h2>
+<h3><code>compose.py</code> — 組合子（組合維度）</h3>
+<p>主張「函式怎麼一起動」是與八軸正交的維度。每個組合子吃若干 <code>f(str)-&gt;str</code> 回傳新的 <code>f(str)-&gt;str</code>（型別不變故可無限疊套）。</p>
+<ul>
+<li><strong>順序合作</strong>：<code>pipe(*fns)</code> — 管線（= 調用鏈的純函式版，<code>lib/trace</code> 負責可觀測性）。</li>
+<li><strong>並聯合作</strong>：<code>fanout(*fns)</code>（同輸入多分支回 list）、<code>fanout_reduce(fns, reducer)</code>（map→reduce 收成單一輸出）。</li>
+<li><strong>條件合作</strong>：<code>route(selector, table, default)</code>（依條件分派，= Switch 的組合子化）、<code>with_fallback(primary, fallback, is_ok)</code>（主拋例外或輸出不合格則走備援）。</li>
+<li><strong>分治合作</strong>：<code>decompose(split, sub, join)</code>（拆→各自處理→合；對 LLM 特別有用，大任務拆小更易驗證）。</li>
+<li><strong>馴化隨機性</strong>（重點，對任何「吵的函式」都適用，LLM 只是最典型那個）：
+<ul>
+<li><code>retry_until_valid(fn, validate, retries=3, on_exhausted=None)</code> — 拒絕採樣：重抽到輸出通過 validate，用盡則回 on_exhausted 或拋 <code>ValidationError</code>。</li>
+<li><code>vote(fn, n=5, key=None)</code> — 自一致（self-consistency）：同輸入抽 n 次取眾數（key 正規化後比對，回第一個命中的原始輸出）。</li>
+<li><code>best_of(fn, n, score)</code> — 抽 n 次取 score 最高者。</li>
+<li><code>guard(fn, validate, repair)</code> — 驗證→修復：壞輸出交給 repair（可為另一次 LLM 呼叫）修。</li>
+</ul>
+</li>
+</ul>
+<h3><code>interact.py</code> — 多函數交互（組合維度的「來回」版）</h3>
+<p>對應組合維度文件 §5。<code>compose</code> 處理<strong>單向組合</strong>（資料從輸入流到輸出）；<code>interact</code> 處理更難的<strong>交互</strong>：函式之間來回，需要 compose 沒有的兩樣東西——<strong>共享狀態</strong>與<strong>終止條件</strong>。</p>
+<ul>
+<li><strong>黑板（blackboard）driver</strong> <code>run(participants, state, until, max_rounds=8)</code>：每輪讓每個 participant 依序讀寫共享 <code>state</code>（dict），直到 <code>until(state)</code> 成立或達上限。回 state 含 <code>_rounds</code>、<code>_stopped</code>（<code>until</code>｜<code>max_rounds</code>）。</li>
+<li><strong><code>actor_critic(task, actor, critic, max_rounds=3)</code></strong>：actor 生成草稿、critic 批評（LLM-as-judge），反覆修到驗收或用盡。回 <code>{draft, accepted, rounds, history}</code>。把驗證從一次性 pass/fail 升級成「不過就帶理由重修」。</li>
+<li><strong><code>debate(task, debaters, judge, rounds=1)</code></strong>：多方各出 argument，judge 收斂成裁決；rounds&gt;1 時把上一輪裁決回灌。回 <code>{verdict, rounds, arguments}</code>。</li>
+</ul>
+<p><strong>為什麼 <code>max_rounds</code> 是強制的</strong>：LLM 交互最容易出事的地方是<strong>不會停</strong>（actor 與 critic 無限互踢），故 <code>max_rounds</code> 設成必有的安全閥（預設給值），即使 <code>until</code> 永不成立也保證收斂。<code>compose</code>（單向）與 <code>interact</code>（來回）在「actor-critic」處交會。</p>
+<h3><code>compose_meta.py</code> — 組合的軸推導規則（候選新概念）</h3>
+<p>對應組合維度文件 §3。<code>compose</code> 只組合<strong>行為</strong>；本模組多做一件事：從成員函式的八軸 metadata <strong>推導出複合函式的 metadata</strong>。若成立，hub 就能對「臨時組起來的複合函式」自動算 metadata，不必人工標註——是把組合維度接回八軸的橋。</p>
+<ul>
+<li><strong>核心物件</strong> <code>@dataclass MetaFn(fn, meta, name)</code> — callable + 八軸 metadata，<code>__call__</code> 即呼叫 fn。</li>
+<li><strong>推導規則</strong>：
+<ul>
+<li><strong>guarantee</strong>（強度序 none &lt; idempotent &lt; transactional）：<code>pipe</code> 取<strong>最弱</strong>（一條鏈只要有一段不能安全重試，整條就不能）；<code>fanout</code> 若分支共用 state_dir → 並發寫衝突 → 退化為 <code>none</code>，否則取最弱。</li>
+<li><strong>state</strong>：聯集（任一成員 stateful_external，整體就是）。</li>
+<li><strong>state_dirs</strong>：聯集（讓 hub 算出複合函式會碰哪些目錄）。</li>
+<li><strong>lifecycle</strong>：複合呼叫本身回 <code>one_shot</code>；有 persistent 成員則加 <code>requires_persistent</code> 列出相依——<strong>八軸沒有「依賴外部 server」的 lifecycle 值，這個推導正好把缺口暴露出來</strong>。</li>
+</ul>
+</li>
+<li><strong>組合子</strong>：<code>derive_pipe(metafns)</code> / <code>mpipe(*metafns)</code>（meta-aware pipe）、<code>derive_fanout</code> / <code>mfanout_reduce(metafns, reducer)</code>（含共用 dir 衝突偵測 + <code>_warning</code>）、<code>mretry(metafn, validate, retries=3)</code>（<strong>強制檢查被包函式至少 idempotent</strong>，否則拒絕組裝——把「retry 前置條件」變可執行檢查）。</li>
+</ul>
+<p><strong>簡化與保留</strong>：guarantee 強度序是簡化（transactional 與 idempotent 嚴格說非全序，此處為能算 min 而定序）；<code>interruptible</code> 的推導較微妙（pipe 段間是天然 checkpoint），本原型先不推導，列後續。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="code_02_prototype_tools.html"><span class="dir">← 上一篇</span><span class="fn">code_02_prototype_tools</span></a>
+<a class="next" href="code_04_prototype_demos_tests.html"><span class="dir">下一篇 →</span><span class="fn">code_04_prototype_demos_tests</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

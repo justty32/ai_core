@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_04_data_format · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_04_data_format.md · 33 行</div>
+<h1>doc_04_data_format</h1>
+<ul>
+<li><strong>來源</strong>：<code>core_nature/data_format.md</code></li>
+<li><strong>狀態</strong>：定案規範（部分待填）</li>
+<li><strong>一行摘要</strong>：跨工具通用資料格式規範——JSON 作為通用格式（結構化 I/O、metadata、設定檔），CLI argv ↔ JSON 轉換不重造輪子，主力 <code>argparse</code> + <code>vars()</code>。</li>
+</ul>
+<blockquote>
+<p>交叉引用：九軸詳規見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>、library 契約見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>、CLI 介面契約見 <a href="doc_07_cli.html">doc_07_cli.md</a>、terminal 執行模型見 <a href="doc_02_terminal_model.html">doc_02_terminal_model.md</a>。</p>
+</blockquote>
+<hr />
+<p>跨工具的通用資料格式規範。</p>
+<hr />
+<h2>§3 資料結構：JSON 作為通用格式</h2>
+<h3>3.1 設計立場</h3>
+<p>系統以 <strong>JSON</strong> 作為跨工具的通用資料格式。所有工具的結構化輸入輸出、metadata、設定檔，一律以 JSON 表示。</p>
+<p>CLI 參數（argv）與 JSON 之間的轉換是日常操作，不自行實作，直接採用現有工具。</p>
+<h3>3.2 CLI argv → JSON（不重造輪子）</h3>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>環境</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>argparse</code> + <code>vars()</code></td>
+<td>Python 標準庫</td>
+<td><code>vars(parser.parse_args())</code> 直接得到 dict，<code>json.dumps()</code> 完成轉換。零外部相依，<strong>首選</strong>。</td>
+</tr>
+<tr>
+<td><code>click</code></td>
+<td>Python（外部）</td>
+<td>比 argparse 更人性化，context 物件可取出所有參數為 dict，但引入外部相依。</td>
+</tr>
+<tr>
+<td><code>jsonargparse</code></td>
+<td>Python（外部）</td>
+<td>專為 CLI ↔ JSON/YAML 設計，支援 nested object（<code>--model.layer 3</code>），功能最強，相依最重。</td>
+</tr>
+<tr>
+<td><code>jo</code></td>
+<td>Shell</td>
+<td><code>jo name=Alice age=30</code> → <code>{&quot;name&quot;:&quot;Alice&quot;,&quot;age&quot;:30}</code>，輕量但不解析 <code>--flag</code> 語法。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>結論</strong>：主力使用 <code>argparse</code> + <code>vars()</code>，符合「最少相依、CLI 一等公民」原則。Subcommand 結構透過 <code>add_subparsers</code> 處理，輸出 dict 結構直接對應 subcommand 樹。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_03_execution_forms.html"><span class="dir">← 上一篇</span><span class="fn">doc_03_execution_forms</span></a>
+<a class="next" href="doc_05_axes_metadata.html"><span class="dir">下一篇 →</span><span class="fn">doc_05_axes_metadata</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

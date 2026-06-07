@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lib_spec.md · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_06_lib_contract.md · 830 行</div>
+<hr />
+<h2>來源: core_nature/lib_spec.md（821 行，本批最長檔，已完整逐字覆蓋）
+狀態: 定案規範（register/intercept 宣告攔截拆分為現行；§4/§9 自陳「從粗糙到嚴整」待 v0 收緊）
+一行摘要: ai_core Python library 的 API 契約落地處——register/register_subcommand/register_subcommand_resolver/intercept 簽名與行為、--metadata 攔截規則、九軸 metadata fields 完整格式、memoized 不入軸決策。</h2>
+<blockquote>
+<p>軸的概念定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；複合慣例見 <a href="doc_08_composite.html">doc_08_composite.md</a>；正式核心實作狀態見 <a href="code_01_core_library.html">code_01_core_library.md</a>；決策脈絡見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<h1>lib_spec.md</h1>
+<p>ai_core Python library 的 API 設計細節。</p>
+<hr />
+<h2>§1 I/O 出入口（entries）</h2>
+<h3>metadata field</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entries</code></td>
+<td>object</td>
+<td>key 為自由命名的語意名稱，value 為該 entry 的屬性物件</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若 <code>entries</code> 缺席，等同宣告單一 stdio entry（batch、text、雙向）。</p>
+<hr />
+<h3>entry 屬性規格</h3>
+<p>每個 entry 的 value 為一個物件，包含以下欄位：</p>
+<h4><code>able_in</code> / <code>able_out</code></h4>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>able_in</code></td>
+<td>bool</td>
+<td>此 entry 是否接收外部資料（輸入方向）</td>
+</tr>
+<tr>
+<td><code>able_out</code></td>
+<td>bool</td>
+<td>此 entry 是否向外輸出資料（輸出方向）</td>
+</tr>
+</tbody>
+</table>
+<p>兩者可同時為 <code>true</code>（雙向，如互動式 entry）。</p>
+<h4><code>mode</code></h4>
+<p>描述資料流動形式。可為字串或物件。</p>
+<p><strong>字串形式：</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;batch&quot;</code></td>
+<td>一次性交換：輸入讀完後才開始處理，輸出一次寫完</td>
+</tr>
+<tr>
+<td><code>&quot;streaming&quot;</code></td>
+<td>持續性流動：資料逐筆產生或消費</td>
+</tr>
+<tr>
+<td><code>&quot;interactive&quot;</code></td>
+<td>執行途中需要對方即時介入（如 stdin prompt）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>物件形式（用於 streaming 需要描述速率）：</strong></p>
+<pre><code class="language-json">&quot;mode&quot;: {
+  &quot;type&quot;: &quot;streaming&quot;,
+  &quot;rate&quot;: &quot;20b/s&quot;
+}
+</code></pre>
+<pre><code class="language-json">&quot;mode&quot;: {
+  &quot;type&quot;: &quot;streaming&quot;,
+  &quot;chunk_size&quot;: &quot;4kb&quot;,
+  &quot;interval&quot;: &quot;500ms&quot;
+}
+</code></pre>
+<p>物件形式中 <code>type</code> 為必填，其餘速率欄位為選填。</p>
+<h4><code>type</code></h4>
+<p>描述資料的內容格式。可為字串或物件。</p>
+<p><strong>字串形式：</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;text&quot;</code></td>
+<td>純文字，編碼未指定（呼叫方自行假設）</td>
+</tr>
+<tr>
+<td><code>&quot;binary&quot;</code></td>
+<td>二進位資料</td>
+</tr>
+</tbody>
+</table>
+<p><strong>物件形式（需要指定編碼或 MIME）：</strong></p>
+<pre><code class="language-json">&quot;type&quot;: {&quot;base&quot;: &quot;text&quot;, &quot;encoding&quot;: &quot;utf-8&quot;}
+&quot;type&quot;: {&quot;base&quot;: &quot;binary&quot;, &quot;mime&quot;: &quot;image/png&quot;}
+</code></pre>
+<h4><code>channel_constraint</code>（選填）</h4>
+<p>宣告此 entry 對可接受 channel 的品質下限。mapping 層依此過濾。</p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;stable&quot;</code></td>
+<td>只接受穩定通道（file、stdio）；不接受 http / socket 等有延遲或中斷風險的通道</td>
+</tr>
+<tr>
+<td>缺席</td>
+<td>無限制，任何通道皆可</td>
+</tr>
+</tbody>
+</table>
+<h4><code>terminal_binding</code>（選填）</h4>
+<p>僅在 terminal 環境下有意義。描述此 entry 在 CLI 中如何被接線。</p>
+<pre><code class="language-json">&quot;terminal_binding&quot;: {
+  &quot;argflag&quot;: &quot;--input&quot;,
+  &quot;default&quot;: &quot;stdin&quot;
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>argflag</code></td>
+<td>string</td>
+<td>對應的 argparse flag（如 <code>&quot;--input&quot;</code>）</td>
+</tr>
+<tr>
+<td><code>default</code></td>
+<td>string</td>
+<td>未指定 flag 時的預設接線（如 <code>&quot;stdin&quot;</code>、<code>&quot;./data.txt&quot;</code>）</td>
+</tr>
+</tbody>
+</table>
+<p>換環境時，<code>terminal_binding</code> 整塊忽略即可，entry 語意不受影響。</p>
+<hr />
+<h3>完整範例</h3>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;persistent&quot;,
+    state=&quot;stateful_external&quot;,
+    entries={
+        &quot;entry_states&quot;: {
+            &quot;able_in&quot;: False,
+            &quot;able_out&quot;: True,
+            &quot;mode&quot;: {&quot;type&quot;: &quot;streaming&quot;, &quot;rate&quot;: &quot;20b/s&quot;},
+            &quot;type&quot;: &quot;text&quot;,
+        },
+        &quot;entry_trigger&quot;: {
+            &quot;able_in&quot;: True,
+            &quot;able_out&quot;: False,
+            &quot;mode&quot;: &quot;batch&quot;,
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;channel_constraint&quot;: &quot;stable&quot;,
+        },
+        &quot;entry_content&quot;: {
+            &quot;able_in&quot;: True,
+            &quot;able_out&quot;: False,
+            &quot;mode&quot;: &quot;batch&quot;,
+            &quot;type&quot;: &quot;binary&quot;,
+            &quot;terminal_binding&quot;: {
+                &quot;argflag&quot;: &quot;--content&quot;,
+                &quot;default&quot;: &quot;./data.bin&quot;,
+            },
+        },
+    },
+)
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{
+  &quot;lifecycle&quot;: &quot;persistent&quot;,
+  &quot;state&quot;: &quot;stateful_external&quot;,
+  &quot;entries&quot;: {
+    &quot;entry_states&quot;: {
+      &quot;able_in&quot;: false,
+      &quot;able_out&quot;: true,
+      &quot;mode&quot;: {&quot;type&quot;: &quot;streaming&quot;, &quot;rate&quot;: &quot;20b/s&quot;},
+      &quot;type&quot;: &quot;text&quot;
+    },
+    &quot;entry_trigger&quot;: {
+      &quot;able_in&quot;: true,
+      &quot;able_out&quot;: false,
+      &quot;mode&quot;: &quot;batch&quot;,
+      &quot;type&quot;: &quot;text&quot;,
+      &quot;channel_constraint&quot;: &quot;stable&quot;
+    },
+    &quot;entry_content&quot;: {
+      &quot;able_in&quot;: true,
+      &quot;able_out&quot;: false,
+      &quot;mode&quot;: &quot;batch&quot;,
+      &quot;type&quot;: &quot;binary&quot;,
+      &quot;terminal_binding&quot;: {&quot;argflag&quot;: &quot;--content&quot;, &quot;default&quot;: &quot;./data.bin&quot;}
+    }
+  }
+}
+</code></pre>
+<hr />
+<h3>Terminal 環境預定義 entry 名稱</h3>
+<blockquote>
+<p>此節專屬 terminal（CLI / shell）環境。在其他環境中，這些名稱無特殊意義。</p>
+</blockquote>
+<p>使用以下預定義名稱時，其屬性應符合標準定義：</p>
+<table>
+<thead>
+<tr>
+<th>名稱</th>
+<th><code>able_in</code></th>
+<th><code>able_out</code></th>
+<th><code>mode</code></th>
+<th><code>type</code></th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stdin</code></td>
+<td><code>true</code></td>
+<td><code>false</code></td>
+<td><code>&quot;batch&quot;</code> 或 <code>&quot;interactive&quot;</code></td>
+<td><code>&quot;text&quot;</code></td>
+<td>標準輸入流</td>
+</tr>
+<tr>
+<td><code>stdout</code></td>
+<td><code>false</code></td>
+<td><code>true</code></td>
+<td><code>&quot;batch&quot;</code> 或 <code>&quot;streaming&quot;</code></td>
+<td><code>&quot;text&quot;</code></td>
+<td>標準輸出流</td>
+</tr>
+<tr>
+<td><code>stderr</code></td>
+<td><code>false</code></td>
+<td><code>true</code></td>
+<td><code>&quot;streaming&quot;</code></td>
+<td><code>&quot;text&quot;</code></td>
+<td>標準錯誤輸出</td>
+</tr>
+</tbody>
+</table>
+<p>規則：</p>
+<ul>
+<li><code>mode</code> 的具體值仍需在 entry 中明確宣告</li>
+<li><code>stderr</code> 通常不需要出現在 entries 中（屬程式內部的診斷輸出，呼叫方無需感知）</li>
+<li>檔案型入出口（如 <code>--input file.txt</code>）使用自訂名稱，並搭配 <code>channel_constraint: &quot;stable&quot;</code> 及 <code>terminal_binding</code>；無預定義名稱</li>
+<li>其他環境（http、socket 等）的預定義名稱留待各環境規範定義</li>
+</ul>
+<hr />
+<h2><code>register()</code> 與 <code>intercept()</code>（宣告／攔截拆分）</h2>
+<blockquote>
+<p><strong>設計演進</strong>：早期版本的 <code>register()</code> 在呼叫時就<strong>同時</strong>做「宣告 metadata」與「攔截
+<code>--metadata</code>」兩件事，且攔截要求 <code>--metadata</code> 必須是唯一引數。這在三種情境下出問題：
+(A) git-style dispatcher 的 <code>prog &lt;sub&gt; --metadata</code> 不相容；(B) 單一執行檔含多種 lifecycle
+的子命令無法各自宣告；(F) 在 module 頂層 <code>register()</code> 會在 import 時就讀 <code>sys.argv</code> / 攔截 /
+<code>sys.exit</code>，使工具無法被當 library 重用。現行規範把<strong>宣告</strong>與<strong>攔截</strong>拆成兩個動作。</p>
+</blockquote>
+<h3>介面</h3>
+<table>
+<thead>
+<tr>
+<th>函式</th>
+<th>職責</th>
+<th>副作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>register(**kwargs)</code></td>
+<td>宣告程式<strong>頂層</strong> metadata（dispatcher 的預設行為）</td>
+<td>無——只寫入內部登記，不讀 argv、不攔截、不 exit</td>
+</tr>
+<tr>
+<td><code>register_subcommand(name, **kwargs)</code></td>
+<td>宣告某個<strong>靜態子命令</strong>的 scoped metadata（可與頂層不同 lifecycle）</td>
+<td>無</td>
+</tr>
+<tr>
+<td><code>register_subcommand_resolver(fn)</code></td>
+<td>註冊<strong>動態子命令</strong>解析器 <code>fn(name, store_override) -&gt; dict | None</code>（子命令名稱來自外部資料，如 store）</td>
+<td>無</td>
+</tr>
+<tr>
+<td><code>intercept(argv=None)</code></td>
+<td>顯式攔截 <code>--metadata</code>；命中則輸出 JSON 並 <code>sys.exit</code>，否則 <strong>return 交還控制權</strong></td>
+<td>命中 metadata 查詢時 <code>sys.exit</code></td>
+</tr>
+</tbody>
+</table>
+<h3>規則</h3>
+<ol>
+<li><strong><code>register*</code> 系列純宣告、無副作用</strong>：可安全地在 import 時或 <code>main()</code> 內呼叫，import 不再有
+讀 argv / 攔截 / exit 的副作用（解 F）。</li>
+<li><strong><code>register()</code> 可重複呼叫</strong>（last-write-wins，覆寫頂層 metadata）；不再因二次呼叫而 crash。
+慣例上每個程式只在自己以 <code>__main__</code> 身分執行時宣告一次。</li>
+<li><strong>攔截由 <code>intercept()</code> 顯式負責</strong>，須在 <code>argparse.parse_args()</code> 之前呼叫。葉子工具的典型形態
+是 <code>register(...)</code> 後緊接 <code>intercept()</code>。</li>
+<li><strong>register 應在 <code>__main__</code> / <code>main()</code> 內呼叫</strong>（見下方「import-time 副作用」節）。</li>
+</ol>
+<h3><code>intercept()</code> 攔截規則</h3>
+<p>先吃掉可選的前導 <code>--store DIR</code>（使 <code>prog --store DIR &lt;sub&gt; --metadata</code> 也成立），再依序判斷：</p>
+<table>
+<thead>
+<tr>
+<th>argv（去掉 <code>--store DIR</code> 後）</th>
+<th>行為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[&quot;--metadata&quot;]</code></td>
+<td>印<strong>頂層</strong> metadata，<code>sys.exit(0)</code></td>
+</tr>
+<tr>
+<td><code>[&lt;name&gt;, &quot;--metadata&quot;]</code></td>
+<td>依序查「靜態子命令登記」→「動態 resolver」；命中印該 <strong>scoped</strong> metadata <code>exit(0)</code>；皆查無 → stderr 報錯 <code>exit(1)</code></td>
+</tr>
+<tr>
+<td>其餘</td>
+<td><strong>return</strong>（非 metadata 查詢，交回 caller 走一般 dispatch）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>與舊規範的差異：<code>prog &lt;sub&gt; --metadata</code> 由「報錯」變成「<strong>合法的 scoped metadata 查詢</strong>」
+（解 A）。<code>--metadata</code> 夾在一般引數中間（如 <code>prog --foo --metadata</code>）不再特別報錯——除非它
+落入上表前兩列的形狀，否則一律視為一般引數交還 caller。</p>
+</blockquote>
+<h3>輸出格式</h3>
+<p>純 JSON 到 stdout，無 header / wrapper（<code>ensure_ascii=False</code>，metadata 可含非 ASCII）：</p>
+<pre><code class="language-json">{&quot;lifecycle&quot;: &quot;one_shot&quot;}
+</code></pre>
+<h3>範例</h3>
+<p><strong>葉子工具</strong>（單一行為）：</p>
+<pre><code class="language-python">import ai_core
+
+def main():
+    ai_core.register(lifecycle=&quot;one_shot&quot;)
+    ai_core.intercept()          # 命中 --metadata 則輸出並 exit；否則往下走
+
+    parser = argparse.ArgumentParser()
+    # ...
+
+if __name__ == &quot;__main__&quot;:
+    sys.exit(main())
+</code></pre>
+<p><strong>dispatcher（含多種 lifecycle 子命令，解 A/B）</strong>：</p>
+<pre><code class="language-python">def main():
+    ai_core.register(lifecycle=&quot;one_shot&quot;, state=&quot;stateless&quot;)          # 頂層＝dispatcher 預設
+    ai_core.register_subcommand(&quot;forge&quot;, lifecycle=&quot;persistent&quot;)       # forge 子命令是 server
+    ai_core.register_subcommand_resolver(resolve_from_store)           # 動態子命令查 store
+    ai_core.intercept()          # 處理 prog --metadata / prog &lt;sub&gt; --metadata 各變體
+    # ... 一般 dispatch
+</code></pre>
+<p><code>prog --metadata</code> 回頂層 <code>one_shot</code>、<code>prog forge --metadata</code> 回 <code>persistent</code>——同一執行檔不同
+子命令各報自己的 lifecycle。</p>
+<h3>register 的 import-time 副作用（慣例）</h3>
+<p><code>register*</code> 系列已設計成純宣告，但<strong>仍建議在 <code>main()</code> / <code>__main__</code> 區塊內呼叫</strong>，不要放在 module
+頂層。理由：頂層 metadata 是 module-global 的單例，若工具 A 在頂層 <code>register()</code>、又被工具 B
+<code>import A</code> 來重用其函式，A 的頂層宣告會在 import 時就寫入全域、與 B 自己的宣告互相覆寫。把
+<code>register()</code> 留在「確定以腳本身分執行」的 <code>main()</code> 內，import 重用時就完全無副作用。</p>
+<hr />
+<h2>§2 生命週期</h2>
+<h3>metadata field</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>允許值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lifecycle</code></td>
+<td>string</td>
+<td><code>&quot;one_shot&quot;</code> | <code>&quot;persistent&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<h3>說明</h3>
+<p>描述程式從啟動到結束的持續模式。</p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;one_shot&quot;</code></td>
+<td>啟動 → 執行 → 結束。程序存活時間與任務等長</td>
+</tr>
+<tr>
+<td><code>&quot;persistent&quot;</code></td>
+<td>啟動後持續存活，等待請求或持續產出，直到被顯式終止</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若此 key 不存在、為 <code>null</code>、或為 <code>false</code>，等同於 <code>&quot;one_shot&quot;</code>。只有明確需要 <code>&quot;persistent&quot;</code> 時才需宣告。</p>
+<hr />
+<h2>§3 跨呼叫狀態</h2>
+<h3>metadata fields</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>string</td>
+<td><code>&quot;stateless&quot;</code> | <code>&quot;stateful_external&quot;</code></td>
+</tr>
+<tr>
+<td><code>state_dirs</code></td>
+<td>array</td>
+<td>遵守標準目錄慣例時使用的目錄子集；見 <a href="../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）</td>
+</tr>
+</tbody>
+</table>
+<h3>說明</h3>
+<p>描述程式在多次執行之間是否保有、影響或累積狀態。</p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;stateless&quot;</code></td>
+<td>每次執行互相獨立，輸出完全由當次輸入決定。可安全重試、平行執行。</td>
+</tr>
+<tr>
+<td><code>&quot;stateful_external&quot;</code></td>
+<td>狀態存於程式外部。呼叫方需知悉此程式會對外部狀態產生讀寫副作用。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若此 key 不存在、為 <code>null</code>、或為 <code>false</code>，等同於 <code>&quot;stateless&quot;</code>。只有明確需要 <code>&quot;stateful_external&quot;</code> 時才需宣告。</p>
+<blockquote>
+<p><code>&quot;stateful_internal&quot;</code>（狀態存於程序記憶體）理論上存在，但程序結束後記憶體釋放，實務上等同於每次 one-shot 都從外部重載狀態，故不列為獨立值。</p>
+</blockquote>
+<h3>標準狀態目錄慣例（Terminal 實作）</h3>
+<p><code>state: &quot;stateful_external&quot;</code> 在 terminal 環境下的標準路徑慣例（<code>.config</code>、<code>.cache</code>、<code>.state</code>、<code>.data</code>），以及其對 §1 / §5 / §6 的跨軸影響，定義於 <a href="../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）。</p>
+<h3>與 §2 的關聯</h3>
+<table>
+<thead>
+<tr>
+<th>組合</th>
+<th>常見形態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lifecycle: &quot;one_shot&quot;</code> + <code>state: &quot;stateless&quot;</code></td>
+<td>最典型的 CLI 工具：給定輸入 → 產出輸出 → 結束（兩者皆為預設，可省略宣告）</td>
+</tr>
+<tr>
+<td><code>lifecycle: &quot;one_shot&quot;</code> + <code>state: &quot;stateful_external&quot;</code></td>
+<td>資料庫更新腳本、append log 工具：每次執行都改動外部狀態</td>
+</tr>
+<tr>
+<td><code>lifecycle: &quot;persistent&quot;</code> + <code>state: &quot;stateless&quot;</code></td>
+<td>無記憶的 stateless server（每個請求獨立處理，無跨請求狀態）</td>
+</tr>
+<tr>
+<td><code>lifecycle: &quot;persistent&quot;</code> + <code>state: &quot;stateful_external&quot;</code></td>
+<td>有狀態的 server（e.g., session 管理、累積計數器，狀態寫入外部）</td>
+</tr>
+</tbody>
+</table>
+<h3>對呼叫方的影響</h3>
+<ul>
+<li><code>&quot;stateless&quot;</code>：呼叫方可自由重試或並行，無須考慮副作用。</li>
+<li><code>&quot;stateful_external&quot;</code>：呼叫方應確認狀態路徑（由 <code>--help</code> 或標準目錄慣例推斷）；並行執行需自行處理競爭條件（race condition）。</li>
+</ul>
+<h3>register() 範例</h3>
+<pre><code class="language-python">import ai_core
+
+def main():
+    ai_core.register(
+        lifecycle=&quot;one_shot&quot;,
+        state=&quot;stateful_external&quot;,
+    )
+
+    parser = argparse.ArgumentParser()
+    # ...
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{&quot;lifecycle&quot;: &quot;one_shot&quot;, &quot;state&quot;: &quot;stateful_external&quot;}
+</code></pre>
+<hr />
+<h2>§5 可中斷性</h2>
+<h3>metadata field</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>允許值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>interruptible</code></td>
+<td>string | object</td>
+<td>見下表</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若此 key 缺席、為 <code>null</code> 或 <code>false</code>，等同 <code>&quot;unsafe&quot;</code>（最保守）。</p>
+<hr />
+<h3>說明</h3>
+<p>描述程式對中斷（強制退出、外部 kill、環境切換）的承受能力，以及中斷後對外部狀態的影響。此軸為跨環境的抽象描述，不依賴具體的 OS 信號或平台機制。</p>
+<blockquote>
+<p><strong>設計備註</strong>：「損毀外部狀態」的定義是廣義的——不只是寫到一半造成資料損毀，也包括「程式被中斷、任務未正常完成，因此外部狀態未達到預期結果」。後者屬於任務層面的不完整，同樣是呼叫方需要知道的風險。相關定義之後可能需要精心深挖與設計。</p>
+</blockquote>
+<p><strong>字串形式（標準值）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;safe&quot;</code></td>
+<td>可隨時中斷；無副作用，中斷後外部狀態不受影響</td>
+</tr>
+<tr>
+<td><code>&quot;unsafe&quot;</code></td>
+<td>中斷可能損毀外部狀態，或任務未完成導致狀態未達預期（預設值）</td>
+</tr>
+<tr>
+<td><code>&quot;resettable&quot;</code></td>
+<td>中斷損毀狀態，但程式提供重置機制可恢復至某個安全狀態（不保證回到原始狀態）</td>
+</tr>
+<tr>
+<td><code>&quot;rollback&quot;</code></td>
+<td>中斷損毀狀態，但程式提供回滾機制可撤銷所有未完成的修改，完整還原至呼叫前的原始狀態</td>
+</tr>
+<tr>
+<td><code>&quot;resumable&quot;</code></td>
+<td>可中斷，且程式支援從斷點繼續執行；中斷不損毀狀態，下次呼叫從中斷處接續，而非從頭開始</td>
+</tr>
+<tr>
+<td><code>&quot;graceful&quot;</code></td>
+<td>可中斷，但不能直接 kill；需給程式時間完成 cleanup 後正常退出</td>
+</tr>
+</tbody>
+</table>
+<p><strong>物件形式（需補充細節，或非標準情形）：</strong></p>
+<pre><code class="language-json">{&quot;type&quot;: &quot;resettable&quot;, &quot;reset_hint&quot;: &quot;--reset&quot;}
+</code></pre>
+<pre><code class="language-json">{&quot;type&quot;: &quot;graceful&quot;, &quot;timeout&quot;: &quot;5s&quot;}
+</code></pre>
+<pre><code class="language-json">{&quot;type&quot;: &quot;conditional&quot;, &quot;condition&quot;: &quot;llm_entry 正常運作時可隨時中斷&quot;}
+</code></pre>
+<p>物件形式中 <code>type</code> 為必填，其餘選填。<code>&quot;conditional&quot;</code> 及其他非標準型別屬自定義，value 格式不受限制。</p>
+<hr />
+<h3>與 §3 / §6 的關係</h3>
+<table>
+<thead>
+<tr>
+<th>軸</th>
+<th>職責</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§3 跨呼叫狀態</td>
+<td>描述程式有無跨執行的外部狀態</td>
+</tr>
+<tr>
+<td>§5 可中斷性</td>
+<td>描述中斷對當次執行與外部狀態的影響</td>
+</tr>
+<tr>
+<td>§6 執行保證</td>
+<td>描述中斷後如何恢復（idempotent / transactional）</td>
+</tr>
+</tbody>
+</table>
+<p><code>&quot;safe&quot;</code> 通常與 <code>state: &quot;stateless&quot;</code> 搭配；但兩者獨立——stateless 程式執行途中仍可能有未提交的外部寫入，此時 <code>interruptible</code> 應為 <code>&quot;unsafe&quot;</code> 或 <code>&quot;graceful&quot;</code>。</p>
+<hr />
+<h3>register() 範例</h3>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;persistent&quot;,
+    state=&quot;stateful_external&quot;,
+    interruptible={&quot;type&quot;: &quot;resettable&quot;, &quot;reset_hint&quot;: &quot;--reset&quot;},
+)
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{
+  &quot;lifecycle&quot;: &quot;persistent&quot;,
+  &quot;state&quot;: &quot;stateful_external&quot;,
+  &quot;interruptible&quot;: {&quot;type&quot;: &quot;resettable&quot;, &quot;reset_hint&quot;: &quot;--reset&quot;}
+}
+</code></pre>
+<hr />
+<h2>§4 資源特性</h2>
+<blockquote>
+<p><strong>設計備註</strong>：<code>resources</code> 採自由 key-value 結構。標準規範精確定義最常見的具體資源 key（memory / gpu / time / disk / network）；其定義固定。自定義 key 的 value 格式不受限制。</p>
+</blockquote>
+<h3>metadata field</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resources</code></td>
+<td>object</td>
+<td>key 為資源名稱，value 為該資源的需求描述</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若 <code>resources</code> 缺席，等同宣告無任何資源需求聲明。</p>
+<hr />
+<h3>設計原則</h3>
+<p><code>resources</code> 為自由 key-value 結構，與 <code>entries</code> 同模式：</p>
+<ul>
+<li>key 完全自由命名——可以是顯性的系統資源（<code>memory</code>、<code>gpu</code>），也可以是抽象的隱性依賴（<code>llm_entry</code>、<code>db</code>）</li>
+<li><strong>預定義 key</strong>（見下節）有規範的 value 格式，hub 可直接解析</li>
+<li><strong>自定義 key</strong> 的 value 格式由撰寫者自訂；hub 讀得到但不一定能理解，至少讓呼叫方知道此依賴存在</li>
+</ul>
+<hr />
+<h3>預定義 key</h3>
+<h4><code>memory</code></h4>
+<p>描述記憶體用量。</p>
+<p>字串形式（宣告峰值）：</p>
+<pre><code class="language-json">&quot;memory&quot;: &quot;4gb&quot;
+</code></pre>
+<p>物件形式（需要區分各階段）：</p>
+<pre><code class="language-json">&quot;memory&quot;: {&quot;startup&quot;: &quot;2gb&quot;, &quot;peak&quot;: &quot;8gb&quot;, &quot;idle&quot;: &quot;500mb&quot;}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>子欄位</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>startup</code></td>
+<td>啟動時立即佔用（e.g., 模型載入後常駐）</td>
+</tr>
+<tr>
+<td><code>peak</code></td>
+<td>執行途中的記憶體峰值</td>
+</tr>
+<tr>
+<td><code>idle</code></td>
+<td>Persistent 程式閒置時的底線佔用</td>
+</tr>
+</tbody>
+</table>
+<p>三個子欄位皆選填；<code>idle</code> 僅對 <code>lifecycle: &quot;persistent&quot;</code> 有意義。</p>
+<h4><code>gpu</code></h4>
+<p>布林形式（宣告是否需要 GPU）：</p>
+<pre><code class="language-json">&quot;gpu&quot;: true
+</code></pre>
+<p>物件形式（需要宣告 VRAM 用量）：</p>
+<pre><code class="language-json">&quot;gpu&quot;: {&quot;vram&quot;: &quot;6gb&quot;}
+</code></pre>
+<h4><code>time</code></h4>
+<p>描述執行時間預估。</p>
+<p>字串形式（預期執行時間）：</p>
+<pre><code class="language-json">&quot;time&quot;: &quot;30s&quot;
+</code></pre>
+<p>物件形式（需要宣告上限）：</p>
+<pre><code class="language-json">&quot;time&quot;: {&quot;expected&quot;: &quot;30s&quot;, &quot;max&quot;: &quot;5m&quot;}
+</code></pre>
+<h4><code>disk</code></h4>
+<p>執行期間的暫用磁碟空間（結束後清除）。持久性資料（§3 <code>.data</code> 目錄）不在此描述。</p>
+<pre><code class="language-json">&quot;disk&quot;: &quot;500mb&quot;
+</code></pre>
+<h4><code>network</code></h4>
+<p>宣告執行期間是否需要網路存取。</p>
+<pre><code class="language-json">&quot;network&quot;: true
+</code></pre>
+<hr />
+<h3>單位格式</h3>
+<table>
+<thead>
+<tr>
+<th>種類</th>
+<th>單位</th>
+<th>範例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>容量</td>
+<td><code>b</code> / <code>kb</code> / <code>mb</code> / <code>gb</code></td>
+<td><code>&quot;512mb&quot;</code>、<code>&quot;4gb&quot;</code></td>
+</tr>
+<tr>
+<td>時間</td>
+<td><code>ms</code> / <code>s</code> / <code>m</code> / <code>h</code></td>
+<td><code>&quot;500ms&quot;</code>、<code>&quot;30s&quot;</code>、<code>&quot;5m&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>自定義 key 範例</h3>
+<pre><code class="language-json">&quot;resources&quot;: {
+  &quot;llm_entry&quot;: true,
+  &quot;db&quot;: {&quot;type&quot;: &quot;postgres&quot;},
+  &quot;render_server&quot;: {&quot;port&quot;: 7860}
+}
+</code></pre>
+<p>value 格式無限制，由撰寫者自行定義語意。</p>
+<hr />
+<h2>§6 執行保證</h2>
+<h3>metadata fields</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>guarantee</code></td>
+<td>string</td>
+<td>程式對執行結果的承諾（狀態一致性）</td>
+</tr>
+<tr>
+<td><code>dry_run</code></td>
+<td>bool | object</td>
+<td>是否支援 dry-run 模式（能力宣告）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：</p>
+<ul>
+<li><code>guarantee</code> 缺席或 <code>null</code> → <code>&quot;none&quot;</code>（呼叫方自行承擔重試或中斷後果）</li>
+<li><code>dry_run</code> 缺席或 <code>false</code> → 不支援 dry-run</li>
+</ul>
+<hr />
+<h3><code>guarantee</code> 說明</h3>
+<p>描述程式對其執行副作用的承諾，尤其是失敗或中斷後的狀態一致性。</p>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;none&quot;</code></td>
+<td>無承諾（預設值）；重複執行或中途失敗的後果由呼叫方自行承擔</td>
+</tr>
+<tr>
+<td><code>&quot;idempotent&quot;</code></td>
+<td>重複執行與執行一次等效；中斷後安全重試，不會累積額外副作用</td>
+</tr>
+<tr>
+<td><code>&quot;transactional&quot;</code></td>
+<td>全部成功或完全不發生（ACID 語意）；中途失敗自動回滾，不留部分狀態</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>與 §3 的關係</strong>：<code>guarantee</code> 對 <code>state: &quot;stateless&quot;</code> 的程式通常無意義——stateless 程式本身即等同冪等，亦無外部狀態可回滾。有意義的保證宣告限於 <code>state: &quot;stateful_external&quot;</code> 的程式。</p>
+</blockquote>
+<hr />
+<h3><code>dry_run</code> 說明</h3>
+<p>宣告程式是否支援 dry-run 模式。開啟時，程式執行完整邏輯但<strong>不實際修改外部狀態</strong>，用於預覽副作用。</p>
+<p>布林形式（支援，flag 名稱由程式自訂）：</p>
+<pre><code class="language-json">&quot;dry_run&quot;: true
+</code></pre>
+<p>物件形式：</p>
+<pre><code class="language-json">&quot;dry_run&quot;: {
+  &quot;flag&quot;: &quot;--dry-run&quot;,
+  &quot;state_entry&quot;: &quot;stdout&quot;,
+  &quot;error_entry&quot;: &quot;stderr&quot;
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>子欄位</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flag</code></td>
+<td>string</td>
+<td>觸發 dry-run 模式的 CLI flag（選填）</td>
+</tr>
+<tr>
+<td><code>state_entry</code></td>
+<td>string</td>
+<td>dry-run 執行時，輸出「若正式執行會發生什麼」的 entry 名稱；引用 <code>entries</code> 中的 key（選填）</td>
+</tr>
+<tr>
+<td><code>error_entry</code></td>
+<td>string</td>
+<td>dry-run 執行時，輸出錯誤訊息的 entry 名稱；引用 <code>entries</code> 中的 key（選填）</td>
+</tr>
+</tbody>
+</table>
+<p>三個子欄位皆選填；物件形式中至少應填一個有意義的欄位，否則用布林形式即可。</p>
+<blockquote>
+<p><strong>注意</strong>：<code>dry_run</code> 是能力宣告（程式支援此模式），而非執行時的當前狀態。呼叫方依此決定是否傳入對應 flag。</p>
+</blockquote>
+<p><code>dry_run</code> 與 <code>guarantee</code> 正交——兩者可同時存在：</p>
+<ul>
+<li><code>guarantee: &quot;transactional&quot;</code> + <code>dry_run</code> → 正式執行具事務保證，且支援預覽</li>
+<li><code>guarantee: &quot;none&quot;</code> + <code>dry_run</code> → 正式執行無保證，但可先用 dry-run 確認副作用</li>
+<li><code>guarantee: &quot;idempotent&quot;</code> 無 <code>dry_run</code> → 冪等保證，呼叫方可直接重試而無需預覽</li>
+</ul>
+<hr />
+<h3>與 §5 可中斷性的關係</h3>
+<p>§5 描述「程式被中斷時的能力」；§6 描述「程式對執行結果的承諾」。兩軸獨立，但搭配使用時語意更完整：</p>
+<table>
+<thead>
+<tr>
+<th>§5 <code>interruptible</code></th>
+<th>§6 <code>guarantee</code></th>
+<th>中斷後行為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;unsafe&quot;</code></td>
+<td><code>&quot;none&quot;</code></td>
+<td>外部狀態可能損毀或未完成；呼叫方需自行決定是否重試</td>
+</tr>
+<tr>
+<td><code>&quot;unsafe&quot;</code></td>
+<td><code>&quot;idempotent&quot;</code></td>
+<td>可安全重試；重跑不會疊加副作用</td>
+</tr>
+<tr>
+<td><code>&quot;unsafe&quot;</code></td>
+<td><code>&quot;transactional&quot;</code></td>
+<td>程式自身錯誤會自動回滾；但外部強制終止（kill）可能繞過回滾機制，外部狀態損毀風險仍存在</td>
+</tr>
+<tr>
+<td><code>&quot;safe&quot;</code></td>
+<td>任意</td>
+<td>中斷無風險；§6 的承諾在 stateless 程式上意義較小</td>
+</tr>
+<tr>
+<td><code>&quot;rollback&quot;</code></td>
+<td><code>&quot;transactional&quot;</code></td>
+<td>兩軸同向——程式對「中斷能回滾」與「執行具事務性」都做出承諾</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>register() 範例</h3>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;one_shot&quot;,
+    state=&quot;stateful_external&quot;,
+    guarantee=&quot;transactional&quot;,
+    dry_run={
+        &quot;flag&quot;: &quot;--dry-run&quot;,
+        &quot;state_entry&quot;: &quot;stdout&quot;,
+        &quot;error_entry&quot;: &quot;stderr&quot;,
+    },
+)
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{
+  &quot;lifecycle&quot;: &quot;one_shot&quot;,
+  &quot;state&quot;: &quot;stateful_external&quot;,
+  &quot;guarantee&quot;: &quot;transactional&quot;,
+  &quot;dry_run&quot;: {
+    &quot;flag&quot;: &quot;--dry-run&quot;,
+    &quot;state_entry&quot;: &quot;stdout&quot;,
+    &quot;error_entry&quot;: &quot;stderr&quot;
+  }
+}
+</code></pre>
+<hr />
+<h3>完整範例</h3>
+<pre><code class="language-python">ai_core.register(
+    lifecycle=&quot;persistent&quot;,
+    resources={
+        &quot;memory&quot;: {&quot;startup&quot;: &quot;2gb&quot;, &quot;idle&quot;: &quot;500mb&quot;, &quot;peak&quot;: &quot;8gb&quot;},
+        &quot;gpu&quot;: {&quot;vram&quot;: &quot;6gb&quot;},
+        &quot;time&quot;: {&quot;expected&quot;: &quot;30s&quot;},
+        &quot;llm_entry&quot;: True,
+    }
+)
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{
+  &quot;lifecycle&quot;: &quot;persistent&quot;,
+  &quot;resources&quot;: {
+    &quot;memory&quot;: {&quot;startup&quot;: &quot;2gb&quot;, &quot;idle&quot;: &quot;500mb&quot;, &quot;peak&quot;: &quot;8gb&quot;},
+    &quot;gpu&quot;: {&quot;vram&quot;: &quot;6gb&quot;},
+    &quot;time&quot;: {&quot;expected&quot;: &quot;30s&quot;},
+    &quot;llm_entry&quot;: true
+  }
+}
+</code></pre>
+<hr />
+<h2>§9 確定性 / 隨機性（nondeterminism）</h2>
+<blockquote>
+<p>這是繼 §1–§6 之後<strong>新增</strong>的軸。前八軸描述的都是「執行特性」（怎麼跑、有無狀態、能否中斷…），
+預設假設函式是<strong>確定性</strong>的（同輸入 → 同輸出）。但 ai_core 的核心對象之一是 LLM——一個天生
+<strong>隨機</strong>的函式。這個軸把「此環節是隨機的」標出來，並承載治理原則所需的<strong>證書</strong>。詳細的軸層
+討論見 <a href="../core_nature/axis_spec.md"><code>axis_spec.md</code> §9</a>（<a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>）。</p>
+</blockquote>
+<h3>metadata field</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nondeterministic</code></td>
+<td>bool | object</td>
+<td>宣告此函式（或此調用環節）含不可確定性</td>
+</tr>
+</tbody>
+</table>
+<p><strong>預設值</strong>：若 <code>nondeterministic</code> 缺席、為 <code>null</code> 或 <code>false</code> → 視為<strong>確定性</strong>函式（同輸入同輸出）。
+只有明確含隨機環節（典型是包了 LLM 的函式）時才宣告。</p>
+<h3>說明</h3>
+<table>
+<thead>
+<tr>
+<th>形式</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nondeterministic: true</code></td>
+<td><strong>未認證的隨機環節</strong>。只標記「這裡是隨機的」，是 LLM 馴化框架的觸發根，但尚未經測試認證。對應治理的「開機期」——允許存在，但帶著「待認證」的債。</td>
+</tr>
+<tr>
+<td><code>nondeterministic: {…}</code></td>
+<td><strong>證書</strong>。不是含糊的「這裡隨機」，而是「<strong>此環節用模型 X、經測試組 Y、認證穩定度 Z%</strong>」。對應治理的「成熟期」——LLM 不是被信任，是被<strong>認證</strong>，且可被<strong>撤照</strong>。</td>
+</tr>
+</tbody>
+</table>
+<h3>證書（object 形式）的建議欄位</h3>
+<p>沿用 §4 <code>resources</code> 的設計——<strong>自由 key-value，預定義 key 有建議語意，自訂 key 不受限</strong>。
+validation 只確保它是 dict，不強制特定 key（規範「從粗糙到嚴整」，待 v0 驗證後再收緊）。</p>
+<table>
+<thead>
+<tr>
+<th>建議 key</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td>此環節用哪個模型填（如 <code>&quot;local-8b&quot;</code>、<code>&quot;claude-opus&quot;</code>）</td>
+</tr>
+<tr>
+<td><code>test_set</code></td>
+<td>認證所依據的測試組識別</td>
+</tr>
+<tr>
+<td><code>stability</code></td>
+<td>認證穩定度（如 <code>&quot;92%&quot;</code> 或 <code>0.92</code>）——證書的核心主張</td>
+</tr>
+</tbody>
+</table>
+<h3>為何是新軸，而非塞進既有軸</h3>
+<p><code>nondeterministic</code> 與 <code>memoized</code>（見下「未入軸的決策」）共有一個處境：<strong>沒有任何既有軸值可以
+隱含它</strong>。中斷恢復慣例之所以「不新增欄位」，是因為它能由 <code>interruptible</code> / <code>guarantee</code> 隱含觸發；
+但「這函式是不是隨機的」在八軸裡完全無從推斷——<code>lifecycle</code> / <code>state</code> / <code>guarantee</code> 都描述不了。
+因此它<strong>必須</strong>是一個獨立的宣告。</p>
+<h3>與其他軸的關係（正交）</h3>
+<p><code>nondeterministic</code> 與所有執行特性軸正交：一個函式可以同時是 <code>nondeterministic: true</code> 且
+<code>state: &quot;stateful_external&quot;</code> 且 <code>guarantee: &quot;none&quot;</code>。隨機性是「輸出由何決定」的性質，與「有無副作用」
+「能否重試」彼此獨立。</p>
+<blockquote>
+<p><strong>與 §6 <code>guarantee</code> 的對照</strong>：<code>guarantee</code> 講的是「對外部狀態的承諾」；<code>nondeterministic</code>
+講的是「輸出本身可不可預測」。一個 LLM 包裝函式常是 <code>guarantee: &quot;none&quot;</code> + <code>nondeterministic: true</code>——
+既不保證副作用冪等，輸出也不可預測。馴化框架（retry / vote / guard …，見 <code>try_implement/docs/</code>）
+正是把後者收斂成「夠穩到能發證書」的機器。</p>
+</blockquote>
+<h3>register() 範例</h3>
+<pre><code class="language-python"># 開機期：標記隨機、尚未認證
+ai_core.register(nondeterministic=True)
+
+# 成熟期：帶證書
+ai_core.register(nondeterministic={
+    &quot;model&quot;: &quot;local-8b&quot;,
+    &quot;test_set&quot;: &quot;code_qa_v1&quot;,
+    &quot;stability&quot;: &quot;92%&quot;,
+})
+</code></pre>
+<p><code>--metadata</code> 輸出：</p>
+<pre><code class="language-json">{&quot;nondeterministic&quot;: {&quot;model&quot;: &quot;local-8b&quot;, &quot;test_set&quot;: &quot;code_qa_v1&quot;, &quot;stability&quot;: &quot;92%&quot;}}
+</code></pre>
+<hr />
+<h2>未入軸的決策：<code>memoized</code>（純 runtime）</h2>
+<p><code>memoized</code>（記憶化 / 輸入→輸出快取）曾與 <code>nondeterministic</code> 並列為候選新軸。<strong>決策：不入
+metadata 軸，維持純 runtime 行為</strong>（由 <code>try_implement/lib/memoize.py</code> 這類 library 在執行期處理）。</p>
+<p>理由：快取是<strong>呼叫方 / library 的優化決策</strong>，不是函式對外的語意承諾。一個函式「可不可以被快取」
+其實由既有軸隱含——<code>nondeterministic</code> 缺席（確定性）＋ <code>state: &quot;stateless&quot;</code> 的函式天然可安全
+memoize；隨機或有狀態的函式則否。因此 memoize 不像 <code>nondeterministic</code> 那樣「無既有軸值可隱含」，
+不需要新欄位。這與「中斷恢復慣例不新增欄位」同精神：能由既有軸推斷的，就不膨脹軸層。</p>
+<blockquote>
+<p>若日後出現「函式想主動宣告自己的快取版本 / TTL 語意」的真實需求（而非由呼叫方決定），再
+重新評估是否補欄位。目前 <code>lib/memoize.py</code> 的 cache key / 失效策略由呼叫方明確指定，足夠。</p>
+</blockquote>
+<hr />
+<h2>§7 組合模式</h2>
+<p><strong>此軸不在本規範範圍內，不定義 metadata fields。</strong></p>
+<p>組合模式描述的是呼叫鏈（call chain）的結構：fan-out/fan-in、proxy/wrapper、hook/callback、agentic loop 等。這是呼叫方（hub、router）的關切點，不是單一執行單元的屬性——程式本身不需要、也不應該知道自己被如何組合。</p>
+<blockquote>
+<p>若日後需要描述呼叫鏈拓撲，應另立文件（如 <code>call_graph_spec.md</code>），而非在單一程式的 <code>--metadata</code> 中宣告。</p>
+</blockquote>
+<hr />
+<h2>§8 環境模式</h2>
+<p><strong>此軸不在本規範範圍內，不定義 metadata fields。</strong></p>
+<p>程式本身不管理自己的執行環境。本規範的預設假設為<strong>穩定的 Linux 環境</strong>；容器化、venv、resource limit 等屬於部署/執行層的選擇，不影響程式介面設計。</p>
+<p>唯一例外是<strong>包裝程式（wrapper）</strong>——它的職責是修改子程式的執行環境（設置環境變數、切換工作目錄、套用 resource limit 等）。這個包裝程式本身是一個執行單元，其行為用其他軸描述；環境管理只是它的輸出副作用，不需要額外的 metadata field。</p>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_05_axes_metadata.html"><span class="dir">← 上一篇</span><span class="fn">doc_05_axes_metadata</span></a>
+<a class="next" href="doc_07_cli.html"><span class="dir">下一篇 →</span><span class="fn">doc_07_cli</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

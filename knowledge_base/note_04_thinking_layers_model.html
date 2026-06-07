@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note_04 — 早期分層架構與本質思考（歷史思考） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-note">note 筆記想法</span>
+  <span class="lvl-tag" style="color:var(--l3);background:rgba(0,0,0,.25)">③ 歷史</span>
+</nav>
+<main class="md">
+  <div class="filemeta">note_04_thinking_layers_model.md · 455 行</div>
+<h1>note_04 — 早期分層架構與本質思考（歷史思考）</h1>
+<p><strong>來源</strong>：<code>thinking.md</code>、<code>thinking_layers.md</code>、<code>thinking_oop.md</code>、<code>thinking_state.md</code>、<code>thinking_core_nature.md</code>
+<strong>狀態</strong>：歷史思考（已被取代）。早期 <code>thinking*.md</code> 屬歷史思考留存，已被 <code>roadmap.md</code> 與 <code>core_nature/</code> 取代為當前事實來源；保留於此是為了無損保存獨特概念與演化脈絡。
+<strong>一行摘要</strong>：ai_core 最早期的整體構想——以「執行模型」而非「技術層」定義結構、metadata/index/hub 三大貫穿理念、CLI 與 OOP 的對稱統一、multi-shot 狀態模型，以及本質定位的切分起點。</p>
+<p><strong>現行對應內容見</strong>：</p>
+<ul>
+<li>分層／本質 → <a href="doc_01_nature_overview.html">doc_01_nature_overview</a></li>
+<li>執行狀態／執行形式 → <a href="doc_03_execution_forms.html">doc_03_execution_forms</a>（multi-shot 狀態、<code>.state</code>/<code>.data</code> 等）</li>
+<li>整體願景／初心 → <a href="note_01_vision_and_origin.html">note_01_vision_and_origin</a></li>
+<li>九軸／metadata 軸定義現況 → <a href="doc_05_axes_metadata.html">doc_05_axes_metadata</a></li>
+<li>register/intercept library 契約現況 → <a href="doc_06_lib_contract.html">doc_06_lib_contract</a></li>
+<li>CLI 契約現況 → <a href="doc_07_cli.html">doc_07_cli</a></li>
+</ul>
+<blockquote>
+<p>注意演化落差：本檔記載的許多 metadata 欄位（<code>execution_model</code>、<code>reversible</code>、<code>undo_method</code>、<code>retry_safe</code>、<code>memory_hints</code>、<code>complexity</code>、<code>semantic_coupling</code>、<code>is_multishot</code>、<code>multi_shot_dirs</code>）是<strong>早期提案</strong>，與現行已定案的九軸（<code>entries</code>/<code>lifecycle</code>/<code>state</code>/<code>state_dirs</code>/<code>resources</code>/<code>interruptible</code>/<code>guarantee</code>/<code>dry_run</code>/<code>nondeterministic</code>）並非一一對應。base class（OOP <code>Function(ABC)</code>）的設計方向後來被 <code>register()/intercept()</code> 純宣告模型取代。閱讀時請以九軸與 register/intercept 為現行標準事實。</p>
+</blockquote>
+<hr />
+<h2>A. 專案定位：為 Heuristic Learning 提供基礎設施（出自 thinking.md，2026-05-20）</h2>
+<p><strong>ai_core 的用途是為 Heuristic Learning 提供基礎設施。</strong></p>
+<p>Heuristic Learning（HL）是一種替代梯度更新的迭代範式：coding agent 直接編輯策略程式碼，環境回饋驅動下一輪改進，舊能力固化為測試與版本差異，而非消失在模型權重裡。</p>
+<p>參考：<a href="https://trinkle23897.github.io/learning-beyond-gradients/#zh">Learning Beyond Gradients</a></p>
+<p>ai_core 各元件對應的 HL 角色：</p>
+<table>
+<thead>
+<tr>
+<th>ai_core 元件</th>
+<th>HL 角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entry_manager</code> + <code>client</code></td>
+<td>LLM 監督者的呼叫介面</td>
+</tr>
+<tr>
+<td><code>author</code></td>
+<td>agent 產生 / 修改策略函式</td>
+</tr>
+<tr>
+<td><code>hub</code> + <code>funcs/</code></td>
+<td>策略函式庫（Heuristic System）</td>
+</tr>
+<tr>
+<td><code>author</code> dry-run + retry</td>
+<td>環境回饋驅動的改進迴圈</td>
+</tr>
+<tr>
+<td><code>--metadata</code> 介面</td>
+<td>agent 理解工具的唯一入口</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>這個「HL 基礎設施」定位是早期願景的一種表述，與現行 <code>roadmap.md</code> 的「輔助小笨模型 + 資產工廠 + 拒絕為預設」框架是同源但措辭不同的演化前身。</p>
+</blockquote>
+<hr />
+<h2>B. Metadata 設計補充（出自 thinking.md，2026-05-20）</h2>
+<blockquote>
+<p>朝 coding agent 一側看，能接受多少耦合複雜度，取決於模型能力、上下文長度、memory 質量、工具質量、整體迭代速度。</p>
+</blockquote>
+<p><strong>metadata 的職責是把認知負擔從 agent 身上搬走。</strong> 這意味著 metadata 不只是描述「函式是什麼」，還要描述「agent 使用這個函式時需要多少認知資源」。</p>
+<p>當時 <code>MetadataView</code> 的缺口：</p>
+<table>
+<thead>
+<tr>
+<th>缺失欄位</th>
+<th>對應維度</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>complexity</code> / <code>cognitive_load</code></td>
+<td>模型能力</td>
+<td>這個函式有多難用對？影響 agent 是否應拆解或迴避</td>
+</tr>
+<tr>
+<td><code>memory_hints</code></td>
+<td>memory 質量</td>
+<td>成功執行後哪些輸出值得跨輪次記住——<strong>最優先補的欄位</strong></td>
+</tr>
+<tr>
+<td><code>idempotent</code> / <code>retry_safe</code></td>
+<td>迭代速度</td>
+<td>重跑有副作用嗎？agent 判斷是否重試時不能靠猜</td>
+</tr>
+<tr>
+<td><code>semantic_coupling</code></td>
+<td>工具質量</td>
+<td>使用模式上常與哪些函式搭配——與 <code>dependencies</code>（技術依賴）不同</td>
+</tr>
+</tbody>
+</table>
+<p><code>memory_hints</code> 最關鍵：HL 的價值建立在跨輪次積累上，若函式不宣告哪些輸出值得記，agent 只能靠猜，memory 質量就會不穩定。</p>
+<blockquote>
+<p>演化備註：<code>idempotent</code>/<code>retry_safe</code> 的關注點後來收斂成現行第七軸 <code>guarantee</code>（none&lt;idempotent&lt;transactional）。<code>memory_hints</code>/<code>complexity</code>/<code>semantic_coupling</code> 等「語意/用途欄位」在 <code>DECISIONS.md</code> 被歸入刻意暫緩至 v0 的 B1 系列。</p>
+</blockquote>
+<hr />
+<h2>C. Index 與 Metadata 的可變性，以及 Hub 作為透鏡（出自 thinking.md，2026-05-21）</h2>
+<h3>核心洞見：index 與 metadata 都不是靜態的</h3>
+<p><strong>Index 的兩層語意：</strong></p>
+<table>
+<thead>
+<tr>
+<th>層次</th>
+<th>說明</th>
+<th>穩定性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>規範索引（canonical）</td>
+<td>絕對路徑 / module 完整路徑，指向「這個東西本身」</td>
+<td>穩定，不隨環境改變</td>
+</tr>
+<tr>
+<td>參照（reference）</td>
+<td>相對路徑 / hub-local name，指向「在某個上下文中怎麼找到它」</td>
+<td>隨工作目錄、所在 hub 等上下文變動</td>
+</tr>
+</tbody>
+</table>
+<p>相對路徑隨工作目錄改變，這不是缺陷——reference 是 canonical index 在特定上下文中的投影形式。</p>
+<p><strong>Metadata 的可變性：</strong></p>
+<p>Metadata 可以依 <strong>subcommand 結構</strong>改變，類比 <code>git --help</code> vs <code>git remote --help</code>：</p>
+<ul>
+<li><code>xxx.sh --metadata</code> → 全域 metadata</li>
+<li><code>xxx.sh subcommand --metadata</code> → 該 subcommand 的 metadata</li>
+</ul>
+<p><strong>輸入不影響 metadata。</strong> 無論 stdin、pipe 上游、還是 flag 帶入的資料，都不改變 metadata 的輸出。以 <code>-</code> 或 <code>--</code> 開頭的 flag 不得與 <code>--metadata</code> 混用（混用應報錯）。</p>
+<p>Metadata 的可變性只有一個軸：<strong>靜態的命令層次（subcommand）</strong>，而非動態的執行期資料。</p>
+<blockquote>
+<p>演化備註：subcommand-scoped metadata 後來落地為現行 <code>register_subcommand()</code> / <code>register_subcommand_resolver()</code>，並由 <code>intercept()</code> 處理 <code>&lt;sub&gt; --metadata</code> 與 <code>--store</code> 前綴。</p>
+</blockquote>
+<h3>Hub 是透鏡（lens）</h3>
+<p>Hub 是 index 的聚集，但對 hub 的<strong>呼叫者</strong>而言，hub 重新定義了 index 與 metadata 的形貌：</p>
+<p><strong>Index 的重定義（命名空間化）</strong>：</p>
+<pre><code>原始 canonical index：  ./tools/professor.sh
+透過 hub 看到的 index：  prompt-hub/professor
+</code></pre>
+<p>Hub 提供一個新的命名空間層，把分散的路徑收攏為統一的邏輯名稱。</p>
+<p><strong>Metadata 的重定義（透鏡式轉換）</strong>：Hub 可以對 metadata 做：</p>
+<ul>
+<li><strong>擴增</strong>：加上 hub 自己的分類、tag、排序權重</li>
+<li><strong>過濾</strong>：只暴露 <code>summary</code>，省略 <code>description</code>，節省 caller 的 context 用量</li>
+<li><strong>彙總</strong>：把語意相近的函式群組成一份聯合描述</li>
+</ul>
+<blockquote>
+<p>透鏡不改變物體本身，只改變觀察者看到的形象。Hub 的本質是<strong>聚合 + 轉換</strong>，不只是被動的目錄列表。</p>
+</blockquote>
+<p><strong>推論：Hub 可以被組合。</strong> Meta-hub 把多個 hub 的 index 再聚合，形成更高層的透鏡。每一層透鏡各自做轉換，外層 caller 只看到最終的聚合結果。</p>
+<h3>thinking.md 歷史紀錄附註</h3>
+<p>2026-05-18 之前的所有設計點已遷移至（當時的）<code>docs/architectures/</code>，對應表見舊版 <code>thinking.md</code>（git history）。</p>
+<hr />
+<h2>D. 用「用途」而非「層」定義結構（出自 thinking_layers.md，2026-05-20）</h2>
+<h3>核心框架</h3>
+<p>系統的結構由**執行模型（execution model）**決定，不是由技術層次決定。沿著兩個軸展開：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>one-shot（請求完就結束）</th>
+<th>persistent（持續存在）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>不管資源</strong></td>
+<td>shell pipe / script</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>管資源</strong></td>
+<td>one-shot 程式</td>
+<td>持續性程式</td>
+</tr>
+<tr>
+<td><strong>管併發</strong></td>
+<td>—</td>
+<td>server</td>
+</tr>
+</tbody>
+</table>
+<p>Hub 是橫切的——它是這些東西的目錄與彙整，不屬於哪一格。</p>
+<blockquote>
+<p>演化備註：這個「執行模型四象限」是現行 <code>lifecycle</code>（one_shot/persistent）軸與 <code>resources</code> 軸的思想前身；server 觸發條件後來在 <code>thinking_pending</code> §3 被確認為「持久性程式基本上建議設計成 server」。</p>
+</blockquote>
+<h3>各執行模型說明</h3>
+<p><strong>pipe-and-script</strong>：外部工具、輕量、快速、命令行操作。直接用 shell pipe 串接，頂多加 shell script 做膠水黏合。</p>
+<pre><code class="language-bash">professor.sh --type &quot;senior c coder&quot; \
+  | modify_c_code_segment.sh --file main.c --line 44-55 --prompt &quot;no pointer&quot; \
+  | code_linter.sh --lang c \
+  &gt; new_main.c
+</code></pre>
+<p>不在乎執行時間與記憶體，隨手可用，用什麼語言實作都可以。</p>
+<p><strong>one-shot</strong>：需要記憶體或執行時間管理的單次程式。請求進來、處理完、結束。可以用任何語言寫，但此時 shell script 已不夠用。仍可被 pipe 串接或直接呼叫。</p>
+<p><strong>persistent</strong>：需要多輪複雜狀態保存與管控的長期程式。特徵：</p>
+<ul>
+<li>用 Ctrl-C 取消</li>
+<li>把狀態存到外部檔案</li>
+<li>在 stdout 持續輸出狀態</li>
+<li>本質上是單一使用者的長期存在行程</li>
+</ul>
+<p><strong>對外介面選項</strong>：one-shot 工具要使用 persistent 程式，有兩條路：</p>
+<ul>
+<li><strong>HTTP API</strong>（往 server 方向走，引入更多複雜度）</li>
+<li><strong>JSON-RPC over stdin/stdout</strong>（LSP 模式）：輕量、不需要 port、不需要 HTTP stack，一個 shell 直接對接，同時保留「不是 server」的身份——這條路更適合 persistent 程式的定位</li>
+</ul>
+<blockquote>
+<p>待重評註記：<code>thinking_pending</code> §3 指出，由於「持久性程式基本上建議設計成 server」，這裡的 JSON-RPC over stdin/stdout 選項需要重新評估或更新。見 <a href="note_05_thinking_components.html">note_05_thinking_components</a> §持久性程式。</p>
+</blockquote>
+<p><strong>server</strong>：觸發條件比「用了 HTTP API」更本質——<strong>資源是有限的，且請求者是多個不認識彼此的 caller</strong>。LLM entry 是標準案例：token rate limit 是共享資源，多個 caller 不知道彼此，所以需要 queue 和 server 集中管理。用來處理高併發、高流量、佇列任務、管控受限資源。</p>
+<h3>Hub 的定位（thinking_layers 版）</h3>
+<p>單一工具在檔案系統中的路徑本身就是一種索引（可尋址）。Hub 的功能不是「建立索引」，而是把分散的索引<strong>聚集</strong>起來——例如 <code>prompt_hub</code> 把所有 prompt 片段工具集中成一份清單。</p>
+<p>當外部工具或 shell script 很多時，hub 做一個整合彙整的簡單程式。實作語言隨便，重點是理念：掃描可用工具、收集 metadata、彙整成清單。</p>
+<h3>邊緣議題：「上一步」的語意隨執行模型不同</h3>
+<p>「上一步」問的是：<strong>這個程式的副作用是不是可逆的？用什麼機制可逆？</strong></p>
+<table>
+<thead>
+<tr>
+<th>執行模型</th>
+<th>上一步的實現方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pipe-and-script</td>
+<td>只能靠 checkpoint 檔案，pipe 本身不可逆</td>
+</tr>
+<tr>
+<td>one-shot</td>
+<td>重跑就是上一步，前提是 idempotent（<code>retry_safe</code> metadata 欄位）</td>
+</tr>
+<tr>
+<td>persistent</td>
+<td>需要 snapshot/checkpoint 機制，本質是 mini git</td>
+</tr>
+<tr>
+<td>server</td>
+<td>cancel task + undo task 副作用（undo 目前尚未設計）</td>
+</tr>
+</tbody>
+</table>
+<p>這個問題可以加進 metadata：<code>reversible: bool</code> + <code>undo_method</code>（描述如何撤銷）。</p>
+<h3>邊緣議題：調用鏈管理（輕量做法）</h3>
+<p>Ledger server 已移除（太後期），但輕量的調用鏈追蹤可以很早就有用：<strong>每個工具在 stderr 印一行結構化紀錄</strong>。</p>
+<pre><code class="language-json">{&quot;caller&quot;: &quot;modify_c_code_segment.sh&quot;, &quot;tool&quot;: &quot;professor.sh&quot;, &quot;status&quot;: &quot;ok&quot;, &quot;ms&quot;: 320}
+</code></pre>
+<p>成本接近零，由最外層的呼叫者決定要不要收集。讓 debug 從「不知道哪步壞了」變成「能看到整條鏈」。</p>
+<blockquote>
+<p>此調用鏈思路在 <code>thinking_pending</code> §5 有後續展開，見 <a href="note_05_thinking_components.html">note_05_thinking_components</a>。</p>
+</blockquote>
+<h3>Metadata 新增欄位小結（thinking_layers 提案）</h3>
+<p>基於以上討論，<code>MetadataView</code> 應補充：</p>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>型別</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>execution_model</code></td>
+<td><code>str</code></td>
+<td><code>pipe-and-script</code> / <code>one-shot</code> / <code>persistent</code> / <code>server</code></td>
+</tr>
+<tr>
+<td><code>reversible</code></td>
+<td><code>bool</code></td>
+<td>副作用是否可撤銷</td>
+</tr>
+<tr>
+<td><code>undo_method</code></td>
+<td><code>str</code></td>
+<td>如何撤銷（<code>rerun</code>、<code>snapshot</code>、<code>api-cancel</code>、<code>none</code>…）</td>
+</tr>
+<tr>
+<td><code>retry_safe</code></td>
+<td><code>bool</code></td>
+<td>重跑是否安全（idempotent）</td>
+</tr>
+<tr>
+<td><code>memory_hints</code></td>
+<td><code>list[str]</code></td>
+<td>成功執行後哪些輸出值得跨輪次記住</td>
+</tr>
+<tr>
+<td><code>complexity</code></td>
+<td><code>str</code></td>
+<td><code>low</code> / <code>medium</code> / <code>high</code>，agent 判斷認知負擔用</td>
+</tr>
+<tr>
+<td><code>semantic_coupling</code></td>
+<td><code>list[str]</code></td>
+<td>使用模式上常與哪些函式搭配</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>E. OOP 對應與 CLI/OOP 統一（出自 thinking_oop.md，2026-05-20）</h2>
+<h3>貫穿始終的三個理念：metadata / index / hub</h3>
+<p><strong>metadata</strong>（程式對自身的描述）、<strong>index</strong>（程式/函數的位址）、<strong>hub</strong>（聚集索引）是貫穿整個系統的三個核心理念。理念本身不變，但在不同邊界上以不同的形式出現：</p>
+<table>
+<thead>
+<tr>
+<th>邊界</th>
+<th>metadata 的形式</th>
+<th>index 的形式</th>
+<th>hub 的形式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>命令行（單檔程式）</td>
+<td><code>--metadata</code> flag → JSON</td>
+<td>OS 檔案系統路徑（<code>./code_senior.sh</code>）</td>
+<td>hub scanner 掃描可執行檔</td>
+</tr>
+<tr>
+<td>程式內部（函數）</td>
+<td><code>ip.register()</code> 的描述參數</td>
+<td>原始碼位置（<code>file.py:44</code>）或 runtime registry</td>
+<td><code>FunctionManager</code> / registry</td>
+</tr>
+<tr>
+<td>Python library（class）</td>
+<td>base class 的類別屬性 + <code>metadata()</code></td>
+<td>module 路徑（<code>mymodule.Professor</code>）</td>
+<td>hub scanner 掃描 subclass</td>
+</tr>
+</tbody>
+</table>
+<p>形式不同，理念相同。設計新機制時，先問：「這裡的 index 長什麼樣？metadata 長什麼樣？hub 長什麼樣？」</p>
+<h3>metadata 與 hub 的本質</h3>
+<ul>
+<li><strong>metadata</strong> 的本質：程式對自身的描述</li>
+<li><strong>hub</strong> 的本質：對程式的<strong>聚集</strong>索引</li>
+</ul>
+<h4>索引的三個層次</h4>
+<table>
+<thead>
+<tr>
+<th>層次</th>
+<th>索引誰</th>
+<th>天然索引</th>
+<th>聚集器</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>跨程式</td>
+<td>獨立可執行檔</td>
+<td>作業系統檔案系統路徑（<code>/bin/program</code>）</td>
+<td>hub</td>
+</tr>
+<tr>
+<td>程式內部</td>
+<td>程式內的函數</td>
+<td>原始碼位置（<code>file.py:44</code>）</td>
+<td><code>FunctionManager</code> / <code>function_indexes</code> 全局 class</td>
+</tr>
+</tbody>
+</table>
+<p>兩層的結構完全對稱：環境本身都已提供天然索引，聚集器的工作只是把這些分散的天然索引<strong>收攏成一份清單</strong>。</p>
+<p><strong>邊緣案例</strong>：執行期間動態生成的函數沒有靜態行號可用作天然索引，只能由程式自行維護額外的索引結構（dict、registry 等）。此情況（當時）暫不設計。</p>
+<p>Hub 做的是<strong>跨程式的聚集</strong>，<code>FunctionManager</code> 做的是<strong>程式內的聚集</strong>，兩者是同一概念在不同邊界上的顯示形象。<code>--metadata</code> flag 與 hub scanner 是這兩個概念在<strong>命令行世界</strong>的顯示形象。在 <strong>Python library 世界</strong>，同樣的概念自然對應到 OOP：<strong>繼承於提供這兩個功能的 base class</strong>。</p>
+<h3>CLI 與 OOP 的統一</h3>
+<p>CLI 世界的 <code>--metadata</code> 是 base class metadata 的<strong>跨行程序列化格式</strong>。Base class 本身就是 metadata；<code>--metadata</code> 只是把它印成 JSON 讓另一個行程能讀到。兩者是同一個概念在不同邊界上的顯示形象。</p>
+<pre><code>Python class  ──(同一個行程)──→  MetadataView 物件
+CLI 執行檔    ──(行程邊界)────→  --metadata → JSON → MetadataView 物件
+</code></pre>
+<p>Hub 不需要知道來源是哪種，終點都是 <code>MetadataView</code>。</p>
+<h3>Base Class 設計（早期提案）</h3>
+<pre><code class="language-python">class Function(ABC):
+    # 類別層級宣告 metadata（子類別 override）
+    name: str = &quot;&quot;
+    description: str = &quot;&quot;
+    execution_model: str = &quot;one-shot&quot;   # pipe-and-script / one-shot / persistent / server
+    retry_safe: bool = True
+    reversible: bool = False
+    undo_method: str = &quot;none&quot;
+    memory_hints: list[str] = []
+    complexity: str = &quot;low&quot;
+    semantic_coupling: list[str] = []
+    # ... 其他 MetadataView 欄位
+
+    @classmethod
+    def metadata(cls) -&gt; MetadataView:
+        &quot;&quot;&quot;從類別屬性組出標準 MetadataView。&quot;&quot;&quot;
+        ...
+
+    @abstractmethod
+    def run(self, input: str) -&gt; str:
+        &quot;&quot;&quot;子類別實作實際邏輯。&quot;&quot;&quot;
+        ...
+</code></pre>
+<p><strong>設計原則</strong>：base class 只負責<strong>宣告介面</strong>（metadata 欄位 + 抽象 <code>run()</code>）。Auto CLI 生成、hub 自動註冊等功能作為獨立的 opt-in 工具，不內建於 base class——否則違反 KISS，base class 會變成 framework。</p>
+<blockquote>
+<p>演化備註：這個 ABC base class 路線<strong>未被採用</strong>。現行定案是 <code>src/ai_core/_core.py</code> 的純宣告函式 <code>register()/register_subcommand()/register_subcommand_resolver()</code> + 顯式 <code>intercept()</code>，刻意避開繼承與 framework 化。見 <a href="doc_06_lib_contract.html">doc_06_lib_contract</a>。</p>
+</blockquote>
+<h3>推論一：Auto CLI 生成</h3>
+<p>有了 base class，CLI wrapper 是純樣板程式碼，可以自動產生。<code>--input</code>、<code>--output</code>、<code>--metadata</code>、<code>--json-errors</code> 全部從 base class 來。<strong>寫 Python class 就同時得到 CLI 介面，不用手寫兩份。</strong></p>
+<h3>推論二：Hub 統一掃描兩個世界</h3>
+<table>
+<thead>
+<tr>
+<th>來源</th>
+<th>掃描方式</th>
+<th>終點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>可執行檔</td>
+<td>呼叫 <code>--metadata</code>（CLI 協定）</td>
+<td><code>MetadataView</code></td>
+</tr>
+<tr>
+<td>Python module</td>
+<td>import 後找繼承 <code>Function</code> 的 subclass</td>
+<td><code>MetadataView</code></td>
+</tr>
+</tbody>
+</table>
+<h3>推論三：<code>execution_model</code> 驅動不同 lifecycle</h3>
+<p>Base class 可依宣告的 <code>execution_model</code> 提供不同的方法簽名（opt-in subclass）：</p>
+<table>
+<thead>
+<tr>
+<th>execution_model</th>
+<th>方法簽名</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>one-shot</code></td>
+<td><code>run(input) -&gt; output</code></td>
+</tr>
+<tr>
+<td><code>persistent</code></td>
+<td><code>start()</code> / <code>on_message()</code> / <code>stop()</code></td>
+</tr>
+<tr>
+<td><code>server</code></td>
+<td>產生 FastAPI app</td>
+</tr>
+</tbody>
+</table>
+<h3>統一呼叫介面（Unified Call Interface）</h3>
+<p>索引解決「找到在哪」，呼叫介面解決「如何使用」。兩者合起來才是完整的抽象。</p>
+<h4>outside_progs：從外部呼叫單檔程式或 module</h4>
+<p>目標：不論目標是 shell script、Python module 內的函數、還是 server，呼叫端一律用相同介面：</p>
+<pre><code class="language-python">import outside_progs as op
+
+ret = op.call(&quot;../code_senior.sh&quot;, {&quot;lang&quot;: &quot;c&quot;})
+ret = op.call(&quot;mymodule.Professor&quot;, {&quot;type&quot;: &quot;senior c coder&quot;})
+</code></pre>
+<p>第一個參數是<strong>天然索引</strong>（路徑或 module 位址），第二個參數是輸入。library 內部依據 <code>execution_model</code>（從 metadata 取得）自動分派：</p>
+<table>
+<thead>
+<tr>
+<th>execution_model</th>
+<th>內部實作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pipe-and-script</code></td>
+<td>subprocess 呼叫，stdin/stdout 傳遞</td>
+</tr>
+<tr>
+<td><code>one-shot</code></td>
+<td>subprocess 或直接 import + 呼叫 <code>run()</code></td>
+</tr>
+<tr>
+<td><code>persistent</code></td>
+<td>JSON-RPC over stdin/stdout</td>
+</tr>
+<tr>
+<td><code>server</code></td>
+<td>HTTP request</td>
+</tr>
+</tbody>
+</table>
+<p>呼叫端不需要知道底層是哪種，metadata 讀一次就夠。</p>
+<blockquote>
+<p>跨邊界調用等價性在 <code>thinking_pending</code> §6 有後續確認立場，見 <a href="note_05_thinking_components.html">note_05_thinking_components</a>。</p>
+</blockquote>
+<h4>inside_procs：程式內函數對外暴露</h4>
+<p>程式內的函數若要被外部的單檔程式或 shell 呼叫，程式必須主動暴露這些函數。<code>inside_procs</code> 做兩件事：</p>
+<ol>
+<li><strong>建立內部 registry</strong>（即前述 <code>FunctionManager</code>）：<code>ip.register()</code> 把函數登記進去</li>
+<li><strong>自動生成 CLI dispatch</strong>：讓外部可以用命令列指名呼叫特定函數</li>
+</ol>
+<pre><code class="language-python">import inside_procs as ip
+
+ip.register(func_code_senior, &quot;code_senior&quot;, {&quot;lang&quot;: &quot;c&quot;})
+</code></pre>
+<p>外部單檔程式透過命令列呼叫（假設程式名為 <code>seniors</code>）：</p>
+<pre><code class="language-bash">seniors --ip &quot;code_senior&quot; --lang &quot;c&quot;
+</code></pre>
+<p><code>--ip</code> 路由到 registry 中對應的函數，其餘參數作為輸入傳入。<code>inside_procs</code> 與 <code>outside_progs</code> 是一對：一個負責「把內部暴露出去」，一個負責「從外部統一呼叫進來」。</p>
+<blockquote>
+<p>演化備註：<code>ip.register()</code> 是現行 <code>register()</code> API 的命名前身，但語意已改變——現行 <code>register()</code> 是純宣告、零副作用（不讀 argv、不攔截、不 exit），而早期 <code>ip.register()</code> 同時負責 registry 登記 + CLI dispatch 生成。</p>
+</blockquote>
+<h3>與 <code>protocol/</code> 的關係</h3>
+<p>Base class 自然放在 <code>src/ai_core/protocol/</code> 下——<code>protocol/</code> 已定義為 function 作者與 manager 作者的共用 helper 出口。這個 base class 就是 Python 世界裡的「協定」本身。</p>
+<blockquote>
+<p>演化備註：現行核心程式碼集中在 <code>src/ai_core/_core.py</code>，並非 <code>protocol/</code> 子目錄。</p>
+</blockquote>
+<hr />
+<h2>F. Multi-shot 狀態模型（出自 thinking_state.md，2026-05-21）</h2>
+<h3>Multi-shot 本質定義</h3>
+<p><strong>Multi-shot</strong> 是一個抽象描述：<strong>上次執行的結果會影響到下一次執行的程式</strong>。當前（早期）的標準實現是針對 terminal 狀態（CLI / shell 世界）定義的。</p>
+<h3>標準實現規範（Terminal 版）</h3>
+<h4>狀態檔位置</h4>
+<p>程式 <code>XXX</code> 執行時，在其<strong>工作目錄</strong>下存取以下路徑：</p>
+<pre><code>.config/&lt;XXX&gt;/      ← 或 .config/&lt;XXX&gt;.json（單檔形式）
+.cache/&lt;XXX&gt;/       ← 或 .cache/&lt;XXX&gt;.json
+.state/&lt;XXX&gt;/       ← 或 .state/&lt;XXX&gt;.json
+</code></pre>
+<p>四個標準目錄各自語意：</p>
+<table>
+<thead>
+<tr>
+<th>目錄</th>
+<th>語意</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.config</code></td>
+<td>程式本身不會修改的設定（由人類或外部工具寫入）</td>
+</tr>
+<tr>
+<td><code>.cache</code></td>
+<td>可在程式執行時間之外被任意刪除，程式不依賴其存在</td>
+</tr>
+<tr>
+<td><code>.state</code></td>
+<td>程式目前所在的 stage——執行進程、跨輪次的階段位置</td>
+</tr>
+<tr>
+<td><code>.data</code></td>
+<td>程式累積建造出來的成果性資料；重要、不可隨意刪除</td>
+</tr>
+</tbody>
+</table>
+<p><code>.state</code> 與 <code>.data</code> 的分野：<code>.state</code> 清掉只是忘記做到哪（可重置），<code>.data</code> 清掉是真的失去成果（需備份）。</p>
+<p>沒有硬性規定四者都必須存在；標準實現要求實作者<strong>按語意選用</strong>。</p>
+<h4>檔案格式規則</h4>
+<ul>
+<li>每個位置可以是<strong>資料夾</strong>或<strong>單檔</strong></li>
+<li><strong>單檔</strong>（如 <code>.config/&lt;XXX&gt;.json</code>）：<strong>必須是 <code>.json</code>，且內容為 JSON 物件</strong></li>
+<li><strong>資料夾內的檔案</strong>（如 <code>.config/&lt;XXX&gt;/YYY.json</code>）：格式無限制</li>
+</ul>
+<h4>版本管理</h4>
+<p>標準實現規範<strong>不包含版本管理</strong>（刻意省略，保持簡單）。</p>
+<blockquote>
+<p>演化備註：<code>.state</code> / <code>.data</code> / <code>.config</code> / <code>.cache</code> 的概念演化成現行 <code>state</code>（stateless/stateful_external）軸與 <code>state_dirs</code> 軸。詳見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata</a>。</p>
+</blockquote>
+<h3>本質深究：從 Terminal 到程式內函數</h3>
+<table>
+<thead>
+<tr>
+<th>邊界</th>
+<th>multi-shot 的實現形式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Terminal（CLI）</td>
+<td>工作目錄下的 <code>.config</code>、<code>.cache</code>、<code>.state</code> 檔案</td>
+</tr>
+<tr>
+<td>程式內函數</td>
+<td>由程式內部的 global manager 管理等效的 in-memory 結構</td>
+</tr>
+</tbody>
+</table>
+<p>程式函數被呼叫一次 = terminal 下單一程式被呼叫一次。<code>.config</code>、<code>.cache</code>、<code>.state</code> 的概念在程式內部同樣存在，只是形式從檔案變成記憶體中的結構。</p>
+<p>Library 提供統一介面，讓使用者不必手動操作檔案或 manager——（原檔此處討論尚未完成，訊息中斷）。</p>
+<h3>並發執行</h3>
+<p>核心規範不處理。標準實現建議：若 <code>XXX</code> 預期多實例並發，寫入 <code>.state/&lt;XXX&gt;</code> 時標註自身 PID。讀寫鎖由 OS 處理，具體標註格式與看見他人標註時的行為，由 <code>XXX</code> 撰寫者自行決定。</p>
+<h3>Metadata 宣告慣例（早期提案）</h3>
+<p>建議在 metadata 中加入：</p>
+<pre><code class="language-json">{
+  &quot;is_multishot&quot;: true,
+  &quot;multi_shot_dirs&quot;: [&quot;state&quot;, &quot;data&quot;]
+}
+</code></pre>
+<p><code>is_multishot: true</code> 是入口——值為 true 時，caller / hub 才進一步讀 <code>multi_shot_dirs</code>。<code>multi_shot_dirs</code> 列出此程式實際使用的目錄，省略則不宣告。</p>
+<blockquote>
+<p>演化備註：<code>is_multishot</code> + <code>multi_shot_dirs</code> 是現行 <code>state</code> 軸 + <code>state_dirs</code> 軸的提案前身。</p>
+</blockquote>
+<h3>與其他 thinking 的關係（thinking_state 自述）</h3>
+<ul>
+<li><code>thinking_layers.md</code>：persistent 執行模型的 snapshot/checkpoint，建立在這裡的 <code>.state</code> 機制之上</li>
+<li><code>thinking_production.md</code>：AI 生成函式後如何自動補上狀態宣告——尚未處理（見 <a href="note_05_thinking_components.html">note_05_thinking_components</a> §production）</li>
+</ul>
+<hr />
+<h2>G. core_nature 本質的切分起點（出自 thinking_core_nature.md，2026-05-26）</h2>
+<p>此檔在歷史上已被切分，內容移至 <code>core_nature/</code> 子資料夾。其當時的子檔案索引（記錄 core_nature 規範家族的最初分檔結構）：</p>
+<table>
+<thead>
+<tr>
+<th>檔案</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>core_nature/overview.md</code></td>
+<td>為什麼從 terminal 出發；本質是什麼（待填）→ 現行見 <a href="doc_01_nature_overview.html">doc_01_nature_overview</a></td>
+</tr>
+<tr>
+<td><code>core_nature/terminal_model.md</code></td>
+<td>§1 POSIX shell 執行模型、CLI 慣例、subcommand → 現行見 <a href="doc_02_terminal_model.html">doc_02_terminal_model</a></td>
+</tr>
+<tr>
+<td><code>core_nature/cli_spec.md</code></td>
+<td>§2 本規範的 CLI 標準（argparse + Lisp 概念模型）→ 現行見 <a href="doc_07_cli.html">doc_07_cli</a></td>
+</tr>
+<tr>
+<td><code>core_nature/data_format.md</code></td>
+<td>§3 JSON 作為通用資料格式</td>
+</tr>
+<tr>
+<td><code>core_nature/execution_forms.md</code></td>
+<td>§0 分類軸總覽；§4 函式執行形式毛料清單（18 種形式）→ 現行見 <a href="doc_03_execution_forms.html">doc_03_execution_forms</a></td>
+</tr>
+<tr>
+<td><code>core_nature/axis_spec.md</code></td>
+<td>各分類軸的應對措施：規範、metadata、library（三階段進行中）→ 現行見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata</a></td>
+</tr>
+<tr>
+<td><code>core_nature/lib_spec.md</code></td>
+<td>Python library API 設計細節（register()、--metadata 攔截、各軸 metadata fields）→ 現行見 <a href="doc_06_lib_contract.html">doc_06_lib_contract</a></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>此檔本身僅是切分指標，實質內容已併入 <code>core_nature/</code> 規範家族（現由 doc_ 系列承載）。保留於此是為記錄「thinking_core_nature → core_nature/ 切分」這一演化事件。</p>
+</blockquote>
+
+</main>
+<footer class="pager">
+<a class="prev" href="note_03_cross_environment.html"><span class="dir">← 上一篇</span><span class="fn">note_03_cross_environment</span></a>
+<a class="next" href="note_05_thinking_components.html"><span class="dir">下一篇 →</span><span class="fn">note_05_thinking_components</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_21 — 多函數交互：組合維度（與八/九軸正交的維度） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_21_composition_dimension.md · 116 行</div>
+<h1>doc_21 — 多函數交互：組合維度（與八/九軸正交的維度）</h1>
+<ul>
+<li><strong>來源</strong>：<code>try_implement/docs/multi_function_interaction.md</code></li>
+<li><strong>狀態</strong>：原型概念文件（部分已扶正 / 部分暫緩）。本文主張「組合是與八軸正交的維度」為提案草稿，非定案規範；其中 §3 的<strong>軸推導規則（A4）目前⏸暫緩至 v0</strong>（已有原型 <code>lib/compose_meta.py</code>，但未扶正為規範）；§5 的<strong>交互終止條件是否標準化亦⏸暫緩</strong>。</li>
+<li><strong>一行摘要</strong>：八/九軸描述「單一函式的本性」，組合描述「函式怎麼一起動」；提出可疊套組合子、組合的軸推導規則、組合 vs 交互的區別、blackboard 交互模型與終止條件。</li>
+</ul>
+<blockquote>
+<p>軸推導(A4)的暫緩/待決狀態詳見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。對應實作見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>（<code>lib/compose.py</code>、<code>lib/compose_meta.py</code>、<code>lib/interact.py</code>、<code>lib/trace.py</code>、<code>lib/call.py</code>）。軸定義見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；複合規範見 <a href="doc_08_composite.html">doc_08_composite.md</a>。LLM 馴化五層框架見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>。</p>
+</blockquote>
+<hr />
+<h2>1. 八軸描述「一個函式」，但沒描述「函式怎麼一起動」</h2>
+<p>現有的八軸（lifecycle / state / interruptible / guarantee / I/O 通道…）回答的都是<strong>單一函式的執行本性</strong>：它活多久、有沒有副作用、能不能中斷、能不能重試。</p>
+<p>但 ai_core 的價值不在單一函式，而在<strong>把很多函式組起來</strong>——一個 LLM 包裝函式的輸出餵給一個 linter，再餵給一個彙整器；或同一個問題問三次取多數。這個「怎麼組」的問題，八軸一個字都沒提到。</p>
+<p><strong>主張：組合（composition）是與八軸正交的另一個維度。</strong> 八軸是「名詞的屬性」，組合是「動詞」。要把它變成一等公民，而不是每次都臨時用 shell pipe 硬接。</p>
+<hr />
+<h2>2. 組合的基本形態</h2>
+<p><code>lib/compose.py</code> 把這些做成了可疊套的組合子（每個都吃 <code>f(str)-&gt;str</code>、回 <code>f(str)-&gt;str</code>）：</p>
+<table>
+<thead>
+<tr>
+<th>形態</th>
+<th>組合子</th>
+<th>語意</th>
+<th>對應既有概念</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>順序</td>
+<td><code>pipe(f, g, h)</code></td>
+<td>前一個輸出餵下一個</td>
+<td>調用鏈 / shell pipeline</td>
+</tr>
+<tr>
+<td>並聯</td>
+<td><code>fanout</code> / <code>fanout_reduce</code></td>
+<td>同輸入多分支，可再彙整</td>
+<td>map / map-reduce</td>
+</tr>
+<tr>
+<td>條件</td>
+<td><code>route(selector, table)</code></td>
+<td>依條件分派到不同函式</td>
+<td><strong>Switch</strong>（thinking_routing）</td>
+</tr>
+<tr>
+<td>分治</td>
+<td><code>decompose(split, sub, join)</code></td>
+<td>拆 → 各自處理 → 合</td>
+<td>分而治之</td>
+</tr>
+<tr>
+<td>反覆</td>
+<td><code>vote</code> / <code>best_of</code> / <code>retry_until_valid</code></td>
+<td>對<strong>同一函式</strong>反覆採樣再選</td>
+<td>自一致 / 拒絕採樣</td>
+</tr>
+</tbody>
+</table>
+<p>關鍵性質：因為輸入輸出型別不變（<code>str-&gt;str</code>），組合子可以<strong>無限疊套</strong>——<code>pipe</code> 裡套 <code>vote</code>、<code>vote</code> 裡套 <code>retry_until_valid</code>。這是「組合維度」能成立的前提。</p>
+<hr />
+<h2>3. 組合也有執行本性：軸的「推導規則」（真正的概念拓展）</h2>
+<blockquote>
+<p><strong>⏸ 暫緩狀態（A4）</strong>：本節提出的「從成員軸推導複合函式軸」是核心概念拓展，已有原型實作，但<strong>規範化（A4）目前暫緩至 v0</strong>，留給 v0 切片逼出優先序。下列規則為提案 + 原型驗證，非定案。詳見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<p>最有意思的延伸：<strong>組合子產出的新函式，它自己的八軸是什麼？</strong> 這不該由人重新標註，而應能從「組成它的函式的軸」<strong>推導</strong>出來。提出一組推導規則的雛形：</p>
+<h3>guarantee（執行保證）</h3>
+<ul>
+<li><code>pipe(f, g)</code>：整體保證 = <strong>各段的最弱保證</strong>。一條鏈裡只要有一段不是 idempotent，整條重跑就不安全。（最弱連結原則）</li>
+<li><code>fanout(f, g)</code>：若各分支寫<strong>不同</strong>外部狀態，保證 = 各自保證的交集；若寫<strong>同一</strong>狀態，退化為 <code>none</code>（並發寫衝突）。</li>
+<li><code>retry_until_valid(f)</code>：要求 <code>f</code> 至少 idempotent，否則重試會累積副作用——<strong>這是組合對被組合者的「前置條件」</strong>，本身就是一條值得入規範的規則。</li>
+</ul>
+<h3>state（跨呼叫狀態）</h3>
+<ul>
+<li>任何組合的 state = 各成員 state 的<strong>聯集</strong>（只要有一個 stateful_external，整體就是）。</li>
+<li><code>state_dirs</code> 同理取聯集——這正好讓 hub 能算出「呼叫這個複合函式，會碰哪些目錄」。</li>
+</ul>
+<h3>lifecycle</h3>
+<ul>
+<li>組合通常是 one_shot；但若任一成員是 persistent（server），整體變成「依賴某 server 在線」的 one_shot——這帶出一個新狀態：<strong>「有外部 server 相依」的 lifecycle 變體</strong>，目前八軸沒有，值得補。</li>
+</ul>
+<h3>interruptible</h3>
+<ul>
+<li><code>pipe</code> 的可中斷性 = 在「段與段之間」最安全；段內中斷則取該段的 interruptible。→ 提示一個自然的 checkpoint 邊界：<strong>每段之間就是天然的恢復點</strong>（接 <code>lib/recovery</code>）。</li>
+</ul>
+<blockquote>
+<p>這組推導規則若成立，hub 就能對「臨時組起來的複合函式」自動算出 metadata，不必人工標註——這是把組合維度接回八軸的橋。<strong>建議列為複合規範家族的候選議題。</strong></p>
+<p><strong>✅ 已做原型</strong>：<code>lib/compose_meta.py</code> 把上述規則寫成可跑的 <code>MetaFn</code> + <code>mpipe</code> / <code>mfanout_reduce</code>：guarantee 取最弱、state/state_dirs 取聯集、persistent 成員列入 <code>requires_persistent</code>、fanout 共用 state_dir 時 guarantee 退化 none 並帶 warning。並用 <code>mretry</code> 把「retry 要求被包函式至少 idempotent」這個前置契約做成執行期檢查。測試見 <code>lib_smoke_test.py::test_compose_meta</code>。簡化處（guarantee 強度序、interruptible 暫不推導）記在該檔檔頭。</p>
+</blockquote>
+<hr />
+<h2>4. 與既有工具的對應</h2>
+<p>組合維度不是憑空新增，現有工具早已是它的特例：</p>
+<ul>
+<li><strong>Router</strong> = <code>route</code> 的退化（selector 就是「查表名稱」）。</li>
+<li><strong>Switch</strong> = <code>route</code> + 條件 selector。</li>
+<li><strong>SFC</strong> = 被組合函式的<strong>倉庫</strong>（提供 <code>f</code> 們）。</li>
+<li><strong>trace</strong> = 組合的<strong>可觀測性</strong>（pipe/fanout 在執行期長成一棵調用樹）。</li>
+<li><strong>call</strong> = 讓組合的成員可以跨邊界（in-process / subprocess / http），組合子不在意成員在哪。</li>
+</ul>
+<p>換句話說：<code>compose</code> 是把這些散落工具背後的共同骨架，提煉成顯式的概念。</p>
+<hr />
+<h2>5. 交互（interaction）≠ 組合（composition）</h2>
+<p>上面都是<strong>單向</strong>的：資料從輸入流到輸出。但「多函數<strong>交互</strong>」更強——函式之間<strong>來回</strong>：</p>
+<ul>
+<li>actor-critic：生成函式產出 → 批評函式挑錯 → 生成函式據此修改 → 再批評…</li>
+<li>debate / ensemble：多個函式互相反駁，收斂到共識。</li>
+<li>對話迴圈：函式與環境（或使用者、或另一個函式）多輪往返。</li>
+</ul>
+<p>交互比組合難，因為它需要兩樣組合沒有的東西：<strong>共享狀態</strong> 與 <strong>終止條件</strong>。提出交互的最小模型（blackboard driver）：</p>
+<pre><code>driver(participants, state, until):
+    while not until(state):
+        for p in participants:
+            state = p(state)      # 每個參與者讀寫共享 state
+    return state
+</code></pre>
+<ul>
+<li><code>state</code> 是黑板（blackboard），參與函式輪流讀寫。</li>
+<li><code>until</code> 是終止謂詞（達成共識、達到輪數上限、通過驗證…）——<strong>沒有它，交互不會停</strong>，這正是 LLM 交互最容易出事的地方（無限互踢）。</li>
+<li>這個模型直接接 <code>lib/state_dirs</code>（state 可落地）、<code>lib/recovery</code>（多輪可中斷恢復）、<code>lib/singleton</code>（輪數/成本上限 = consume rate 守門）。</li>
+</ul>
+<blockquote>
+<p><strong>✅ 已實作</strong>：<code>lib/interact.py</code> 提供這個 blackboard driver（<code>run</code>），以及兩個高階模式：<code>actor_critic</code>（生成↔批評來回修，= LLM-as-judge）與 <code>debate</code>（多方論點 → judge 收斂）。<code>max_rounds</code> 是<strong>強制安全閥</strong>——即使 <code>until</code> 永不成立也保證停（直接回應上面「沒有終止條件，交互不會停」的隱患）。測試見 <code>lib_smoke_test.py::test_interact</code>。</p>
+<p>actor-critic / LLM-as-judge 與 LLM 馴化五層框架（L2 驗證 / L3 聚合）交會，見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a> §4。</p>
+</blockquote>
+<hr />
+<h2>6. 開放問題</h2>
+<ol>
+<li>軸推導規則（§3，即 A4）要做到多細？只推 guarantee/state，還是全八/九軸？（⏸暫緩至 v0，見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>）</li>
+<li>交互的「終止條件」要不要標準化成一個 metadata 概念（像 §5 interruptible 那樣）？（⏸暫緩）</li>
+<li>組合子本身算不算「函式」——能不能被 SFC 收錄、被 hub 列進 skill 清單？（若能，LLM 就能「自己組裝工具鏈」，這很強但也很危險。）</li>
+<li>並聯（fanout）目前是順序執行的；真並發要不要進來？並發一進來，§並發 的立場（核心規範不處理多實例並發）就會被挑戰。</li>
+</ol>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_20_taming_framework.html"><span class="dir">← 上一篇</span><span class="fn">doc_20_taming_framework</span></a>
+<a class="next" href="doc_30_html_dashboard.html"><span class="dir">下一篇 →</span><span class="fn">doc_30_html_dashboard</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

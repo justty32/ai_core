@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>code_02 — 原型工具（try_implement/tools/） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-code">code 程式成果</span>
+  <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
+</nav>
+<main class="md">
+  <div class="filemeta">code_02_prototype_tools.md · 286 行</div>
+<h1>code_02 — 原型工具（try_implement/tools/）</h1>
+<blockquote>
+<p><strong>來源</strong>：<code>try_implement/tools/</code>（indexer / router / switch / sfc / hub / llm_entry_manager / chain / _common）＋ <code>try_implement/routes.json</code>、<code>try_implement/switch.json</code>
+<strong>狀態</strong>：原型／探索（多為提案，非定案）。<strong>例外</strong>：A1/A2/A3（register 宣告／攔截拆分）與第九軸 <code>nondeterministic</code> 已扶正進正式核心 <code>src/ai_core/_core.py</code>，本目錄工具已<strong>改接真 <code>ai_core</code></strong>。
+<strong>一行摘要</strong>：路由／函式管理工具的可跑原型——Indexer、Router、Switch、SFC、Hub、LLM Entry Manager、chain，每個都實作跨元件硬契約 <code>--metadata</code>。</p>
+</blockquote>
+<p>相關交叉引用：核心 library 見 <a href="code_01_core_library.html">code_01_core_library.md</a>；被工具 import 的 library 見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>；煙霧測試與 demo 見 <a href="code_04_prototype_demos_tests.html">code_04_prototype_demos_tests.md</a>；軸／metadata 規範見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；懸案清單見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+<p>整套只用 Python 3.11+ 標準庫（argparse / json / subprocess / pathlib / urllib…），零外部相依，遵守 KISS / Lightweight / No wheel-remake / Least dependency。</p>
+<hr />
+<h2>共通慣例（所有工具都遵守）</h2>
+<ol>
+<li><strong><code>--metadata</code> 跨元件硬契約</strong>：每個工具都實作 <code>--metadata</code>，輸出自身的軸 metadata JSON。Function Hub / Indexer 的可行性完全建立在此契約上。</li>
+<li><strong>宣告／攔截拆分模型</strong>（已扶正進 <code>_core.py</code>）：
+<ul>
+<li><code>ai_core.register(**meta)</code> — 純宣告頂層 metadata，<strong>零副作用</strong>（不讀 argv、不攔截、不 exit），import 即安全。</li>
+<li><code>ai_core.intercept(argv=None)</code> — 在 <code>main()</code> 顯式呼叫；命中 <code>--metadata</code> 則輸出 JSON 並 exit，否則交還控制權。</li>
+<li>慣例：<code>register*</code> 放在 <code>main()</code> 內（而非 module 頂層），讓工具被當 library <code>import</code> 時完全無副作用（解原始 Gap F）。</li>
+</ul>
+</li>
+<li>所有工具的 <code>register()</code>/<code>intercept()</code> 都放在 <code>main()</code> 最前面，先於 argparse。</li>
+</ol>
+<hr />
+<h2><code>_common.py</code> — 共用 sys.path 小工具</h2>
+<p>把 <code>import ai_core</code>（位於 repo <code>src/ai_core</code>）與 <code>from lib import ...</code>（位於 try_implement 根）變成可用，純標準庫（sys / pathlib），不安裝套件也不改設定檔。</p>
+<ul>
+<li><code>ensure_ai_core_importable()</code> — 把 <code>&lt;repo&gt;/src</code> 插入 <code>sys.path[0]</code>，使 <code>import ai_core</code> 成功。<code>&lt;repo&gt;</code> = <code>parents[2]</code>。</li>
+<li><code>ensure_lib_importable()</code> — 把 <code>&lt;repo&gt;/try_implement</code> 插入 <code>sys.path[0]</code>，使 <code>from lib import ...</code> 成功。<code>parents[1]</code>。</li>
+<li><code>repo_root()</code> — 回 repo 根 Path。</li>
+</ul>
+<p>設計理由：spike 不安裝套件，用「動態塞 sys.path」這個最輕量手段（least dependency）。</p>
+<hr />
+<h2><code>indexer.py</code> — Indexer</h2>
+<p><strong>職責</strong>：掃描指定資料夾的可執行檔，逐一呼叫 <code>&lt;file&gt; --metadata</code>，彙整成靜態索引（JSON 或 markdown）。對應 thinking_routing 的「Indexer」與 thinking_sfc 的 Indexer 行。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: one_shot</code>、<code>state: stateless</code>（純讀取掃描；輸出檔由呼叫方指定，視為一般輸出）。</li>
+<li><strong>可執行判定</strong> <code>_looks_executable()</code>：副檔名為 <code>.py</code>/<code>.sh</code>，或具 exec 權限；跳過隱藏檔與 <code>_</code> 開頭（如 <code>_common.py</code>）。</li>
+<li><strong>呼叫 metadata</strong> <code>_invoke_metadata()</code>：<code>.py</code> 用 <code>sys.executable</code>、<code>.sh</code> 用 <code>bash</code>、其餘直接執行，避免 exec 權限或 shebang 問題（KISS）。回傳非零或無輸出即拋例外。</li>
+<li><strong><code>build_index()</code></strong>：回 <code>{scan_dir, count, functions, errors}</code>；單一檔失敗收進 <code>errors</code> 區，不中斷整批掃描。<strong>此函式被 <code>hub.py</code> 重用</strong>——這是把 <code>register()</code> 移進 <code>main()</code>（而非頂層）的直接動機（解 Gap F）。</li>
+<li><strong>輸出</strong>：<code>--format json</code>（預設，indent=2）或 <code>--format md</code>（<code>render_markdown()</code>，每函式列出路徑/lifecycle/state/完整 metadata，並有「掃描錯誤」區）。</li>
+<li><strong>CLI</strong>：<code>--dir</code>（必填）、<code>--format {json,md}</code>、<code>--output</code>（寫檔，否則印 stdout）、<code>--timeout</code>（每次 <code>--metadata</code> 逾時，預設 10s）。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">indexer.py --dir funcs --format md          # markdown 索引
+indexer.py --dir tools --format json        # 也能索引工具自己
+indexer.py --dir funcs --output index.json
+indexer.py --metadata                       # {&quot;lifecycle&quot;:&quot;one_shot&quot;,&quot;state&quot;:&quot;stateless&quot;}
+</code></pre>
+<p><strong>實作狀態</strong>：可跑、已扶正接真 <code>ai_core</code>。<strong>Indexer 升級版</strong>（AI 加 tags/summary/category）未做（需 LLM，超出 spike）。</p>
+<hr />
+<h2><code>router.py</code> — Router（thinking_sfc Layer 1b）</h2>
+<p><strong>職責</strong>：name → 可執行物 的 mapping，讀 JSON 設定檔查表後以 subprocess dispatch 執行（透傳 stdin/stdout/stderr 與 exit code，KISS：router 全透明）。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: one_shot</code>、<code>state: stateless</code>（router 自身無狀態；被路由目標各自宣告 state）。</li>
+<li><strong>設定來源</strong>：<code>--routes &lt;json&gt;</code>，格式 <code>{&quot;routes&quot;: {&quot;&lt;name&gt;&quot;: {&quot;path&quot;: &quot;...&quot;, &quot;type&quot;: &quot;exec&quot;}}}</code>，path 相對於設定檔目錄解析。</li>
+<li><strong><code>resolve_command()</code></strong>：把 target 轉成 argv（依副檔名選 interpreter：<code>.py</code>→python、<code>.sh</code>→bash）。<strong>只支援 <code>type=exec</code></strong>（單檔程式路徑）；SFC store 內的腳本片段由 <code>sfc.py</code> 自己執行（職責分離，非缺漏）。</li>
+<li><strong>trace-aware</strong>：dispatch 包在 <code>trace.span(f&quot;router:{name}&quot;)</code> 內，並用 <code>trace.child_env()</code> 把 trace id / 父 span 經環境變數帶給子 process——若目標也用 <code>lib/trace</code>，其 span 接上同一棵調用樹。即 <code>lib/trace</code> 已實際接進工具，不只是獨立 library。</li>
+<li><strong>CLI</strong>：<code>--routes</code>（必填）、<code>--list</code>（列出所有路由名後結束）、<code>name</code>（要路由的目標）、<code>rest</code>（REMAINDER，原樣轉交目標）。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">echo &quot;hello&quot; | router.py --routes routes.json upper
+router.py --routes routes.json --list
+router.py --metadata
+</code></pre>
+<p>對應設定檔 <code>routes.json</code>：</p>
+<pre><code class="language-json">{ &quot;routes&quot;: {
+    &quot;upper&quot;:  {&quot;path&quot;: &quot;funcs/upper.py&quot;,     &quot;type&quot;: &quot;exec&quot;},
+    &quot;c_lint&quot;: {&quot;path&quot;: &quot;funcs/c_linter.sh&quot;,  &quot;type&quot;: &quot;exec&quot;},
+    &quot;py_lint&quot;:{&quot;path&quot;: &quot;funcs/py_linter.sh&quot;, &quot;type&quot;: &quot;exec&quot;}
+}}
+</code></pre>
+<p><strong>實作狀態</strong>：可跑、已扶正。<strong>Router 升級版</strong>（安全憑證／資源管理）未做。</p>
+<hr />
+<h2><code>switch.py</code> — Switch（條件式 dispatcher）</h2>
+<p><strong>職責</strong>：在 mapping 之外加條件判斷的 router——依「switch 變數值」走規則表分支到不同 target。典型例子：依輸入語言（c / python）路由到不同 linter。對應 thinking_routing 的「Switch」。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: one_shot</code>、<code>state: stateless</code>。</li>
+<li><strong>條件表達（spike 決策）</strong>：純資料的<strong>規則表（rule list）</strong>，每條規則做「key 的值 == 常數」字串相等比較，命中即路由。<strong>無 DSL、無 <code>eval</code>、不造規則引擎</strong>（不重造輪子）。LLM 易生成、人易讀。範圍／正則等複雜條件留待正式規範。</li>
+<li><strong>switch 變數值來源</strong> <code>decide_value()</code>：<code>source: &quot;arg&quot;</code>（取自 CLI flag，如 <code>--lang c</code>）或 <code>source: &quot;ext&quot;</code>（取自 <code>--input</code> 檔副檔名）。</li>
+<li><strong><code>pick_target()</code></strong>：逐條比對 <code>equals</code>，未命中回 <code>default</code>（選填）。</li>
+<li><strong><code>resolve_command()</code></strong>：與 router 同邏輯（spike 刻意不抽共用模組，見 Gap D）。</li>
+<li><strong>CLI</strong>：<code>--config</code>（必填）、<code>--lang</code>（source=arg 的判斷值）、<code>--input</code>（source=ext 時取副檔名）、<code>--explain</code>（只印會路由到哪個 target，不執行）、<code>rest</code>（REMAINDER，用 <code>--</code> 分隔轉交）。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">echo &quot;int main(){}&quot; | switch.py --config switch.json --lang c
+echo &quot;print(1)&quot;     | switch.py --config switch.json --lang python
+switch.py --config switch.json --lang rust --explain   # 只看決策（未命中走 default）
+switch.py --metadata
+</code></pre>
+<p>對應設定檔 <code>switch.json</code>：</p>
+<pre><code class="language-json">{ &quot;switch&quot;: {
+    &quot;on&quot;: &quot;lang&quot;, &quot;source&quot;: &quot;arg&quot;,
+    &quot;rules&quot;: [
+      {&quot;equals&quot;: &quot;c&quot;,      &quot;target&quot;: {&quot;path&quot;: &quot;funcs/c_linter.sh&quot;,  &quot;type&quot;: &quot;exec&quot;}},
+      {&quot;equals&quot;: &quot;python&quot;, &quot;target&quot;: {&quot;path&quot;: &quot;funcs/py_linter.sh&quot;, &quot;type&quot;: &quot;exec&quot;}}
+    ],
+    &quot;default&quot;: {&quot;path&quot;: &quot;funcs/c_linter.sh&quot;, &quot;type&quot;: &quot;exec&quot;}
+}}
+</code></pre>
+<p><strong>實作狀態</strong>：可跑、已扶正。</p>
+<hr />
+<h2><code>sfc.py</code> — SFC（Small Function Center）</h2>
+<p><strong>職責</strong>：把大量 tiny function 集中到一個 git-style subcommand dispatcher，避免檔案爆炸。涵蓋 Layer 0（store）/ 1a（intake）/ 1b（router）/ 2（forge server）/ 3（動態 add/remove/persist）/ 4（shell-kind timeout + 標準錯誤封套）。</p>
+<blockquote>
+<p><strong>已改接真 <code>ai_core</code></strong>：<code>import ai_core as meta</code>。原本繞過 library 的 <code>meta_core.py</code> 原型已<strong>刪除</strong>（見下方說明）。</p>
+</blockquote>
+<h3>metadata 設定（解 Gap A/B/F，已扶正進 <code>_core.py</code>）</h3>
+<p><code>_setup_metadata()</code> 用拆分模型宣告<strong>單一執行檔多種 lifecycle</strong>：</p>
+<ul>
+<li><code>meta.register(lifecycle=&quot;one_shot&quot;, state=&quot;stateless&quot;)</code> — 頂層 dispatcher 預設行為。</li>
+<li><code>meta.register_subcommand(&quot;forge&quot;, lifecycle=&quot;persistent&quot;, state=&quot;stateless&quot;)</code> — <strong>forge 是 persistent</strong>（解 Gap B）。</li>
+<li><code>meta.register_subcommand(&quot;intake&quot;, lifecycle=&quot;one_shot&quot;, state=&quot;stateful_external&quot;)</code>。</li>
+<li><code>meta.register_subcommand(&quot;list&quot;, ...)</code>、<code>meta.register_subcommand(&quot;admin&quot;, ...)</code>（皆 one_shot/stateless）。</li>
+<li><code>meta.register_subcommand_resolver(_resolve_tiny_metadata)</code> — 動態子命令：tiny function 名稱來自 store，metadata 存在 store 不寫死，resolver 去查。</li>
+<li><code>main()</code> 開頭 <code>meta.intercept(argv)</code> 統一攔截所有 <code>--metadata</code> 變體（含 <code>&lt;sub&gt; --metadata</code>、<code>--store</code> 前綴）。</li>
+</ul>
+<p><strong><code>--metadata</code> 行為（重點，已驗證）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指令</th>
+<th>回傳</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sfc --metadata</code></td>
+<td>頂層 dispatcher → <code>one_shot</code></td>
+</tr>
+<tr>
+<td><code>sfc forge --metadata</code></td>
+<td><code>persistent</code>（與頂層不同 lifecycle，Gap B 修法效果）</td>
+</tr>
+<tr>
+<td><code>sfc intake --metadata</code></td>
+<td><code>stateful_external</code></td>
+</tr>
+<tr>
+<td><code>sfc &lt;tinyfn&gt; --metadata</code>（如 <code>sfc shout --metadata</code>）</td>
+<td>走動態 resolver 去 store 查該函式 metadata</td>
+</tr>
+<tr>
+<td><code>sfc &lt;未知&gt; --metadata</code></td>
+<td>exit 1</td>
+</tr>
+</tbody>
+</table>
+<h3>Layer 0 — store（純資料存取）</h3>
+<p><code>class Store</code>：封裝 <code>functions.json</code> + <code>index.json</code> 的讀寫。</p>
+<ul>
+<li><strong>格式決策（thinking_sfc 標為待設計）</strong>：<code>functions.json</code> 是 <strong>object</strong>（key=函式名，O(1) 查找），<code>index.json</code> 是 <code>{&quot;index&quot;: {&quot;&lt;name&gt;&quot;: &quot;&lt;store key&gt;&quot;}}</code>。保留獨立 index.json 作為「可被獨立擴充的查找層」（未來放 tags/summary/category），spike 階段先是恆等映射。全 JSON、純標準庫可解析。</li>
+<li>函式定義欄位：<code>name</code> / <code>kind</code>（<code>python</code>｜<code>shell</code>）/ <code>body</code> / <code>description</code> / <code>metadata</code>（沿用 ai_core 軸）。</li>
+<li><code>DEFAULT_STORE_DIR</code> = <code>try_implement/store</code>；可由 <code>--store &lt;dir&gt;</code>（須在最前）覆寫。</li>
+</ul>
+<h3>tiny function 呼叫介面（thinking_sfc 待設計）</h3>
+<p><code>compile_function(defn, shell_timeout=None)</code> 把定義編譯成 callable <code>fn(stdin: str, args: dict) -&gt; str</code>：</p>
+<ul>
+<li><strong><code>kind=&quot;python&quot;</code></strong>：body 是函式體原始碼，包成 <code>def _fn(stdin, args):</code>，<code>compile</code>+<code>exec</code> 到<strong>受限 namespace</strong>（只放少量 builtins：len/str/int/float/range/list/dict/sum/sorted/min/max/enumerate/split/print）後<strong>真正 in-process</strong> 執行。空 body / 只有註解 → 明確攔截給可讀錯誤（避免 cryptic IndentationError）。受限 namespace 是 spike 等級薄防護，<strong>非沙箱</strong>（Gap E）。</li>
+<li><strong><code>kind=&quot;shell&quot;</code></strong>：body 是 shell 指令，SFC 內部開 <code>bash -c</code> subprocess，stdin 餵進、stdout 收回。<code>shell_timeout</code>（Layer 4）超時拋 <code>ToolTimeout</code>。<strong>timeout 只對 shell-kind 生效</strong>（python-kind 真 in-process 無乾淨隔離邊界，Gap E）。</li>
+<li>剩餘 CLI flag 由 <code>_rest_to_dict()</code> 依 cli_spec §2.0（Lisp keyword pair → dict）轉成 <code>args</code>（<code>--key value</code>→dict、<code>--flag</code>→True、bare positional→<code>_positional</code> list）。</li>
+</ul>
+<h3>Layer 1a — intake（<code>cmd_intake</code>）</h3>
+<p>把片段納入 store。支援 <code>--from-json &lt;file&gt;</code> 或 <code>--name/--kind/--body/--description</code>。<strong>收進前先 <code>compile_function()</code> 驗證能編譯</strong>（fail fast，給乾淨錯誤而非 traceback），通過才寫 <code>functions.json</code> + <code>index.json</code>（恆等映射）。</p>
+<h3>Layer 1b — call（<code>call_function</code>）</h3>
+<p>讀檔查表執行單一函式：<code>store.get(name)</code> → <code>compile_function()</code> → 讀 stdin → 跑 → 寫 stdout（補尾換行）。subcommand-scoped <code>--metadata</code> 已在 <code>main()</code> 最前由 <code>meta.intercept()</code> 處理掉，不會走到這裡。</p>
+<h3>Layer 2/3 — forge（<code>cmd_forge</code>，persistent server）</h3>
+<p>啟動時把 store 內所有 tiny function 編譯成 callable 存進記憶體 dict，之後純記憶體查表執行。對外用 <strong>NDJSON 行協議</strong>（每行一個 JSON request/response，stdin/stdout）。整個 serve 迴圈包在 <code>trace.span(&quot;forge.serve&quot;)</code> 內成為調用樹 root，每次 call 是 <code>trace.span(f&quot;forge.call:{name}&quot;)</code> 的 child（trace 事件走 stderr）。啟動時印 <code>[forge] ready</code> 訊號到 stderr。</p>
+<p>協議：</p>
+<ul>
+<li><strong>call</strong>：<code>{&quot;call&quot;:&quot;&lt;name&gt;&quot;,&quot;stdin&quot;:&quot;...&quot;,&quot;args&quot;:{...}}</code> → <code>{&quot;ok&quot;:true,&quot;stdout&quot;:&quot;...&quot;}</code>。</li>
+<li><strong>Layer 3 管理 API</strong>：<code>{&quot;cmd&quot;:&quot;list&quot;}</code> / <code>{&quot;cmd&quot;:&quot;add&quot;,&quot;defn&quot;:{...}}</code>（執行期動態編譯加入）/ <code>{&quot;cmd&quot;:&quot;remove&quot;,&quot;name&quot;:&quot;...&quot;}</code> / <code>{&quot;cmd&quot;:&quot;persist&quot;}</code>（把記憶體定義寫回 Layer 0 store，與 intake 對稱）/ <code>{&quot;cmd&quot;:&quot;shutdown&quot;}</code>。</li>
+</ul>
+<h3>Layer 4 — 錯誤封套 + 資源（部分做）</h3>
+<p><code>_err(etype, message, function?)</code> 產出<strong>標準錯誤封套</strong> <code>{&quot;ok&quot;:false,&quot;error&quot;:{&quot;type&quot;,&quot;message&quot;,&quot;function&quot;?}}</code>，取代扁平字串，讓 caller 依 type 分流（如 timeout 可重試、bad_request 不該重試）。type ∈ <code>bad_json</code> / <code>bad_request</code> / <code>unknown_function</code> / <code>compile_error</code> / <code>runtime_error</code> / <code>timeout</code>。</p>
+<p><code>cmd_admin</code>（<code>sfc admin</code>）已退化為<strong>指路牌</strong>：管理操作請對 running 的 forge server 發 NDJSON。Layer 4 的資源管理（記憶體/時間上限）對 python-kind 仍是 <strong>TODO</strong>（Gap E：stdlib 做不到乾淨隔離）。</p>
+<h3>CLI 進入點</h3>
+<p>git-style：保留字 <code>{intake, list, forge, admin}</code>，其餘字串視為 tiny function 名稱（Layer 1b）。</p>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">sfc list
+echo &quot;hello there&quot; | sfc shout      # python in-process → &quot;HELLO THERE!&quot;
+echo &quot;a b c d&quot;     | sfc wc_words    # shell subprocess → 4
+sfc shout --metadata                 # subcommand-scoped metadata
+sfc --metadata                       # SFC 自身（one_shot）
+sfc intake --name rev --kind python --body &quot;return stdin.strip()[::-1]&quot;
+# forge persistent server（NDJSON）
+printf '%s\n%s\n%s\n' '{&quot;cmd&quot;:&quot;list&quot;}' '{&quot;call&quot;:&quot;shout&quot;,&quot;stdin&quot;:&quot;hi&quot;}' '{&quot;cmd&quot;:&quot;shutdown&quot;}' | sfc forge
+# Layer 3 動態管理
+printf '%s\n%s\n%s\n' \
+  '{&quot;cmd&quot;:&quot;add&quot;,&quot;defn&quot;:{&quot;name&quot;:&quot;rev&quot;,&quot;kind&quot;:&quot;python&quot;,&quot;body&quot;:&quot;return stdin.strip()[::-1]&quot;}}' \
+  '{&quot;call&quot;:&quot;rev&quot;,&quot;stdin&quot;:&quot;abc&quot;}' '{&quot;cmd&quot;:&quot;persist&quot;}' '{&quot;cmd&quot;:&quot;shutdown&quot;}' | sfc forge
+</code></pre>
+<p><strong>實作狀態</strong>：Layer 0–3 ✅ 已做；Layer 4 部分（shell timeout + 錯誤封套已做，python 資源上限 + retry 策略未做）。</p>
+<h3><code>meta_core.py</code> 已刪除（2026-05-26）</h3>
+<p>原型 <code>tools/meta_core.py</code> 曾提供「放寬攔截 + <code>register_subcommand</code> + resolver」來繞過原始 <code>_core.py</code> 的限制。這些能力已<strong>扶正進 <code>src/ai_core/_core.py</code></strong>（採宣告／攔截拆分），原型功成身退、檔案已刪，<code>sfc.py</code> 改接真 library。</p>
+<hr />
+<h2><code>hub.py</code> — Function Hub（規範未定，本版自定義）</h2>
+<p><strong>職責</strong>：把整個函式生態轉成「給 LLM 看的 skill 清單」的透鏡（CLAUDE.md 元件 4）。規範完整定義未定，使用者授權自訂的<strong>最小可用定義</strong>。在 Indexer 之上多做兩件事：(1) <strong>語意化</strong>——把每函式 metadata 轉成一條技能描述；(2) <strong>預算化（核心）</strong>——套 context budget，超過就逐級收斂，避免清單撐爆 LLM context。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: one_shot</code>、<code>state: stateless</code>。</li>
+<li><strong>重用 Indexer</strong>：<code>from indexer import build_index</code>（已可安全 import，因 register 移進 main）。</li>
+<li><strong><code>to_skill()</code></strong>：把 index entry 轉成 <code>{name, summary, lifecycle, side_effects, retriable, path}</code>。</li>
+<li><strong>summary 來源優先序</strong>：metadata 的 <code>description</code>/<code>summary</code> 欄位 → 沒有就 <code>_synthesize_summary()</code> 從軸值硬湊（如 one_shot+stateless →「一次性、無副作用」）。⚠️ <strong>八軸沒有語意用途欄位（Gap C）</strong>，所以 hub 只能合成粗略 summary——<strong>這把缺口暴露得很具體：沒有語意描述軸，skill 清單對 LLM 幾乎沒用。</strong></li>
+<li><strong>budget 逐級收斂</strong> <code>render_skills()</code>：<code>full</code>（多行/技能）→ <code>compact</code>（一行 <code>name — summary</code>）→ <code>truncated</code>（截斷 summary 並附「另有 N 項未列出」）。</li>
+<li><strong>CLI</strong>：<code>--scan</code>（必填）、<code>--format {skills,json,md}</code>（預設 skills）、<code>--budget</code>（字元預算，超過自動收斂）、<code>--timeout</code>。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">hub.py --scan funcs
+hub.py --scan funcs --budget 60       # 過小預算 → 自動收斂並標註省略
+hub.py --scan funcs --format json
+hub.py --metadata
+</code></pre>
+<p><strong>實作狀態</strong>：最小自定義版可跑；完整定義仍待規範定奪。是 Gap C 的具體放大證據（見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a> 與 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>）。</p>
+<hr />
+<h2><code>llm_entry_manager.py</code> — LLM Entry Manager（CLAUDE.md 元件 1）</h2>
+<p><strong>職責</strong>：把「LLM 是 singleton 資源」落地——本地/遠端模型一次只能處理一個請求，且請求者是多個互不認識的 caller → queue（一次一個）+ consume rate（token/錢/算力）管理。示範三概念疊起來：persistent server（<code>lib/server</code>）+ singleton 資源（<code>lib/singleton</code> 的 RateMeter）+ 可插拔 LLM backend（<code>lib/llm_call</code>，預設 mock）= LLM Entry Manager。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: persistent</code>、<code>state: stateless</code>、<code>resources: {singleton: true, consume_dimensions: [&quot;token&quot;]}</code>。（singleton 性質塞進 resources——八軸沒有專門的 singleton 欄位，這是一個觀察。）</li>
+<li><strong><code>build_server()</code></strong>：建 <code>NDJSONServer</code>，註冊 <code>complete</code> / <code>usage</code> handler；<code>SingletonResource(&quot;llm&quot;, limits={token})</code> 管 consume rate。<code>complete</code> 先用 <code>meter.would_exceed()</code> 守門，超預算回 <code>{&quot;ok&quot;:false,&quot;error&quot;:&quot;rate limit exceeded&quot;,...}</code>；否則跑 <code>llm_call.llm_call()</code>、<code>meter.record()</code> 記用量。</li>
+<li><strong>token 估算</strong> <code>_estimate_tokens()</code>：mock 約 4 字元 1 token。真接 API 時換成 backend 的 usage。</li>
+<li><strong>backend</strong>：預設 <code>EchoBackend</code>；真接 API 時換接 <code>lib/call.Http</code> 或官方 SDK。</li>
+<li><strong>CLI</strong>：<code>--limit-token</code>（token 預算上限）、<code>--metadata</code>。NDJSON 協議：<code>{&quot;cmd&quot;:&quot;complete&quot;,&quot;prompt&quot;:&quot;...&quot;,&quot;opts&quot;:{...}}</code>、<code>{&quot;cmd&quot;:&quot;usage&quot;}</code>、內建 <code>ping</code>/<code>list</code>/<code>shutdown</code>（來自 <code>lib/server</code>）。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">printf '%s\n%s\n%s\n' \
+  '{&quot;cmd&quot;:&quot;complete&quot;,&quot;prompt&quot;:&quot;hello world&quot;}' \
+  '{&quot;cmd&quot;:&quot;usage&quot;}' '{&quot;cmd&quot;:&quot;shutdown&quot;}' | llm_entry_manager.py --limit-token 50
+llm_entry_manager.py --metadata
+</code></pre>
+<p><strong>實作狀態</strong>：可跑原型（mock backend）。</p>
+<hr />
+<h2><code>chain.py</code> — chain（組合維度的 CLI）</h2>
+<p><strong>職責</strong>：把「組合維度」變成可從 shell 用的一等工具（對應組合維度概念，見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>）。用 JSON 宣告一條 pipeline，把 stdin 依序流過每個 stage（subprocess）= 調用鏈的顯式形式；並能用 <code>lib/compose_meta</code> 從各 stage 的 <code>--metadata</code> 推導整條鏈的複合 metadata。串起整個 lib 堆疊：<code>lib/call</code>（跨邊界呼叫成員）+ <code>lib/compose</code>（pipe 串接）+ <code>lib/trace</code>（調用鏈追蹤）+ <code>lib/compose_meta</code>（推導複合 metadata）。</p>
+<ul>
+<li><strong>軸</strong>：<code>lifecycle: one_shot</code>、<code>state: stateless</code>。</li>
+<li><strong>spec 格式</strong>：<code>{&quot;name&quot;:..., &quot;stages&quot;:[{&quot;path&quot;:&quot;funcs/upper.py&quot;,&quot;type&quot;:&quot;exec&quot;}, {&quot;path&quot;:&quot;funcs/reverse.py&quot;,&quot;type&quot;:&quot;exec&quot;,&quot;args&quot;:[&quot;--flag&quot;]}]}</code>，path 相對於 spec 檔目錄。</li>
+<li><strong><code>_resolve()</code></strong>：把 stage 轉 argv（依副檔名選 interpreter）——這是 router/switch 的 <code>resolve_command</code> 的<strong>第三份</strong>幾乎相同實作，Gap D 訊號再強一點（spike 仍各自獨立維持單檔自足）。</li>
+<li><strong><code>run_pipeline()</code></strong>：每 stage 包成 <code>call.Subprocess</code>，再用 <code>compose.pipe</code> 串起，整條包在 <code>trace.span(f&quot;chain:{name}&quot;)</code> 內。</li>
+<li><strong><code>derive_metadata()</code></strong>：對每 stage 呼叫 <code>--metadata</code>，用 <code>compose_meta.derive_pipe()</code> 算複合 metadata。</li>
+<li><strong>CLI</strong>：<code>--spec</code>（必填）、<code>--derive</code>（不執行，改印推導的複合 metadata）、<code>--metadata</code>。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">echo hi | chain.py --spec chain_demo.json   # upper→reverse → &quot;IH&quot;
+chain.py --spec chain_demo.json --derive    # 推導複合 metadata（lifecycle=one_shot、guarantee 取最弱=none）
+chain.py --metadata
+</code></pre>
+<p><strong>實作狀態</strong>：可跑原型，已扶正接真 <code>ai_core</code> 與 lib 堆疊。</p>
+<hr />
+<h2>工具層發現的設計缺口（簡表，詳見 note_06）</h2>
+<ul>
+<li><strong>Gap A/B/F</strong>：✅ 已扶正進 <code>_core.py</code>（subcommand-scoped metadata、單檔多 lifecycle、register 無 import 副作用）。</li>
+<li><strong>Gap C</strong>：metadata 缺語意用途欄位 → hub 的 skill 清單只能硬湊 summary（未決）。</li>
+<li><strong>Gap D</strong>：router/switch/chain 三份重複的 <code>resolve_command</code>（DRY vs 單檔自足張力，未決）。</li>
+<li><strong>Gap E</strong>：python-kind in-process tiny function 無真正資源/安全隔離（Layer 2 vs Layer 4 張力，未決）。</li>
+</ul>
+
+</main>
+<footer class="pager">
+<a class="prev" href="code_01_core_library.html"><span class="dir">← 上一篇</span><span class="fn">code_01_core_library</span></a>
+<a class="next" href="code_03_prototype_lib.html"><span class="dir">下一篇 →</span><span class="fn">code_03_prototype_lib</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

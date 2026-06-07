@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>axis_spec.md · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_05_axes_metadata.md · 314 行</div>
+<hr />
+<h2>來源: core_nature/axis_spec.md（303 行）
+狀態: 定案規範（部分軸標「待議」；標題自陳「從粗糙到嚴整，勿視當前內容為定論」，但九軸骨架已扶正）
+一行摘要: 九個描述函式特性的「軸」之完整規範——逐軸名稱、語意、值域、預設、範例；第九軸 nondeterministic 承載治理原則。</h2>
+<blockquote>
+<p>軸的 metadata field 落地格式定義於 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>；正式核心實作狀態見 <a href="code_01_core_library.html">code_01_core_library.md</a>；軸的決策脈絡見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
+</blockquote>
+<h1>axis_spec.md</h1>
+<p>對 <code>execution_forms.md</code> §0 各分類軸的應對措施：標準規範、metadata 標示、library 設計。</p>
+<p><strong>三階段流程：</strong></p>
+<table>
+<thead>
+<tr>
+<th>階段</th>
+<th>工作</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>針對各維度與已知函數形式做分析，釐清問題</td>
+<td>進行中</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>初步規範草稿、metadata fields 定義、library 雛形</td>
+<td>待開始</td>
+</tr>
+<tr>
+<td>Phase 3</td>
+<td>多輪討論後定稿</td>
+<td>待開始</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>本檔從粗糙到嚴整，內容隨討論演進，勿視當前內容為定論。</p>
+</blockquote>
+<hr />
+<h2>Phase 1 初步觀察：從使用者體驗出發</h2>
+<blockquote>
+<p>粗糙想法紀錄，尚未對應到各軸。</p>
+</blockquote>
+<p>使用者體驗的自然演進順序：</p>
+<h3>1. One-shot（起點）</h3>
+<p>最常見的形式。執行一次，拿結果，結束。</p>
+<h3>2. Multi-shot（事情變複雜）</h3>
+<p>需要多次執行，且每次執行的結果不同（有跨呼叫的狀態）。狀態的儲存位置決定了程式的形態：</p>
+<ul>
+<li><strong>狀態存外部</strong>（檔案、DB 等）：等於每次執行的輸入形式改變了（<code>--state-file</code> 之類），程式本身仍可以是無狀態的</li>
+<li><strong>狀態存內部</strong>：等於修改程式自身——這幾乎不實際，程序結束後記憶體釋放，只有把狀態寫進 code/config 才算「存內部」，但那本質上還是外部檔案</li>
+</ul>
+<blockquote>
+<p>推論：真正「stateful-internal」的情況極少；大多數 multi-shot 實際上是 stateful-external 搭配不同輸入。</p>
+</blockquote>
+<h3>3. Persistent（一直待在那邊）</h3>
+<p>執行後不結束，持續存活。依用途細分：</p>
+<table>
+<thead>
+<tr>
+<th>子類型</th>
+<th>行為</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monitoring / Streaming</td>
+<td>持續往 stdout 吐資料</td>
+<td>log tail、sensor reader</td>
+</tr>
+<tr>
+<td>Resource entry / Scheduler</td>
+<td>管理資源，做請求排程</td>
+<td>LLM Entry Manager、job queue</td>
+</tr>
+<tr>
+<td>Periodic / Wake</td>
+<td>定期觸發某動作，其餘時間休眠</td>
+<td>cron-style daemon</td>
+</tr>
+<tr>
+<td>Server（可互動）</td>
+<td>等待請求，每次請求回應一次</td>
+<td>HTTP server、RPC server</td>
+</tr>
+</tbody>
+</table>
+<h3>4. Server + Client 配對</h3>
+<p>Server 模式通常伴隨一個 client 程式。兩者之間的通訊方式形成一個獨立關切點：</p>
+<ul>
+<li>stdin / stdout（最簡單，適合本機同步）</li>
+<li>Shared memory（本機高速）</li>
+<li>File I/O（非同步、可持久）</li>
+<li>TCP / Unix socket</li>
+<li>HTTP API / RPC</li>
+</ul>
+<blockquote>
+<p>通訊方式是 §1 I/O 型態 與 §8 環境模式 的交叉點；server 本身的生命週期屬於 §2。</p>
+</blockquote>
+<hr />
+<h2>§1 I/O 型態</h2>
+<!-- 要描述的問題：輸入從哪來、輸出往哪去、是否需要執行途中的互動 -->
+<!-- 已知形式：無輸入、stdin、互動式（中途需 stdin）、streaming push、streaming pull -->
+<h3>Phase 1 分析</h3>
+<p>此軸應拆為兩個獨立子軸，兩者正交：</p>
+<p><strong>§1a 通訊出入口</strong>：資料透過什麼媒介進出程式</p>
+<table>
+<thead>
+<tr>
+<th>出入口</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stdio / stdout / stderr</td>
+<td>最原始的 CLI 介面</td>
+</tr>
+<tr>
+<td>File I/O</td>
+<td>以路徑指定，非同步、可持久</td>
+</tr>
+<tr>
+<td>TCP / Unix socket</td>
+<td>跨程序或跨機器</td>
+</tr>
+<tr>
+<td>HTTP / RPC</td>
+<td>有協議語意的網路通訊</td>
+</tr>
+<tr>
+<td>Shared memory</td>
+<td>同機器高速交換</td>
+</tr>
+</tbody>
+</table>
+<p><strong>§1b 資料進出形式</strong>：資料是一次性交換還是持續性流動</p>
+<table>
+<thead>
+<tr>
+<th>形式</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一次性（batch）</td>
+<td>輸入一次讀完，輸出一次寫出</td>
+</tr>
+<tr>
+<td>Streaming（push）</td>
+<td>輸出方持續推送，接收方逐筆消費</td>
+</tr>
+<tr>
+<td>Streaming（pull / generator）</td>
+<td>接收方主動拉取，輸出方按需產生</td>
+</tr>
+<tr>
+<td>互動式</td>
+<td>執行途中需要使用者介入輸入（stdin prompt）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>§1a 決定「用什麼管道」，§1b 決定「資料怎麼流」。Server+client 的通訊方式是 §1a 的子集；streaming 是 §1b 的子集。</p>
+</blockquote>
+<hr />
+<h2>§2 生命週期</h2>
+<!-- 要描述的問題：執行單元從啟動到結束的持續模式 -->
+<!-- 已知形式：one-shot、persistent、lazy/warm、detached -->
+<h3>Phase 1 分析</h3>
+<p>生命週期只有兩個根本形態：</p>
+<table>
+<thead>
+<tr>
+<th>形態</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>One-shot</strong></td>
+<td>啟動 → 執行 → 結束。程序存活時間與任務等長</td>
+</tr>
+<tr>
+<td><strong>Persistent</strong></td>
+<td>啟動後持續存活，等待請求或持續產出，直到被顯式終止</td>
+</tr>
+</tbody>
+</table>
+<p>其他之前列出的形式都是這兩者的子環節或組合：</p>
+<ul>
+<li><strong>Lazy / Warm</strong>：Persistent 的啟動策略（第一次請求才真正啟動，閒置後可選擇結束）</li>
+<li><strong>Detached / Fire-and-forget</strong>：One-shot 的排程策略（呼叫方不等待結果）</li>
+<li><strong>Periodic / daemon</strong>：Persistent + 定期觸發內部動作</li>
+<li><strong>Streaming</strong>：Persistent 的輸出模式，或 One-shot 的 §1b 形式</li>
+</ul>
+<blockquote>
+<p>生命週期軸的值只有兩個；其他描述應歸到對應的軸。</p>
+</blockquote>
+<hr />
+<h2>§3 跨呼叫狀態</h2>
+<!-- 要描述的問題：單次執行以外是否保有、影響或累積狀態 -->
+<!-- 已知形式：stateless、stateful-external、stateful-internal -->
+<h3>Phase 1 分析</h3>
+<p><strong>Multi-shot 是這個軸的衍生描述</strong>：multi-shot 只是說「需要多次執行且狀態跨次累積」，狀態本身的儲存位置才是根本問題。</p>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stateless</strong></td>
+<td>每次執行互相獨立，輸出只由輸入決定</td>
+</tr>
+<tr>
+<td><strong>Stateful-external</strong></td>
+<td>狀態存於外部（檔案、DB、環境變數），程式透過參數或約定路徑讀寫</td>
+</tr>
+<tr>
+<td><strong>Stateful-internal</strong></td>
+<td>理論上是「修改程式自身」的另一種說法——程序結束後記憶體釋放，所以「存內部」幾乎等同於 stateful-external（把狀態寫進 config / state 檔）。此分類實務上可視為不存在。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Stateful-external 與 §1a 通訊出入口有重疊：狀態存在哪裡，就是用那個出入口。此軸著重的是「有沒有跨呼叫的副作用」，而非「怎麼傳輸」。</p>
+</blockquote>
+<hr />
+<h2>§4 資源特性</h2>
+<!-- 要描述的問題：對計算資源的消耗或佔用（含時間） -->
+<!-- 已知內容：執行時間、記憶體、CPU、GPU；對應 --metadata 的聲明 -->
+<h3>Phase 1 分析</h3>
+<p>資源描述需要涵蓋<strong>資源的生命週期</strong>，而不只是「大約用多少」：</p>
+<table>
+<thead>
+<tr>
+<th>描述維度</th>
+<th>問題</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>種類</strong></td>
+<td>用了哪些資源？（CPU、記憶體、GPU、磁碟、網路、時間）</td>
+</tr>
+<tr>
+<td><strong>啟動時申請</strong></td>
+<td>執行一開始就占用哪些？（e.g., 模型載入後常駐記憶體）</td>
+</tr>
+<tr>
+<td><strong>執行中動態</strong></td>
+<td>途中會額外申請或釋放哪些？（e.g., batch 處理時記憶體峰值）</td>
+</tr>
+<tr>
+<td><strong>結束後釋放</strong></td>
+<td>結束後會釋放哪些？哪些殘留？（e.g., temp files、port binding）</td>
+</tr>
+<tr>
+<td><strong>持續佔用</strong></td>
+<td>Persistent 程式持續佔用的底線資源（idle footprint）</td>
+</tr>
+</tbody>
+</table>
+<p>這些全部反映在 <code>--metadata</code> 的回傳中，是 Function Hub 做排程決策的依據。</p>
+<hr />
+<h2>§5 可中斷性</h2>
+<!-- 要描述的問題：是否可以被暫停、暫停後可否恢復、恢復後副作用為何 -->
+<!-- 已知形式：不可中斷、可暫停（SIGSTOP）、可恢復（checkpoint/restore） -->
+<h3>Phase 1 分析</h3>
+<p>可中斷性應拆為兩個層面：</p>
+<p><strong>§5a OS 排程層（單次執行內）</strong>：執行途中被作業系統或使用者暫停/恢復/延遲</p>
+<table>
+<thead>
+<tr>
+<th>情形</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不可中斷</td>
+<td>執行必須連續完成，中斷會導致狀態損毀（e.g., atomic write）</td>
+</tr>
+<tr>
+<td>可暫停（SIGSTOP）</td>
+<td>OS 可掛起程序，資源仍佔用，恢復後繼續執行</td>
+</tr>
+<tr>
+<td>可恢復（checkpoint）</td>
+<td>程式自行序列化執行狀態，殺掉後可從斷點重啟</td>
+</tr>
+</tbody>
+</table>
+<p><strong>§5b 跨執行狀態層（跨呼叫）</strong>：中斷一次執行後，對 §3 的跨呼叫狀態有何影響</p>
+<table>
+<thead>
+<tr>
+<th>情形</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>無殘留</td>
+<td>Stateless，中斷不影響後續執行</td>
+</tr>
+<tr>
+<td>狀態損毀</td>
+<td>外部狀態寫到一半，下次執行讀到壞資料</td>
+</tr>
+<tr>
+<td>狀態一致（需 §6 執行保證配合）</td>
+<td>透過 transactional 或 idempotent 保證中斷後狀態仍安全</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>§5a 與 §5b 要一起看，§5b 的安全性很大程度取決於 §6 執行保證的設計。資源釋放行為見 §4。</p>
+</blockquote>
+<hr />
+<h2>§6 執行保證</h2>
+<!-- 要描述的問題：對系統狀態的承諾，獨立於執行次數或中途失敗 -->
+<!-- 已知形式：idempotent、transactional（ACID）、dry-run -->
+<h3>Phase 1 分析</h3>
+<p>屬於 metadata 描述範疇，是程式對呼叫方的承諾聲明。</p>
+<table>
+<thead>
+<tr>
+<th>保證類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>無保證</td>
+<td>預設值；呼叫方自行承擔重複執行或中斷的後果</td>
+</tr>
+<tr>
+<td>Idempotent</td>
+<td>重複執行與執行一次結果相同；中斷後安全重試</td>
+</tr>
+<tr>
+<td>Transactional（ACID）</td>
+<td>要麼完全成功，要麼完全不發生；中斷後回滾，不留部分狀態</td>
+</tr>
+<tr>
+<td>Dry-run</td>
+<td>執行但不實際修改外部狀態；用於預覽副作用</td>
+</tr>
+</tbody>
+</table>
+<p><strong>中斷後如何處置</strong>由此軸決定，與 §5 可中斷性對接：</p>
+<ul>
+<li>Transactional → 中斷後回滾，§5b 狀態損毀風險由保證機制吸收</li>
+<li>Idempotent → 中斷後可安全重跑，§5b 無殘留問題</li>
+<li>無保證 → §5b 的損毀風險由呼叫方自行處理</li>
+</ul>
+<hr />
+<h2>§7 組合模式</h2>
+<!-- 要描述的問題：執行單元如何與其他單元構成更大的結構 -->
+<!-- 已知形式：fan-out/fan-in、proxy/wrapper、hook/callback、agentic loop -->
+<h3>Phase 1 分析</h3>
+<p><strong>此軸不在本規範的主要描述範圍內。</strong></p>
+<p>組合模式描述的是呼叫鏈（call chain）的結構，屬於系統架構層面，而非單一執行單元的屬性。單一程式本身不需要知道自己被如何組合；這是呼叫方（hub、router、agentic loop 等）的關切點。</p>
+<blockquote>
+<p>若有需要，可另立文件討論「呼叫鏈設計」，但不應塞進單一執行單元的 metadata。</p>
+</blockquote>
+<hr />
+<h2>§8 環境模式</h2>
+<!-- 要描述的問題：執行環境是預先存在還是動態建立與銷毀 -->
+<!-- 已知形式：固定環境、ephemeral/JIT -->
+<h3>Phase 1 分析</h3>
+<p><strong>此軸同樣不在本規範的主要描述範圍內。</strong></p>
+<p>程式本身通常不管理自己的執行環境。預設假設：<strong>穩定的 Linux 環境</strong>，其餘狀態由使用者自行承擔。</p>
+<p>唯一例外：可以設計一個<strong>包裝程式（wrapper）</strong>，用於修改其子程式的執行環境（切換工作目錄、設置環境變數、resource limit 等）。這個包裝程式自身是一個執行單元，其行為用其他軸描述；環境管理只是它的輸出副作用。</p>
+<blockquote>
+<p>Ephemeral/JIT 環境（如 Docker container、venv）是部署/執行層的選擇，不影響程式介面設計。</p>
+</blockquote>
+<hr />
+<h2>§9 確定性 / 隨機性（nondeterminism）</h2>
+<blockquote>
+<p><code>execution_forms.md §0</code> 原本只列了八軸。本節是後續<strong>新增</strong>的第九軸。新增的理由與它和治理
+原則的關係，記在這裡；metadata field 的格式定義在 <a href="../core_nature/lib_spec.md"><code>lib_spec.md §9</code></a>（見 <a href="doc_06_lib_contract.html">doc_06_lib_contract.md</a>）。</p>
+</blockquote>
+<h3>Phase 1 分析</h3>
+<p>前八軸有一個<strong>隱含的共同前提</strong>：函式是確定性的（deterministic）——同樣的輸入，跑幾次都得到
+同樣的輸出。八軸描述的是「怎麼跑、跑多久、有無副作用、能否中斷」這些<strong>執行特性</strong>，沒有一軸
+描述「輸出本身可不可預測」。</p>
+<p>但 ai_core 的存在理由之一，正是要駕馭一個<strong>天生隨機</strong>的函式：LLM。把 LLM 視為一個函式時，它
+打破了那個隱含前提——同樣的 prompt，兩次呼叫可能給不同答案。這個性質：</p>
+<ul>
+<li><strong>無法由任何既有軸隱含</strong>。<code>lifecycle</code> / <code>state</code> / <code>interruptible</code> / <code>guarantee</code> / <code>resources</code>
+全都描述不了「隨機」。（對比：中斷恢復能力可由 <code>interruptible</code> / <code>guarantee</code> 隱含，所以那條
+複合慣例選擇「不新增欄位」。隨機性沒有這種隱含來源。）</li>
+<li><strong>與其他軸正交</strong>。隨機 ≠ 有狀態，也 ≠ 無保證；一個函式可以同時是隨機的、有狀態的、無保證的。</li>
+</ul>
+<p>因此「確定性 / 隨機性」必須成為一個<strong>獨立的、明確宣告的軸</strong>。</p>
+<h3>這個軸承載「治理原則」</h3>
+<p>這不只是一個布林標記。它是整套治理原則（見 <code>roadmap.md §3.4</code>「拒絕為預設、憑證准入」）能否
+落地的<strong>錨點</strong>：</p>
+<ul>
+<li><strong>拒絕為預設</strong>：函式預設是確定性的（<code>nondeterministic</code> 缺席）。要讓一個環節變成「由 LLM 填」，
+得<strong>主動宣告</strong> <code>nondeterministic</code>——舉證責任在「讓 LLM 進來」那邊。</li>
+<li><strong>兩種強度＝兩個 regime</strong>：
+<ul>
+<li><code>nondeterministic: true</code>（<strong>開機期</strong>）：只標記隨機，未認證。允許存在，但帶著「待認證」的技術債。</li>
+<li><code>nondeterministic: {model, test_set, stability}</code>（<strong>成熟期</strong>）：證書。LLM 不是被信任，是被
+<strong>認證</strong>；附「用哪個模型、經哪個測試組、穩定度幾 %」，因此<strong>可稽核、可撤照</strong>（哪天有人想出
+確定性解法，就把這個 LLM 環節踢掉、移除宣告）。</li>
+</ul>
+</li>
+<li><strong>飛輪＝從 <code>true</code> 遷往 <code>{證書}</code>，再遷往「移除宣告」</strong>：把 LLM 環節換成確定性碼（撤照）、或給
+活下來的環節發證書（認證）。這個軸讓「系統現在有幾個隨機點、各自多穩、用什麼擋著」變成
+可查詢的事實。</li>
+</ul>
+<h3>與馴化框架 / 複合慣例的關係（未來工作）</h3>
+<p><code>nondeterministic: true</code> 是 LLM 馴化框架（<code>try_implement/docs/llm_taming_framework.md</code>：契約 /
+確定化 / 驗證 / 聚合 / 編排五層）的<strong>觸發根</strong>：一個函式宣告自己隨機，才有「需要被馴化」的問題。
+馴化的零件（retry_until_valid / vote / best_of / guard …）已在 <code>try_implement/lib/compose.py</code>
+原型化，其作用正是把一個 <code>nondeterministic: true</code> 的環節，收斂到「穩定到足以發 <code>{stability: …}</code>
+證書」。</p>
+<blockquote>
+<p><strong>待議（複合慣例候選）</strong>：是否把「nondeterministic 環節 + 馴化組合子 + 證書簽發」收斂成一條
+具名的<strong>複合規範</strong>（類比「中斷恢復慣例」），定義證書由誰簽發、撤照流程、stability 怎麼量。
+這條會直接連到 <code>roadmap.md §6</code> 的 v0 切片——等 v0 真的跑出一個「笨模型 + 鷹架」的可靠編輯，
+證書該長什麼樣就會被逼出來。在那之前，本軸先把「宣告隨機 + 可帶證書」這個最小骨架立好。</p>
+</blockquote>
+<hr />
+<h2>九軸速查（整合摘要）</h2>
+<table>
+<thead>
+<tr>
+<th>軸</th>
+<th>field（落地處）</th>
+<th>值域 / 預設</th>
+<th>規範範圍</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§1 I/O 型態</td>
+<td><code>entries</code>（拆 §1a 出入口 + §1b 資料形式）</td>
+<td>object；缺席＝單一 stdio entry</td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§2 生命週期</td>
+<td><code>lifecycle</code></td>
+<td><code>&quot;one_shot&quot;</code>（預設）| <code>&quot;persistent&quot;</code></td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§3 跨呼叫狀態</td>
+<td><code>state</code>、<code>state_dirs</code></td>
+<td><code>&quot;stateless&quot;</code>（預設）| <code>&quot;stateful_external&quot;</code></td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§4 資源特性</td>
+<td><code>resources</code></td>
+<td>自由 key-value；預定義 memory/gpu/time/disk/network</td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§5 可中斷性</td>
+<td><code>interruptible</code></td>
+<td>safe/unsafe(預設)/resettable/rollback/resumable/graceful</td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§6 執行保證</td>
+<td><code>guarantee</code>、<code>dry_run</code></td>
+<td>none(預設)&lt;idempotent&lt;transactional；dry_run bool/object</td>
+<td>在規範內</td>
+</tr>
+<tr>
+<td>§7 組合模式</td>
+<td>（無 field）</td>
+<td>—</td>
+<td><strong>不在規範範圍</strong></td>
+</tr>
+<tr>
+<td>§8 環境模式</td>
+<td>（無 field）</td>
+<td>—</td>
+<td><strong>不在規範範圍</strong></td>
+</tr>
+<tr>
+<td>§9 確定性/隨機性</td>
+<td><code>nondeterministic</code></td>
+<td>缺席＝確定性；<code>true</code>＝未認證隨機；<code>{model,test_set,stability}</code>＝證書</td>
+<td>在規範內（第九軸）</td>
+</tr>
+</tbody>
+</table>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_04_data_format.html"><span class="dir">← 上一篇</span><span class="fn">doc_04_data_format</span></a>
+<a class="next" href="doc_06_lib_contract.html"><span class="dir">下一篇 →</span><span class="fn">doc_06_lib_contract</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

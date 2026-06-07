@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai_core 知識庫 · 導覽</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+    --txt:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --accent2:#79c0ff;
+    /* 權威層配色 */
+    --l1:#3fb950; --l2:#58a6ff; --l3:#d29922; --l4:#bc8cff; --l5:#6e7681;
+    /* 分類配色 */
+    --c-note:#f778ba; --c-doc:#58a6ff; --c-code:#3fb950;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px}
+
+  /* Hero */
+  header{
+    padding:48px 0 28px; border-bottom:1px solid var(--border);
+    background:radial-gradient(1200px 400px at 30% -10%, rgba(88,166,255,.10), transparent);
+  }
+  .kicker{color:var(--dim); font-size:13px; letter-spacing:.12em; text-transform:uppercase}
+  h1{margin:.25em 0 .15em; font-size:34px; font-weight:800; letter-spacing:-.01em}
+  .def{
+    margin:18px 0 0; padding:16px 18px; background:var(--panel);
+    border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px;
+    font-size:15.5px; color:#c9d1d9;
+  }
+  .def b{color:var(--accent2)}
+  .stats{display:flex; gap:22px; flex-wrap:wrap; margin-top:18px; color:var(--dim); font-size:13.5px}
+  .stats b{color:var(--txt); font-size:18px; margin-right:4px}
+
+  /* Controls */
+  .controls{position:sticky; top:0; z-index:10; background:rgba(13,17,23,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--border); padding:14px 0}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  #q{flex:1; min-width:200px; background:var(--panel2); border:1px solid var(--border);
+    color:var(--txt); padding:9px 13px; border-radius:8px; font-size:14px; outline:none}
+  #q:focus{border-color:var(--accent)}
+  .chip{cursor:pointer; user-select:none; background:var(--panel2); border:1px solid var(--border);
+    color:var(--dim); padding:6px 12px; border-radius:999px; font-size:13px; transition:.12s}
+  .chip:hover{border-color:var(--accent); color:var(--txt)}
+  .chip.on{color:#fff}
+  .chip.on[data-cat=note]{background:var(--c-note);border-color:var(--c-note)}
+  .chip.on[data-cat=doc]{background:var(--c-doc);border-color:var(--c-doc)}
+  .chip.on[data-cat=code]{background:var(--c-code);border-color:var(--c-code)}
+  .chip.on[data-lvl]{background:#30363d;border-color:#8b949e;color:#fff}
+  .lvl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .grp-label{font-size:12px;color:var(--dim);margin:0 4px 0 8px}
+
+  /* Grid */
+  main{padding:26px 0 60px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:15px 16px; display:flex; flex-direction:column; gap:9px; transition:.14s;
+    border-top:3px solid var(--border);
+  }
+  .card:hover{transform:translateY(-2px); border-color:#484f58; box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .card[data-cat=note]{border-top-color:var(--c-note)}
+  .card[data-cat=doc]{border-top-color:var(--c-doc)}
+  .card[data-cat=code]{border-top-color:var(--c-code)}
+  .card.hide{display:none}
+  .ctop{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .fname{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:14px; font-weight:700}
+  .badge{font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap}
+  .b-note{background:rgba(247,120,186,.15); color:var(--c-note)}
+  .b-doc{background:rgba(88,166,255,.15); color:var(--c-doc)}
+  .b-code{background:rgba(63,185,80,.15); color:var(--c-code)}
+  .lvl{font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; margin-left:auto}
+  .summary{font-size:13.5px; color:#c9d1d9; flex:1}
+  .meta{display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--dim); margin-top:2px}
+  .open{font-size:12.5px; font-weight:600}
+  .empty{text-align:center; color:var(--dim); padding:50px; display:none}
+
+  /* Legend / sections */
+  section.block{margin:34px 0 0; padding-top:26px; border-top:1px solid var(--border)}
+  h2{font-size:20px; margin:0 0 14px}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--dim)}
+  .legend span b{color:var(--txt)}
+  .paths{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px}
+  .path{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 16px}
+  .path h3{margin:0 0 8px; font-size:14.5px; color:var(--accent2)}
+  .path .seq{font-size:13px; color:#c9d1d9}
+  .path .seq code{background:var(--panel2); padding:1px 6px; border-radius:5px;
+    font-family:ui-monospace,monospace; font-size:12px}
+  .path .seq .arr{color:var(--dim); margin:0 4px}
+  details{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:0 16px; margin-top:10px}
+  summary{cursor:pointer; padding:14px 0; font-weight:600; font-size:14.5px}
+  details[open] summary{border-bottom:1px solid var(--border); margin-bottom:12px}
+  details ol{margin:0 0 14px; padding-left:22px}
+  details li{margin:8px 0; font-size:13.5px; color:#c9d1d9}
+  details code{background:var(--panel2); padding:1px 6px; border-radius:5px; font-family:ui-monospace,monospace; font-size:12.5px}
+  footer{border-top:1px solid var(--border); padding:24px 0 50px; color:var(--dim); font-size:12.5px; text-align:center}
+  .note{font-size:12.5px; color:var(--dim); margin-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">ai_core · knowledge_base</div>
+    <h1>知識庫導覽</h1>
+    <div class="def">
+      ai_core = 一個讓 LLM 退縮到<b>「意圖翻譯」</b>與<b>「模糊前沿」</b>兩介面的基底；
+      它以<b>「拒絕為預設、憑證准入」</b>治理 LLM 的領地，並用飛輪持續把模糊地帶固化成確定性程式碼。
+      <div class="note">第一目標問題：<b>程式碼輔助助手</b>（上層聰明模型讀框架生資產＝結構化抽取；下層笨模型在精準標記位置填碼＝受約束生成）。
+      設計哲學：KISS / Lightweight / No wheel-remake / Least dependency。</div>
+    </div>
+    <div class="stats">
+      <span><b>33</b> 個 .md</span>
+      <span><b id="lc">6,587</b> 行</span>
+      <span><b>3</b> 大分類</span>
+      <span><b>5</b> 層權威</span>
+      <span>整合日期 <b>2026-06-07</b> · 無損壓縮</span>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap row">
+    <input id="q" type="search" placeholder="🔍 搜尋檔名或摘要關鍵字…">
+    <span class="grp-label">分類</span>
+    <span class="chip" data-cat="note">note 筆記想法</span>
+    <span class="chip" data-cat="doc">doc 文檔規範</span>
+    <span class="chip" data-cat="code">code 程式成果</span>
+    <span class="grp-label">權威層</span>
+    <span class="chip" data-lvl="1"><span class="lvl-dot" style="background:var(--l1)"></span>① 定案</span>
+    <span class="chip" data-lvl="2"><span class="lvl-dot" style="background:var(--l2)"></span>② 原型</span>
+    <span class="chip" data-lvl="3"><span class="lvl-dot" style="background:var(--l3)"></span>③ 歷史</span>
+    <span class="chip" data-lvl="4"><span class="lvl-dot" style="background:var(--l4)"></span>④ 舊架構</span>
+    <span class="chip" data-lvl="5"><span class="lvl-dot" style="background:var(--l5)"></span>⑤ 舊世系</span>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">沒有符合條件的檔案。</div>
+
+  <section class="block">
+    <h2>建議閱讀路徑</h2>
+    <div class="paths">
+      <div class="path"><h3>① 想懂「為什麼做、做什麼」</h3>
+        <div class="seq"><code>note_01</code><span class="arr">→</span><code>note_06</code><span class="arr">→</span><code>note_02</code></div></div>
+      <div class="path"><h3>② 想懂「規範現況」</h3>
+        <div class="seq"><code>doc_01</code><span class="arr">→</span><code>doc_03</code><span class="arr">→</span><code>doc_05</code><span class="arr">→</span><code>doc_06</code><span class="arr">→</span><code>doc_07</code><span class="arr">→</span><code>doc_08</code></div></div>
+      <div class="path"><h3>③ 想懂「程式做到哪了」</h3>
+        <div class="seq"><code>code_01</code><span class="arr">→</span><code>code_02</code><span class="arr">→</span><code>code_03</code><span class="arr">→</span><code>code_04</code></div></div>
+      <div class="path"><h3>④ 想懂「規劃中的五大元件」</h3>
+        <div class="seq"><code>doc_12</code><span class="arr">·</span><code>doc_13</code><span class="arr">·</span><code>doc_14</code><span class="arr">+</span><code>doc_20</code></div></div>
+      <div class="path"><h3>⑤ 想懂「演化脈絡 / 被放棄的構想」</h3>
+        <div class="seq"><code>note_03</code><span class="arr">→</span><code>note_05</code><span class="arr">→</span><code>note_07</code><span class="arr">→</span><code>note_09</code></div></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>權威 / 新舊分層（衝突裁決序：① &gt; ②/③/④/⑤）</h2>
+    <div class="legend">
+      <span><span class="lvl-dot" style="background:var(--l1)"></span><b>① 最新事實（定案）</b>：判斷「該怎麼做」的尺</span>
+      <span><span class="lvl-dot" style="background:var(--l2)"></span><b>② 原型 / 提案</b>：可跑，多數未扶正成規範</span>
+      <span><span class="lvl-dot" style="background:var(--l3)"></span><b>③ 歷史思考</b>：已被①取代，供溯源</span>
+      <span><span class="lvl-dot" style="background:var(--l4)"></span><b>④ 舊版架構</b>：另一條設計支線（ai-core-* + FastAPI）</span>
+      <span><span class="lvl-dot" style="background:var(--l5)"></span><b>⑤ 舊版世系</b>：git 684082c，已被完全覆蓋</span>
+    </div>
+
+    <details>
+      <summary>⚠️ 整合時發現的衝突與校正（讀內容檔前先知道）</summary>
+      <ol>
+        <li><b>測試數字三套並存（非矛盾，不同範圍）</b>：<code>test_core.py</code>=<b>65</b>、<code>pytest -q</code> 全收集=<b>82</b>、原型煙霧 <code>72+68</code>=<b>140</b>。引用時請註明範圍。</li>
+        <li><b>「八軸」vs「九軸」</b>：roadmap（含使用者原話）仍寫八軸；現行定案為<b>九軸</b>，第九軸 <code>nondeterministic</code> 於 2026-05-26 扶正。現行事實以 <code>doc_05</code> / <code>code_01</code> 為準。</li>
+        <li><b>舊版架構（④）根本沒有「軸」概念</b>：<code>doc_10~17</code> 用扁平 metadata key，且引入 litellm/fastapi 等相依，與現行「零相依」硬約束衝突。</li>
+        <li><b>舊版世系（⑤）的戲劇性反轉</b>：<code>note_07~09</code> 明確<i>拒絕</i>常駐 server / queue / SFC——而這些正是現行<i>規劃中</i>的五大元件。同名 <code>core.py</code> 但與現行 <code>_core.py</code> 無關。</li>
+        <li><b>執行狀態術語落差</b>：other.md 用 one-shot/multi-shot/persistent/singleton 四態；現行 <code>lifecycle</code> 軸只有 <code>one_shot</code>/<code>persistent</code>，<code>state</code> 軸用 <code>stateless</code>/<code>stateful_external</code>。</li>
+        <li><b>早期 <code>register()</code> 語意已漂移</b>：舊版兼做 registry 登記＋CLI dispatch、且「只能呼叫一次」；現行 <code>register()</code> 是純宣告、零副作用、last-write-wins。</li>
+        <li><b>MEMORY.md 索引已過時</b>：仍指向已被覆蓋的 <code>SYSTEM_DESIGN*.md</code> 等；其內容已由 <code>note_07~09</code> 無損保留。</li>
+      </ol>
+    </details>
+    <p class="note">原始檔（roadmap.md / core_nature/ / try_implement/ …）未被更動，仍是各領域正本；本知識庫是整合視圖。完整索引另見 <a href="00_INDEX.html">00_INDEX</a>（或原始 <a href="00_INDEX.md">.md</a>）。</p>
+  </section>
+</main>
+
+<footer class="wrap">
+  ai_core knowledge_base · 無損整合導覽頁 · 點任一卡片開啟對應 .md（瀏覽器將以純文字顯示 Markdown）
+</footer>
+
+<script>
+const DATA = [
+  // note_
+  {f:"note_01_vision_and_origin.md",c:"note",l:1,ln:213,s:"初心、演化鏈、時間維度、終點兩介面、拒絕為預設治理、第一目標、v0 切片；附錄含使用者原話逐字。"},
+  {f:"note_02_metaphors.md",c:"note",l:3,ln:106,s:"兩大隱喻：牢籠與猴子（細線/邊界/纜線/飛輪）、滑坡軌道與球（執行形式的本質）。"},
+  {f:"note_03_cross_environment.md",c:"note",l:3,ln:85,s:"規範本質（對不確定性建模＋引導缺損智能）、跨環境統一管理願景、執行狀態跨環境性。"},
+  {f:"note_04_thinking_layers_model.md",c:"note",l:3,ln:454,s:"早期：HL 基礎設施定位、用途/執行模型分類、OOP 對應、multi-shot 狀態目錄。"},
+  {f:"note_05_thinking_components.md",c:"note",l:3,ln:378,s:"早期元件思考：Routing 家族、SFC Layer 0~4、rma 資源監控、production、pending §1-6。"},
+  {f:"note_06_decisions_and_open_questions.md",c:"note",l:1,ln:168,s:"已收斂決策、A/B/C/D 區待決、候選新軸、roadmap §7 篩子表、§8 七大開放問題。"},
+  {f:"note_07_legacy_system_design.md",c:"note",l:5,ln:394,s:"舊版兩世代：抽象世代（LISP 組合/make_model→bind→take）＋ process 世代（hub/AI 自我擴展）。"},
+  {f:"note_08_legacy_readme_usage_arch.md",c:"note",l:5,ln:217,s:"舊版操作面：hub CLI、--metadata 約定、AI 六步擴展、planner+chain 編排、五條不變式。"},
+  {f:"note_09_legacy_processes_agents.md",c:"note",l:5,ln:119,s:"舊版 44 個 process 全清單（含大宗 go_* Go 輔助）、AGENTS.md tag 分群。"},
+  // doc_
+  {f:"doc_01_nature_overview.md",c:"doc",l:1,ln:27,s:"設計模式本質定位、為何從 terminal 出發、目標平台（部分待填）。"},
+  {f:"doc_02_terminal_model.md",c:"doc",l:1,ln:99,s:"從 terminal 出發的執行模型：命令解析、CLI 慣例、subcommand。"},
+  {f:"doc_03_execution_forms.md",c:"doc",l:1,ln:320,s:"執行形式（§0 九軸表＋各形式＋觸發機制）。"},
+  {f:"doc_04_data_format.md",c:"doc",l:1,ln:32,s:"JSON 為通用格式、argv→JSON 工具。"},
+  {f:"doc_05_axes_metadata.md",c:"doc",l:1,ln:313,s:"九軸完整規範：entries/lifecycle/state/state_dirs/resources/interruptible/guarantee/dry_run/nondeterministic。"},
+  {f:"doc_06_lib_contract.md",c:"doc",l:1,ln:829,s:"library 契約（最長）：register/register_subcommand/register_subcommand_resolver/intercept。"},
+  {f:"doc_07_cli.md",c:"doc",l:1,ln:82,s:"CLI 即 Lisp 函式呼叫（keyword pair→dict）、argparse。"},
+  {f:"doc_08_composite.md",c:"doc",l:1,ln:271,s:"複合慣例：標準狀態目錄（.config/.cache/.state/.data）、中斷恢復（recovery.json）。"},
+  {f:"doc_10_arch_overview.md",c:"doc",l:4,ln:126,s:"設計原則、Singleton Pattern 兩亞型、架構圖、技術選型、四元件表。"},
+  {f:"doc_11_arch_protocol.md",c:"doc",l:4,ln:329,s:"舊版 metadata 協議（io/examples/errors/dependencies/entrydata/server）、--json-errors。"},
+  {f:"doc_12_arch_entry_manager.md",c:"doc",l:4,ln:223,s:"LLM Entry Manager：queue/rate limit/timeout/streaming/token 認證。"},
+  {f:"doc_13_arch_hub.md",c:"doc",l:4,ln:71,s:"Function Hub：one-shot＋server 雙形態、掃描策略、SFC 展開、LLM 摘要自舉。"},
+  {f:"doc_14_arch_author_sfc.md",c:"doc",l:4,ln:121,s:"ai-core-author（generate→dry-run→register）、Small Function Center。"},
+  {f:"doc_15_arch_project_milestones.md",c:"doc",l:4,ln:201,s:"目錄樹、CLI、config.json、里程碑 M0–M6、跨平台。"},
+  {f:"doc_16_arch_agents.md",c:"doc",l:4,ln:122,s:"Agent 整合、AGENTS.md 模板、export 格式、Self-Sufficiency 路徑。"},
+  {f:"doc_17_arch_changelog.md",c:"doc",l:4,ln:31,s:"舊版完整變更紀錄（2026-04-28 ~ 05-18）。"},
+  {f:"doc_20_taming_framework.md",c:"doc",l:2,ln:151,s:"LLM 隨機性馴化五層框架（契約/確定化/驗證/聚合/編排）對應已實作零件。"},
+  {f:"doc_21_composition_dimension.md",c:"doc",l:2,ln:115,s:"組合維度（與軸正交）、軸推導規則、組合 vs 交互、blackboard 交互模型。"},
+  {f:"doc_30_html_dashboard.md",c:"doc",l:4,ln:101,s:"HTML 儀表板（8 頁）的獨特內容：HL 角色對照表、2026-05-25 現況快照、各模組進度標記。"},
+  // code_
+  {f:"code_01_core_library.md",c:"code",l:1,ln:170,s:"src/ai_core/_core.py API、九軸驗證、pyproject、測試覆蓋（test_core.py = 65 passed）。"},
+  {f:"code_02_prototype_tools.md",c:"code",l:2,ln:285,s:"indexer/router/switch/sfc/hub/llm_entry_manager/chain 各工具職責、CLI、狀態。"},
+  {f:"code_03_prototype_lib.md",c:"code",l:2,ln:171,s:"lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta。"},
+  {f:"code_04_prototype_demos_tests.md",c:"code",l:2,ln:108,s:"3 個 demo、兩套煙霧測試（72+68=140 全綠）、範例函式、store seed。"},
+];
+
+const CAT_LABEL={note:"note 筆記想法",doc:"doc 文檔規範",code:"code 程式成果"};
+const LVL_COLOR={1:"var(--l1)",2:"var(--l2)",3:"var(--l3)",4:"var(--l4)",5:"var(--l5)"};
+const LVL_LABEL={1:"① 定案",2:"② 原型",3:"③ 歷史",4:"④ 舊架構",5:"⑤ 舊世系"};
+
+const grid=document.getElementById("grid");
+DATA.forEach(d=>{
+  const a=document.createElement("a");
+  a.href=d.f.replace(/\.md$/,".html"); a.className="card"; a.dataset.cat=d.c; a.dataset.lvl=d.l;
+  a.dataset.text=(d.f+" "+d.s).toLowerCase();
+  a.innerHTML=`
+    <div class="ctop">
+      <span class="badge b-${d.c}">${CAT_LABEL[d.c]}</span>
+      <span class="lvl" style="background:${LVL_COLOR[d.l]}22;color:${LVL_COLOR[d.l]}">${LVL_LABEL[d.l]}</span>
+    </div>
+    <div class="fname">${d.f.replace(/\.md$/,"")}</div>
+    <div class="summary">${d.s}</div>
+    <div class="meta"><span>${d.ln} 行</span><span class="open">開啟 →</span></div>`;
+  grid.appendChild(a);
+});
+
+// 篩選邏輯
+const q=document.getElementById("q");
+const empty=document.getElementById("empty");
+const cats=new Set(), lvls=new Set();
+document.querySelectorAll(".chip").forEach(ch=>{
+  ch.addEventListener("click",()=>{
+    ch.classList.toggle("on");
+    const set=ch.dataset.cat?cats:lvls;
+    const key=ch.dataset.cat||ch.dataset.lvl;
+    ch.classList.contains("on")?set.add(key):set.delete(key);
+    apply();
+  });
+});
+q.addEventListener("input",apply);
+function apply(){
+  const term=q.value.trim().toLowerCase();
+  let shown=0;
+  document.querySelectorAll(".card").forEach(c=>{
+    const okCat=cats.size===0||cats.has(c.dataset.cat);
+    const okLvl=lvls.size===0||lvls.has(c.dataset.lvl);
+    const okTxt=term===""||c.dataset.text.includes(term);
+    const ok=okCat&&okLvl&&okTxt;
+    c.classList.toggle("hide",!ok);
+    if(ok)shown++;
+  });
+  empty.style.display=shown?"none":"block";
+}
+</script>
+</body>
+</html>
