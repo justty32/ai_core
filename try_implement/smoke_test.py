@@ -352,6 +352,49 @@ def test_chain() -> None:
     check("chain derive 複合 guarantee=none（最弱）", derived["guarantee"] == "none", str(derived))
 
 
+# ---------------------------------------------------------------------------
+# 8. idea：點子捕捉軌的 LLM 工具（bind → entry manager → backend 全鏈）
+# ---------------------------------------------------------------------------
+
+def test_idea() -> None:
+    idea = [PY, str(TOOLS / "idea.py")]
+
+    # metadata 契約：頂層 one_shot；LLM 子命令宣告第九軸；ingest 為 stateful_external
+    meta = json.loads(run(idea + ["--metadata"]).stdout)
+    check("idea metadata = one_shot", meta.get("lifecycle") == "one_shot", str(meta))
+    clean_meta = json.loads(run(idea + ["clean", "--metadata"]).stdout)
+    check("idea clean 宣告第九軸 nondeterministic=true",
+          clean_meta.get("nondeterministic") is True, str(clean_meta))
+    ingest_meta = json.loads(run(idea + ["ingest", "--metadata"]).stdout)
+    check("idea ingest = stateful_external",
+          ingest_meta.get("state") == "stateful_external", str(ingest_meta))
+
+    # 純 filter 全鏈（預設經 entry manager；無 env → EchoBackend）：echo backend 會回顯
+    proc = run(idea + ["clean"], stdin="一些 點子")
+    check("idea clean 經 entry manager 全鏈跑通（EchoBackend 回顯）",
+          proc.returncode == 0 and "一些 點子" in proc.stdout, repr(proc.stdout))
+    proc = run(idea + ["clean", "--direct"], stdin="直接路由")
+    check("idea clean --direct 跳過 entry manager 也跑通",
+          proc.returncode == 0 and "直接路由" in proc.stdout, repr(proc.stdout))
+
+    # ingest：raw 必須逐字（不經 LLM、無 echo 前綴），cleaned/notes 須產出
+    with tempfile.TemporaryDirectory() as d:
+        proc = run(idea + ["ingest", "--slug", "t", "--ideas-dir", d], stdin="逐字保留測試")
+        out = json.loads(proc.stdout)
+        raw_txt = Path(out["raw"]).read_text(encoding="utf-8")
+        check("idea ingest raw 逐字保留（不經 LLM，無 echo 前綴）",
+              "逐字保留測試" in raw_txt and "echo:" not in raw_txt, raw_txt)
+        check("idea ingest 產出 cleaned 與 notes",
+              Path(out["cleaned"]).exists() and Path(out["notes"]).exists(), str(out))
+
+    # entry manager 新增的 CLI provider 覆寫 flag：--provider echo 跑一次 complete 仍通
+    req = json.dumps({"cmd": "complete", "prompt": "hi"}) + "\n"
+    proc = run([PY, str(TOOLS / "llm_entry_manager.py"), "--provider", "echo"], stdin=req)
+    resp = json.loads(proc.stdout.splitlines()[0])
+    check("entry_manager --provider echo 覆寫 flag 跑通 complete",
+          resp.get("ok") and "echo:" in resp.get("text", ""), str(resp))
+
+
 def main() -> int:
     print("=== try_implement 煙霧測試開始 ===\n")
     test_metadata_contract()
@@ -362,6 +405,7 @@ def main() -> int:
     test_hub()
     test_entry_manager()
     test_chain()
+    test_idea()
     print(f"\n=== 全部通過：{_passed} 項斷言 ===")
     return 0
 

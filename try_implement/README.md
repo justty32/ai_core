@@ -18,7 +18,7 @@
    組合維度**（compose）。
 3. **概念拓展文件**（`docs/`）：多函數交互、LLM 隨機性馴化框架。
 
-兩套煙霧測試合計 **140 項斷言全綠**（`smoke_test.py` 72 + `lib_smoke_test.py` 68），外加三個可跑 demo。
+兩套煙霧測試合計 **156 項斷言全綠**（`smoke_test.py` 80 + `lib_smoke_test.py` 76），外加三個可跑 demo。
 
 > 📋 **回來先讀 [`DECISIONS.md`](DECISIONS.md)** —— 把這裡所有「回饋規範」的發現收斂成一頁
 > 決策清單（每項標「待你決定 X 還是 Y」），是對你細調 `core_nature/` 規範最直接有用的入口。
@@ -35,7 +35,8 @@
 | `tools/sfc.py` | **SFC（Small Function Center）**。Layer 0（store）/ 1a（intake）/ 1b（router）/ 2（forge server）/ **3（動態 add/remove/persist）/ 4（shell-kind timeout + 標準錯誤封套）**。git-style subcommand CLI。**已改接真 `ai_core`（宣告/攔截拆分，`import ai_core as meta`）解 Gap A/B/F；forge dispatch 已 trace-aware。** |
 | ~~`tools/meta_core.py`~~ | **已刪除（2026-05-26）**。其「放寬攔截 + `register_subcommand` + resolver」已扶正進 `src/ai_core/_core.py`，原型功成身退。 |
 | `tools/hub.py` | **Function Hub**（規範未定，本版自定義）。掃描函式 → 轉成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。 |
-| `tools/llm_entry_manager.py` | **LLM Entry Manager**（CLAUDE.md 元件 1）。singleton 資源 = persistent server（lib/server）+ consume rate（lib/singleton）+ mock backend（lib/llm_call）。 |
+| `tools/llm_entry_manager.py` | **LLM Entry Manager**（CLAUDE.md 元件 1）。singleton 資源 = persistent server（lib/server）+ consume rate（lib/singleton）+ backend。**backend 改由 `backend_from_env()` 依環境變數挑**（真 OpenAI/Anthropic 或 EchoBackend fallback），`--provider/--model/--base-url` 可覆寫。 |
+| `tools/idea.py` | **點子捕捉軌的 LLM 工具**（把 `/intake /critique /expand` 的「派 agent」換成「打 API」）。git-style 子命令 `clean/notes/critique/expand`（純 filter）＋ `ingest`（口述一條龍寫檔）。預設經 **LLM Entry Manager** 路由（`--direct` 跳過），串起 bind→entry manager→真 backend→API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。 |
 | `tools/chain.py` | **chain**（組合維度的 CLI）。用 JSON 宣告 pipeline，stdin 依序流過各 stage；`--derive` 用 compose_meta 從各 stage 的 `--metadata` 推導複合 metadata。串起 call+compose+trace+compose_meta。 |
 | `tools/_common.py` | 共用小工具：把 `src/`（`import ai_core`）與 try_implement 根（`from lib import ...`）加進 `sys.path`。 |
 | `funcs/upper.py` | 範例「函式」：轉大寫。用 `ai_core.register()` 宣告 metadata。 |
@@ -58,7 +59,7 @@
 | `lib/singleton.py` | thinking_pending §4 | singleton 資源：RateMeter（多維 consume）+ RequestQueue（enqueue/dequeue/cancel）+ SingletonResource。 |
 | `lib/trace.py` | thinking_pending §5 | 調用鏈：結構化 stderr log + trace id 經 env 傳遞 + Collector 重建調用樹。 |
 | `lib/call.py` | thinking_pending §6 / thinking_oop | 跨邊界統一呼叫：InProcess / Subprocess / Http 同一個 `call(text)->text`。 |
-| `lib/llm_call.py` | CLAUDE.md 元件 2 | `llm_call(str)->str` 基底 + `bind()` context packing；可插拔 backend（預設 mock）。 |
+| `lib/llm_call.py` | CLAUDE.md 元件 2 | `llm_call(str)->str` 基底 + `bind()` context packing；可插拔 backend。**真 backend 已實作**：`OpenAIBackend`（`/chat/completions`，吃本地 ollama/llama.cpp/vLLM/OpenRouter）、`AnthropicBackend`（`/v1/messages`），都走 `lib/call.Http`（urllib，零相依）；`backend_from_env()` 依環境變數挑，預設 EchoBackend。 |
 | `lib/compose.py` | **八軸之外的組合維度** | 多函數合作組合子：pipe / fanout / route / decompose + 馴化隨機性的 retry_until_valid / vote / best_of / guard。 |
 | `lib/interact.py` | **多函數交互**（組合維度的「來回」版） | 黑板 driver（`run`）+ actor_critic（LLM-as-judge）+ debate；`max_rounds` 強制安全閥防無限互踢。 |
 | `lib/compose_meta.py` | **組合的軸推導規則**（候選新概念） | `MetaFn` + `mpipe`/`mfanout_reduce`：從成員八軸推導複合函式 metadata（guarantee 取最弱、state/dirs 聯集、persistent 相依、fanout 寫衝突偵測）；`mretry` 強制 idempotent 前置契約。 |
@@ -84,9 +85,9 @@
 ```bash
 cd try_implement
 
-# 兩套煙霧測試（合計 140 斷言）
-python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager（72）
-python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta（68）
+# 兩套煙霧測試（合計 156 斷言）
+python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager/idea（80）
+python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta + 真 backend round-trip（76）
 
 # --- 各工具單獨玩 ---
 
@@ -139,6 +140,16 @@ printf '%s\n%s\n%s\n' \
 # chain：宣告式管線（組合維度的 CLI）
 echo hi | python3 tools/chain.py --spec chain_demo.json   # upper→reverse → IH
 python3 tools/chain.py --spec chain_demo.json --derive    # 從各 stage --metadata 推導複合 metadata
+
+# idea：點子捕捉軌的 LLM 工具（預設經 entry manager；未設 env → EchoBackend 回顯）
+echo "一些 點子"   | python3 tools/idea.py clean            # WF2 初步整理（純 filter）
+echo "整理後內容" | python3 tools/idea.py notes             # WF3 匯總筆記
+echo "某點子"     | python3 tools/idea.py critique --direct  # WF4 找漏洞（--direct 跳過 entry manager）
+echo "口述原文"   | python3 tools/idea.py ingest --slug demo  # 一條龍：raw 逐字 + cleaned + notes 寫檔
+python3 tools/idea.py clean --metadata                      # → nondeterministic:true（第九軸）
+
+# 接真 LLM：設環境變數後上面每個子命令就打真 API（工具/bind 程式碼完全不改）
+#   export AI_CORE_LLM_PROVIDER=openai AI_CORE_LLM_BASE_URL=http://localhost:11434/v1 AI_CORE_LLM_MODEL=llama3
 ```
 
 `forge --metadata` 現在會回 `persistent`、頂層 `sfc --metadata` 回 `one_shot`
@@ -331,6 +342,22 @@ import 就無副作用了。`hub.py` 因此能安全重用。
 明確：register 的副作用（讀 argv、攔截、佔旗標）應延遲到「確定以腳本身分執行」時——
 例如只在 `__main__` 才 register，或 library 提供 lazy 模式。這與 Gap A/B 同源（都是
 register 的 import-time 副作用問題）。
+
+### G. one-shot 工具經由 entry manager 時，consume rate 無法跨呼叫累計（idea 暴露）
+
+`idea` 工具預設經 LLM Entry Manager 路由（尊重「LLM 是 singleton 資源、集中守 consume
+rate」立場），但每次 completion 都**新開一個 entry manager process**（`EntryManagerBackend`
+用 `lib/call.Subprocess` 餵一行 NDJSON）。於是 entry manager 的 `RateMeter` 每次都從零開始，
+**逐次呼叫**而非跨呼叫累計——token/金錢上限形同虛設。
+
+**根因**：entry manager 是 persistent server，但對外只有 stdin/stdout NDJSON 傳輸；一個
+長駐 server 無法被多個獨立的 one-shot process 連上同一個。這正是 §4「forge server 對外
+介面」與 lib/server「stdin/stdout 暫定、保留升 HTTP」備註所標的同一個懸案的具體後果。
+
+**回報**：要讓 consume rate 真正集中，entry manager 需要 stdin/stdout 以外的長駐傳輸
+（Unix socket / HTTP / 具名管道），讓 one-shot 工具連上同一個常駐單例。建議把「persistent
+singleton 如何被多個 one-shot caller 共用」列為規範議題——這牽涉 lifecycle 軸（persistent）
+與「函式互相呼叫」的交會，是 v0 真接小模型後會立刻撞到的。
 
 ---
 

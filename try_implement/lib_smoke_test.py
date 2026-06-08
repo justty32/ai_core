@@ -232,6 +232,61 @@ def test_llm_call() -> None:
     check("bind 疊 system 進 prompt", "professor of coding" in out, out)
     check("bind 疊 postprocess 後綴", out.endswith("-- at 20240505"), out)
 
+    # 真 backend（OpenAI 相容 / Anthropic）：對本地 stub server round-trip，
+    # 驗 payload 組裝與回應解析正確（不需真 API）。
+    captured: dict = {}
+
+    def _serve(handler_cls):
+        httpd = HTTPServer(("127.0.0.1", 0), handler_cls)
+        threading.Thread(target=httpd.handle_request, daemon=True).start()
+        return httpd, httpd.server_address[1]
+
+    class OpenAIStub(BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            captured["openai"] = json.loads(self.rfile.read(n))
+            captured["openai_auth"] = self.headers.get("Authorization")
+            body = json.dumps({"choices": [{"message": {"content": "OA-回覆"}}]}).encode()
+            self.send_response(200); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+
+    httpd, port = _serve(OpenAIStub)
+    oa = llm_call.OpenAIBackend(f"http://127.0.0.1:{port}/v1", "m", api_key="k")
+    check("OpenAIBackend 解析 choices[].message.content", oa.complete("問題") == "OA-回覆")
+    check("OpenAIBackend payload 帶 model+messages",
+          captured["openai"]["model"] == "m"
+          and captured["openai"]["messages"][0]["content"] == "問題", str(captured["openai"]))
+    check("OpenAIBackend 帶 Bearer 授權頭", captured["openai_auth"] == "Bearer k")
+    httpd.server_close()
+
+    class AnthropicStub(BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            captured["anthropic"] = json.loads(self.rfile.read(n))
+            captured["anthropic_key"] = self.headers.get("x-api-key")
+            captured["anthropic_ver"] = self.headers.get("anthropic-version")
+            body = json.dumps({"content": [{"type": "text", "text": "AN-"},
+                                           {"type": "text", "text": "回覆"}]}).encode()
+            self.send_response(200); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+
+    httpd, port = _serve(AnthropicStub)
+    an = llm_call.AnthropicBackend(f"http://127.0.0.1:{port}", "claude-x", api_key="kk")
+    check("AnthropicBackend 串接 text block", an.complete("問題") == "AN-回覆")
+    check("AnthropicBackend payload 帶 max_tokens", "max_tokens" in captured["anthropic"],
+          str(captured["anthropic"]))
+    check("AnthropicBackend 帶 x-api-key 與 anthropic-version",
+          captured["anthropic_key"] == "kk" and captured["anthropic_ver"], str(captured))
+    httpd.server_close()
+
+    # backend_from_env：未設定 → EchoBackend；指定 openai → OpenAIBackend
+    check("backend_from_env 未設定回 EchoBackend",
+          isinstance(llm_call.backend_from_env({}), llm_call.EchoBackend))
+    be = llm_call.backend_from_env({"AI_CORE_LLM_PROVIDER": "openai",
+                                    "AI_CORE_LLM_BASE_URL": "http://x/v1",
+                                    "AI_CORE_LLM_MODEL": "m"})
+    check("backend_from_env openai → OpenAIBackend", isinstance(be, llm_call.OpenAIBackend))
+
 
 # --------------------------------------------------------------------------
 # compose（多函數組合 + 馴化隨機性）
