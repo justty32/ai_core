@@ -68,8 +68,20 @@ ai_core/
 │   └── lib_smoke_test.py   #   68 項斷言
 ├── funcs/                  # 範例函式（echo.sh …）
 ├── progress.md             # 接續上次工作的 resume 指標
+├── .claude/commands/       # 循環工作的專屬 slash command（見下「工作流 slash command」）
 └── pyproject.toml          # hatchling 打包；無 runtime 相依
 ```
+
+## 工作流 Slash Command（`.claude/commands/`）
+
+把本 repo 的循環工作拆成專屬 slash command，打一句即「變身」該模式。指令只是模式切換與重點摘要，**權威來源仍是本檔與對應文件**。
+
+| 指令 | 用途 | 權威來源 |
+|------|------|---------|
+| `/resume` | 接續工作：依固定閱讀順序重建上下文、給下一步 | 本檔「接續工作的閱讀順序」、`roadmap.md`、`progress.md` |
+| `/test` | 跑全部測試（pytest + 兩個 smoke test）並回報 | 本檔「建置／測試指令」 |
+| `/spec` | 規範扶正：把 `try_implement/` 提案收斂進 `core_nature/` 與 `_core.py` | `DECISIONS.md`、`core_nature/` |
+| `/proto` | 原型探索：在 `try_implement/` 先寫出來跑跑看、暴露設計缺口 | `try_implement/README.md` |
 
 ## 建置 / 測試指令
 
