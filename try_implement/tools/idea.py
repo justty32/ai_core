@@ -37,8 +37,11 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import re
+import socket
 import sys
+import time
 from pathlib import Path
 
 from _common import ensure_ai_core_importable, ensure_lib_importable, repo_root
@@ -92,41 +95,73 @@ _LLM_SUBMETA = {"lifecycle": "one_shot", "state": "stateless", "nondeterministic
 class EntryManagerBackend(llm_call.Backend):
     """把 completion 經由 LLM Entry Manager（元件 1）打出去，而非直接呼叫 backend。
 
-    用 lib/call.Subprocess 開一個 entry manager process，餵一行 NDJSON `complete` 請求、
-    收一行回應。entry manager 自己會做 consume-rate 守門、再轉給真 backend。
-    這就是「LLM 是 singleton 資源、集中經由統一入口」立場的落地。
+    entry manager 自己會做 consume-rate 守門、再轉給真 backend——這就是「LLM 是 singleton
+    資源、集中經由統一入口」立場的落地。兩種連線模式：
 
-    ⚠️ 已知限制（試驗田暴露的設計缺口）：每次 completion 都新開一個 entry manager process，
-    故 consume rate 是**逐次呼叫**的、不跨呼叫累計。要真正集中限額需讓 entry manager 以
-    長駐 server 存在、由各工具連上同一個——這需要 stdin/stdout 以外的傳輸層（見 README §4
-    與 lib/server 的「stdin/stdout 暫定、保留升 HTTP」備註）。
+    - **socket 模式**（給 socket_path）：連上一個**長駐** entry manager（`--socket` 啟動的
+      Unix socket server）。多個 one-shot `idea` 連同一個 server → **consume rate 跨呼叫
+      累計**。這是 README「Gap G」的解法。
+    - **subprocess 模式**（不給 socket_path）：每次 completion 新開一個 entry manager
+      process 餵一行 NDJSON。零設定即可跑，但 consume rate 是逐次呼叫、不累計（fallback）。
     """
 
-    def __init__(self, limit_token: float | None = None):
+    def __init__(self, socket_path: str | None = None, limit_token: float | None = None):
+        self.socket_path = socket_path
         self.limit_token = limit_token
 
     def complete(self, prompt: str, **opts: object) -> str:
+        line = json.dumps({"cmd": "complete", "prompt": prompt, "opts": opts},
+                          ensure_ascii=False)
+        if self.socket_path:
+            return self._via_socket(line)
+        return self._via_subprocess(line)
+
+    def _via_socket(self, line: str) -> str:
+        last_err: Exception | None = None
+        for _ in range(20):  # daemon 可能剛啟動，短重試
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                c.connect(self.socket_path)
+            except OSError as exc:
+                c.close()
+                last_err = exc
+                time.sleep(0.05)
+                continue
+            try:
+                c.sendall((line + "\n").encode("utf-8"))
+                resp_line = c.makefile("r", encoding="utf-8").readline()
+            finally:
+                c.close()
+            return self._parse(resp_line)
+        raise RuntimeError(f"連不上 entry manager socket {self.socket_path!r}：{last_err}")
+
+    def _via_subprocess(self, line: str) -> str:
         cmd = [PY, EM_PATH]
         if self.limit_token is not None:
             cmd += ["--limit-token", str(self.limit_token)]
-        line = json.dumps({"cmd": "complete", "prompt": prompt, "opts": opts},
-                          ensure_ascii=False)
         out = call.Subprocess(cmd).call(line + "\n")
         for raw in out.splitlines():
-            raw = raw.strip()
-            if not raw:
-                continue
-            resp = json.loads(raw)
-            if resp.get("ok") is False:
-                raise RuntimeError(f"entry manager 拒絕：{resp.get('error')}")
-            if "text" in resp:
-                return resp["text"]
+            if raw.strip():
+                return self._parse(raw)
         raise RuntimeError(f"entry manager 無有效回應：{out!r}")
 
+    @staticmethod
+    def _parse(raw: str) -> str:
+        resp = json.loads(raw)
+        if resp.get("ok") is False:
+            raise RuntimeError(f"entry manager 拒絕：{resp.get('error')}")
+        if "text" in resp:
+            return resp["text"]
+        raise RuntimeError(f"entry manager 回應無 text：{raw!r}")
 
-def _stage_fn(stage: str, *, direct: bool, limit_token: float | None):
+
+def _stage_fn(stage: str, *, direct: bool, limit_token: float | None,
+              socket_path: str | None):
     """產出某階段的 ``f(str)->str``：bind 疊 system prompt + 選擇 backend 路由。"""
-    backend = llm_call.backend_from_env() if direct else EntryManagerBackend(limit_token)
+    if direct:
+        backend: llm_call.Backend = llm_call.backend_from_env()
+    else:
+        backend = EntryManagerBackend(socket_path=socket_path, limit_token=limit_token)
     return llm_call.bind(system=PROMPTS[stage], backend=backend)
 
 
@@ -169,8 +204,10 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     full_raw = raw_p.read_text(encoding="utf-8")
 
     # WF2/WF3：整份刷新（過 LLM）
-    clean = _stage_fn("clean", direct=args.direct, limit_token=args.limit_token)
-    notes = _stage_fn("notes", direct=args.direct, limit_token=args.limit_token)
+    clean = _stage_fn("clean", direct=args.direct, limit_token=args.limit_token,
+                      socket_path=args.socket)
+    notes = _stage_fn("notes", direct=args.direct, limit_token=args.limit_token,
+                      socket_path=args.socket)
     cleaned_text = clean(full_raw)
     cleaned_p.write_text(f"> 初步整理自 ideas/raw/{fname}\n\n{cleaned_text}\n", encoding="utf-8")
     notes_text = notes(cleaned_text)
@@ -193,7 +230,8 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 
 def cmd_filter(stage: str, args: argparse.Namespace) -> int:
     """純 filter 子命令：stdin → LLM(stage) → stdout。"""
-    fn = _stage_fn(stage, direct=args.direct, limit_token=args.limit_token)
+    fn = _stage_fn(stage, direct=args.direct, limit_token=args.limit_token,
+                   socket_path=args.socket)
     sys.stdout.write(fn(sys.stdin.read()))
     return 0
 
@@ -215,7 +253,10 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--direct", action="store_true",
                     help="跳過 LLM Entry Manager，直接呼叫 backend（測試/不需 rate 管理時）")
     sp.add_argument("--limit-token", type=float, default=None,
-                    help="經由 entry manager 時的逐次 token 上限")
+                    help="subprocess 模式下的逐次 token 上限（socket 模式由 daemon 自己設）")
+    sp.add_argument("--socket", default=os.environ.get("AI_CORE_LLM_SOCKET"),
+                    help="連上長駐 entry manager 的 Unix socket 路徑（讓 consume rate 跨呼叫"
+                         "累計）；預設取環境變數 AI_CORE_LLM_SOCKET")
 
 
 def main(argv: list[str] | None = None) -> int:

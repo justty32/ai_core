@@ -16,6 +16,7 @@ export AI_CORE_LLM_PROVIDER=openai   # 或 anthropic
 export AI_CORE_LLM_BASE_URL=...
 export AI_CORE_LLM_MODEL=...
 ```
+（選用）要讓 consume rate 跨呼叫累計：先起 `llm_entry_manager.py --socket /tmp/ai_core_llm.sock &`，再 `export AI_CORE_LLM_SOCKET=/tmp/ai_core_llm.sock`，`idea` 會自動連上同一個 daemon。
 
 ## 怎麼做（shell out 給 idea 工具）
 先 `date +%Y%m%d-%H%M` 取時間戳，把選定的 notes 檔 pipe 進 `idea expand`，輸出落到 `ideas/brainstorm/`：

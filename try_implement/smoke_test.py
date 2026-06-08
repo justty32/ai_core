@@ -395,6 +395,53 @@ def test_idea() -> None:
           resp.get("ok") and "echo:" in resp.get("text", ""), str(resp))
 
 
+def test_idea_socket() -> None:
+    """Gap G 修復：長駐 socket entry manager，多個 one-shot idea 連同一個 → rate 累計。"""
+    import socket
+    import time
+
+    idea = [PY, str(TOOLS / "idea.py")]
+    sock = str(Path(tempfile.mkdtemp()) / "em.sock")
+    daemon = subprocess.Popen(
+        [PY, str(TOOLS / "llm_entry_manager.py"), "--socket", sock],
+        cwd=str(HERE), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        for _ in range(200):  # 等 daemon 建好 socket
+            if os.path.exists(sock):
+                break
+            time.sleep(0.01)
+        check("entry_manager --socket 啟動並建立 socket 檔", os.path.exists(sock), sock)
+
+        def usage():
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.connect(sock)
+            c.sendall(b'{"cmd":"usage"}\n')
+            line = c.makefile("r", encoding="utf-8").readline()
+            c.close()
+            return json.loads(line)["usage"].get("token", 0)
+
+        env = dict(os.environ, AI_CORE_LLM_SOCKET=sock)
+        run(idea + ["clean"], stdin="第一筆口述", env=env)
+        u1 = usage()
+        run(idea + ["clean"], stdin="第二筆口述", env=env)
+        u2 = usage()
+        check("idea 經長駐 socket entry manager → consume rate 跨呼叫累計（Gap G 修復）",
+              u2 > u1 > 0, f"u1={u1} u2={u2}")
+    finally:
+        try:
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.connect(sock)
+            c.sendall(b'{"cmd":"shutdown"}\n')
+            c.close()
+        except OSError:
+            pass
+        try:
+            daemon.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            daemon.kill()
+
+
 def main() -> int:
     print("=== try_implement 煙霧測試開始 ===\n")
     test_metadata_contract()
@@ -406,6 +453,7 @@ def main() -> int:
     test_entry_manager()
     test_chain()
     test_idea()
+    test_idea_socket()
     print(f"\n=== 全部通過：{_passed} 項斷言 ===")
     return 0
 

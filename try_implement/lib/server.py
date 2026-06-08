@@ -94,13 +94,25 @@ class NDJSONServer:
         except Exception as exc:  # noqa: BLE001
             return ({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, False)
 
+    def _process_line(self, line: str) -> tuple[str | None, bool]:
+        """處理一行：回 (要寫回的 JSON 字串或 None, 是否該停)。空行回 (None, False)。"""
+        line = line.strip()
+        if not line:
+            return (None, False)
+        try:
+            req = json.loads(line)
+        except json.JSONDecodeError as exc:
+            return (json.dumps({"ok": False, "error": f"bad json: {exc}"}), False)
+        resp, stop = self._dispatch(req)
+        return (json.dumps(resp, ensure_ascii=False), stop)
+
     def serve(
         self,
         stdin: Iterable[str] | None = None,
         stdout: TextIO | None = None,
         stderr: TextIO | None = None,
     ) -> int:
-        """跑完整 lifecycle。stdin 為可迭代的行來源（預設 sys.stdin）。"""
+        """跑完整 lifecycle（stdin/stdout 傳輸）。stdin 為可迭代的行來源（預設 sys.stdin）。"""
         stdin = sys.stdin if stdin is None else stdin
         out = sys.stdout if stdout is None else stdout
         err = sys.stderr if stderr is None else stderr
@@ -110,22 +122,70 @@ class NDJSONServer:
         self._ready_signal(err)
 
         for line in stdin:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                req = json.loads(line)
-            except json.JSONDecodeError as exc:
-                out.write(json.dumps({"ok": False, "error": f"bad json: {exc}"}) + "\n")
+            payload, stop = self._process_line(line)
+            if payload is not None:
+                out.write(payload + "\n")
                 out.flush()
-                continue
-            resp, stop = self._dispatch(req)
-            out.write(json.dumps(resp, ensure_ascii=False) + "\n")
-            out.flush()
             if stop:
                 break
 
         if self._on_shutdown:
             self._on_shutdown()
         print(f"[{self.name}] shutdown", file=err)
+        return 0
+
+    def serve_socket(self, socket_path: str, stderr: TextIO | None = None) -> int:
+        """跑完整 lifecycle（Unix domain socket 傳輸）——**長駐單例**版。
+
+        與 serve() 的關鍵差別：多個獨立的 one-shot caller 可**連上同一個 server 實例**，
+        共用同一份 handler 閉包狀態（如 LLM Entry Manager 的 RateMeter）→ consume rate
+        能**跨呼叫累計**。這正是 stdin/stdout 傳輸做不到、而 README「Gap G」要解的點。
+
+        語意上仍是 singleton（一次處理一個 caller）：serial accept，handler 完一個連線
+        才接下一個，不開 thread。單一連線內可送多行請求；連線 EOF 只結束**該連線**，
+        唯有收到 `shutdown` 指令才停掉整個 server（並清掉 socket 檔）。
+        Unix socket 純標準庫、POSIX 原生、免 port 管理（Windows 不在考慮範圍）。
+        """
+        import os
+        import socket as _socket
+
+        err = sys.stderr if stderr is None else stderr
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)  # 清掉殘留的 stale socket
+
+        srv = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+        srv.bind(socket_path)
+        srv.listen(1)  # singleton：一次一個
+
+        if self._on_start:
+            self._on_start()
+        print(
+            f"[{self.name}] ready（unix socket {socket_path}）："
+            f"{len(self._handlers)} handlers {sorted(self._handlers)}",
+            file=err,
+        )
+        err.flush()
+
+        stop_all = False
+        try:
+            while not stop_all:
+                conn, _ = srv.accept()
+                with conn:
+                    rf = conn.makefile("r", encoding="utf-8")
+                    wf = conn.makefile("w", encoding="utf-8")
+                    for line in rf:
+                        payload, stop = self._process_line(line)
+                        if payload is not None:
+                            wf.write(payload + "\n")
+                            wf.flush()
+                        if stop:
+                            stop_all = True
+                            break
+        finally:
+            srv.close()
+            if os.path.exists(socket_path):
+                os.unlink(socket_path)
+            if self._on_shutdown:
+                self._on_shutdown()
+            print(f"[{self.name}] shutdown", file=err)
         return 0

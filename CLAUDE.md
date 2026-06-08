@@ -64,8 +64,8 @@ ai_core/
 │   ├── tools/              #   indexer/router/switch/sfc/hub/llm_entry_manager/chain/idea
 │   ├── lib/                #   複合規範參考實作 + 基礎設施 + llm_call
 │   ├── demos/              #   3 個可跑 demo
-│   ├── smoke_test.py       #   80 項斷言
-│   └── lib_smoke_test.py   #   76 項斷言
+│   ├── smoke_test.py       #   82 項斷言
+│   └── lib_smoke_test.py   #   78 項斷言
 ├── funcs/                  # 範例函式（echo.sh …）
 ├── progress.md             # 接續上次工作的 resume 指標
 ├── ideas/                  # 點子捕捉／頭腦風暴軌（intake/critique/expand 產物，借自 TTemp）
@@ -101,8 +101,8 @@ ai_core/
 .venv/bin/python -m pytest -q                 # 目前 82 passed
 
 # 跑原型煙霧測試（不需 pytest，純標準庫）
-.venv/bin/python try_implement/smoke_test.py      # 80 項斷言
-.venv/bin/python try_implement/lib_smoke_test.py  # 76 項斷言
+.venv/bin/python try_implement/smoke_test.py      # 82 項斷言
+.venv/bin/python try_implement/lib_smoke_test.py  # 78 項斷言
 
 # 跑原型工具（範例）
 .venv/bin/python try_implement/tools/hub.py --metadata
@@ -130,7 +130,7 @@ ai_core/
 
 概念定義見 `roadmap.md` 與下列原型，狀態如下：
 
-1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm / OpenRouter）。LLM 是**單例資源**（一次一請求）→ 佇列模式；集中管理 **consume rate**（token / 金錢 / 本地 GPU）。原型：`try_implement/tools/llm_entry_manager.py`。**backend 已改由 `backend_from_env()` 依環境變數挑真 LLM**（CLI `--provider/--model/--base-url` 可覆寫）。⚠️ 已知缺口：one-shot 工具經它路由時 consume rate 無法跨呼叫累計（需 stdin/stdout 以外的長駐傳輸，見 `try_implement/README.md` Gap G）。
+1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm / OpenRouter）。LLM 是**單例資源**（一次一請求）→ 佇列模式；集中管理 **consume rate**（token / 金錢 / 本地 GPU）。原型：`try_implement/tools/llm_entry_manager.py`。**backend 已改由 `backend_from_env()` 依環境變數挑真 LLM**（CLI `--provider/--model/--base-url` 可覆寫）。**`--socket <path>` 可長駐成 Unix socket daemon**：多個 one-shot caller 連同一個、共用 RateMeter → consume rate 跨呼叫累計（已修 Gap G；底層為 `lib/server.serve_socket`）。
 2. **LLM Calling Packing** — 把 `llm_call(string)->string` 疊 context binding 與 post-processing 成具語意函式。原型：`try_implement/lib/llm_call.py`。**真 backend 已實作**：`OpenAIBackend`（OpenAI 相容 `/chat/completions`，吃本地 ollama/llama.cpp/vLLM/OpenRouter）、`AnthropicBackend`（`/v1/messages`），都走 `lib/call.Http`（urllib，零相依）。
 
 > **點子捕捉軌的 dogfood（2026-06-08）**：`try_implement/tools/idea.py` 把 `/intake /critique /expand` 的「派 Claude Code agent」換成「打真 API」——子命令 `clean/notes/critique/expand`（純 filter）＋ `ingest`（口述一條龍），預設經元件 1 entry manager 路由，串起 `bind`（元件2）→ entry manager（元件1）→ 真 backend → API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。這是 roadmap「廉價小模型消費者」的第一個真實串接。

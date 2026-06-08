@@ -95,6 +95,9 @@ def main() -> int:
                    help="覆寫 AI_CORE_LLM_PROVIDER（openai|anthropic|echo）")
     p.add_argument("--model", default=None, help="覆寫 AI_CORE_LLM_MODEL")
     p.add_argument("--base-url", default=None, help="覆寫 AI_CORE_LLM_BASE_URL")
+    p.add_argument("--socket", default=None,
+                   help="以長駐 Unix socket server 監聽此路徑（多個 one-shot caller 連同一個 → "
+                        "consume rate 跨呼叫累計）；省略則用 stdin/stdout 一次性模式")
     args = p.parse_args()
 
     # backend 由環境變數決定（元件 1「統一 LLM 呼叫入口」把 provider 選擇集中在環境）；
@@ -108,6 +111,8 @@ def main() -> int:
         env["AI_CORE_LLM_BASE_URL"] = args.base_url
     backend = llm_call.backend_from_env(env)
     srv = build_server(args.limit_token, backend)
+    if args.socket:
+        return srv.serve_socket(args.socket)
     return srv.serve()
 
 

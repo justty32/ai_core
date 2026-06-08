@@ -36,6 +36,12 @@ export AI_CORE_LLM_MODEL=<模型名>
 # export AI_CORE_LLM_API_KEY=<金鑰>         # 本地模型常可省略
 ```
 
+（選用）要讓 consume rate 跨多次呼叫累計，先起一個長駐 entry manager daemon，再讓 `idea` 連上同一個：
+```bash
+python3 try_implement/tools/llm_entry_manager.py --socket /tmp/ai_core_llm.sock --limit-token 100000 &
+export AI_CORE_LLM_SOCKET=/tmp/ai_core_llm.sock   # idea 會自動連這個 socket
+```
+
 ## 本次口述內容
 $ARGUMENTS
 
