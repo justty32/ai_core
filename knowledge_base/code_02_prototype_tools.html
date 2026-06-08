@@ -16,12 +16,12 @@
   <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
 </nav>
 <main class="md">
-  <div class="filemeta">code_02_prototype_tools.md · 286 行</div>
+  <div class="filemeta">code_02_prototype_tools.md · 323 行</div>
 <h1>code_02 — 原型工具（try_implement/tools/）</h1>
 <blockquote>
-<p><strong>來源</strong>：<code>try_implement/tools/</code>（indexer / router / switch / sfc / hub / llm_entry_manager / chain / _common）＋ <code>try_implement/routes.json</code>、<code>try_implement/switch.json</code>
+<p><strong>來源</strong>：<code>try_implement/tools/</code>（indexer / router / switch / sfc / hub / llm_entry_manager / chain / idea / _common）＋ <code>try_implement/routes.json</code>、<code>try_implement/switch.json</code>
 <strong>狀態</strong>：原型／探索（多為提案，非定案）。<strong>例外</strong>：A1/A2/A3（register 宣告／攔截拆分）與第九軸 <code>nondeterministic</code> 已扶正進正式核心 <code>src/ai_core/_core.py</code>，本目錄工具已<strong>改接真 <code>ai_core</code></strong>。
-<strong>一行摘要</strong>：路由／函式管理工具的可跑原型——Indexer、Router、Switch、SFC、Hub、LLM Entry Manager、chain，每個都實作跨元件硬契約 <code>--metadata</code>。</p>
+<strong>一行摘要</strong>：路由／函式管理工具的可跑原型——Indexer、Router、Switch、SFC、Hub、LLM Entry Manager、chain、idea，每個都實作跨元件硬契約 <code>--metadata</code>。</p>
 </blockquote>
 <p>相關交叉引用：核心 library 見 <a href="code_01_core_library.html">code_01_core_library.md</a>；被工具 import 的 library 見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>；煙霧測試與 demo 見 <a href="code_04_prototype_demos_tests.html">code_04_prototype_demos_tests.md</a>；軸／metadata 規範見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>；懸案清單見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>。</p>
 <p>整套只用 Python 3.11+ 標準庫（argparse / json / subprocess / pathlib / urllib…），零外部相依，遵守 KISS / Lightweight / No wheel-remake / Least dependency。</p>
@@ -235,16 +235,54 @@ hub.py --metadata
 <li><strong>軸</strong>：<code>lifecycle: persistent</code>、<code>state: stateless</code>、<code>resources: {singleton: true, consume_dimensions: [&quot;token&quot;]}</code>。（singleton 性質塞進 resources——八軸沒有專門的 singleton 欄位，這是一個觀察。）</li>
 <li><strong><code>build_server()</code></strong>：建 <code>NDJSONServer</code>，註冊 <code>complete</code> / <code>usage</code> handler；<code>SingletonResource(&quot;llm&quot;, limits={token})</code> 管 consume rate。<code>complete</code> 先用 <code>meter.would_exceed()</code> 守門，超預算回 <code>{&quot;ok&quot;:false,&quot;error&quot;:&quot;rate limit exceeded&quot;,...}</code>；否則跑 <code>llm_call.llm_call()</code>、<code>meter.record()</code> 記用量。</li>
 <li><strong>token 估算</strong> <code>_estimate_tokens()</code>：mock 約 4 字元 1 token。真接 API 時換成 backend 的 usage。</li>
-<li><strong>backend</strong>：預設 <code>EchoBackend</code>；真接 API 時換接 <code>lib/call.Http</code> 或官方 SDK。</li>
-<li><strong>CLI</strong>：<code>--limit-token</code>（token 預算上限）、<code>--metadata</code>。NDJSON 協議：<code>{&quot;cmd&quot;:&quot;complete&quot;,&quot;prompt&quot;:&quot;...&quot;,&quot;opts&quot;:{...}}</code>、<code>{&quot;cmd&quot;:&quot;usage&quot;}</code>、內建 <code>ping</code>/<code>list</code>/<code>shutdown</code>（來自 <code>lib/server</code>）。</li>
+<li><strong>backend（2026-06-08 改）</strong>：不再寫死 <code>EchoBackend</code>，改由 <strong><code>llm_call.backend_from_env()</code> 依環境變數挑</strong>（真 <code>OpenAIBackend</code>／<code>AnthropicBackend</code> 或 EchoBackend fallback；見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>）。CLI <code>--provider</code> / <code>--model</code> / <code>--base-url</code> 可臨時覆寫環境變數——把 provider 選擇集中在環境，呼應元件 1「統一 LLM 呼叫入口」。</li>
+<li><strong>CLI</strong>：<code>--limit-token</code>（token 預算上限）、<code>--provider</code> / <code>--model</code> / <code>--base-url</code>（覆寫環境）、<strong><code>--socket &lt;path&gt;</code></strong>（長駐模式，見下）、<code>--metadata</code>。NDJSON 協議：<code>{&quot;cmd&quot;:&quot;complete&quot;,&quot;prompt&quot;:&quot;...&quot;,&quot;opts&quot;:{...}}</code>、<code>{&quot;cmd&quot;:&quot;usage&quot;}</code>、內建 <code>ping</code>/<code>list</code>/<code>shutdown</code>（來自 <code>lib/server</code>）。</li>
+<li><strong><code>--socket &lt;path&gt;</code> 長駐單例（解 Gap G，2026-06-08）</strong>：給 <code>--socket</code> 則改走 <code>srv.serve_socket(path)</code>（Unix domain socket 傳輸）而非 stdin/stdout。多個獨立 one-shot caller（如多次 <code>idea</code>）連<strong>同一個 daemon</strong> → 共用同一份 <code>RateMeter</code> → <strong>consume rate 跨呼叫累計</strong>。stdin/stdout 模式做不到這點（每 caller 各自一個 process）。Unix socket 純標準庫、POSIX 原生、免 port（Windows 不在考慮範圍）。</li>
 </ul>
 <p>CLI 範例：</p>
-<pre><code class="language-bash">printf '%s\n%s\n%s\n' \
+<pre><code class="language-bash"># 一次性（stdin/stdout）
+printf '%s\n%s\n%s\n' \
   '{&quot;cmd&quot;:&quot;complete&quot;,&quot;prompt&quot;:&quot;hello world&quot;}' \
   '{&quot;cmd&quot;:&quot;usage&quot;}' '{&quot;cmd&quot;:&quot;shutdown&quot;}' | llm_entry_manager.py --limit-token 50
 llm_entry_manager.py --metadata
+# 長駐單例 daemon（consume rate 跨呼叫累計）
+llm_entry_manager.py --socket /tmp/ai_core_llm.sock --limit-token 100000 &amp;
+printf '{&quot;cmd&quot;:&quot;usage&quot;}\n'    | nc -U /tmp/ai_core_llm.sock
+printf '{&quot;cmd&quot;:&quot;shutdown&quot;}\n' | nc -U /tmp/ai_core_llm.sock   # 收 daemon（清 socket 檔）
 </code></pre>
-<p><strong>實作狀態</strong>：可跑原型（mock backend）。</p>
+<p><strong>實作狀態</strong>：可跑原型。backend 已可接真 API（<code>backend_from_env</code>，未設環境變數則 EchoBackend）；socket 長駐模式已實證（smoke_test 以「兩個獨立 idea process → usage 遞增」驗 Gap G）。</p>
+<hr />
+<h2><code>idea.py</code> — 點子捕捉軌的 LLM 工具（dogfood）</h2>
+<p><strong>職責</strong>：把 <code>/intake /critique /expand</code> 的「派 Claude Code agent」換成「打真 API」——這是 roadmap「廉價小模型消費者」的第一個真實 dogfood，把三元件串成完整一條：<code>bind</code>（元件 2）→ LLM Entry Manager（元件 1）→ 真 backend → API。工作流軌的整體脈絡見 <a href="doc_22_workflow_and_idea_track.html">doc_22_workflow_and_idea_track.md</a>。</p>
+<ul>
+<li><strong>子命令（git-style；text 進 text 出）</strong>：
+<ul>
+<li><code>idea clean</code> — WF2 初步整理（去語音錯字/贅字/缺字，最大保留原意；純 filter stdin→stdout）。</li>
+<li><code>idea notes</code> — WF3 匯總筆記（彙整成結構化筆記；衝突處標 <code>⚠️衝突</code> 不下定論；純 filter）。</li>
+<li><code>idea critique</code> — WF4 找漏洞（嚴格但善意指出漏洞/風險/矛盾，附位置＋為什麼＋嚴重度；純 filter）。</li>
+<li><code>idea expand</code> — WF5 擴展（發散延伸，AI 新加靈感標 <code>💡</code>；純 filter）。</li>
+<li><code>idea ingest</code> — 口述一條龍 orchestrator：stdin 逐字 append 到 <code>raw/</code>（<strong>不過 LLM</strong>，守鐵則 1），再整份刷新 <code>cleaned/</code>、<code>notes/</code>。給 <code>/intake</code> 即時回應路徑用（主 agent 一個背景呼叫就搞定）。</li>
+</ul>
+</li>
+<li><strong>system prompt</strong>：四個階段的鐵則內化成繁中 system prompt（在 <code>PROMPTS</code> dict），由 <code>bind(system=..., backend=...)</code> 疊上去。</li>
+<li><strong>backend 路由</strong>：預設經 <strong>LLM Entry Manager</strong>（<code>EntryManagerBackend</code>，尊重「LLM 是 singleton 資源」立場）；<code>--direct</code> 跳過直接 <code>backend_from_env()</code>。兩種連線模式：
+<ul>
+<li><strong>socket 模式</strong>（<code>--socket &lt;path&gt;</code> 或 env <code>AI_CORE_LLM_SOCKET</code>）：連上長駐 entry manager daemon → <strong>consume rate 跨呼叫累計</strong>（Gap G 解法），短重試容忍 daemon 剛啟動。</li>
+<li><strong>subprocess 模式</strong>（不給 socket）：每次 completion 新開一個 entry manager process 餵一行 NDJSON。零設定即可跑，但 rate 逐次不累計（fallback）。</li>
+</ul>
+</li>
+<li><strong>軸</strong>：頂層 <code>lifecycle: one_shot</code>、<code>state: stateless</code>；clean/notes/critique/expand 子命令各宣告 <code>nondeterministic: true</code>（第九軸；LLM 工具未領證書前誠實標記會吐隨機）；<code>ingest</code> 多寫三個 <code>ideas/</code> 目錄 → <code>state: stateful_external</code> + <code>nondeterministic: true</code>。</li>
+<li><strong>slug 主題隔離</strong>：<code>ingest</code> 同主題（slug）沿用同一份檔（raw 累積、cleaned/notes 刷新），slug 比對用<strong>嚴格整檔名 regex</strong>（<code>\d{8}-\d{4}-&lt;slug&gt;.md</code>）而非 glob，避免跨主題污染（審查發現，commit <code>8e77f54</code> 修）。</li>
+</ul>
+<p>CLI 範例：</p>
+<pre><code class="language-bash">echo &quot;一些 點子&quot;   | idea.py clean              # WF2（純 filter；未設 env → EchoBackend 回顯）
+echo &quot;整理後內容&quot; | idea.py notes               # WF3
+echo &quot;某點子&quot;     | idea.py critique --direct    # WF4（--direct 跳過 entry manager）
+echo &quot;口述原文&quot;   | idea.py ingest --slug demo   # 一條龍：raw 逐字 + cleaned + notes 寫檔
+idea.py clean --metadata                         # → nondeterministic:true（第九軸）
+# 接真 LLM：export AI_CORE_LLM_PROVIDER=openai AI_CORE_LLM_BASE_URL=http://localhost:11434/v1 AI_CORE_LLM_MODEL=llama3
+</code></pre>
+<p><strong>實作狀態</strong>：可跑原型 dogfood；離線（EchoBackend）與 socket 長駐（rate 累計）皆已在 smoke_test 覆蓋。規範未定（與 hub 同屬待扶正）。</p>
 <hr />
 <h2><code>chain.py</code> — chain（組合維度的 CLI）</h2>
 <p><strong>職責</strong>：把「組合維度」變成可從 shell 用的一等工具（對應組合維度概念，見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>）。用 JSON 宣告一條 pipeline，把 stdin 依序流過每個 stage（subprocess）= 調用鏈的顯式形式；並能用 <code>lib/compose_meta</code> 從各 stage 的 <code>--metadata</code> 推導整條鏈的複合 metadata。串起整個 lib 堆疊：<code>lib/call</code>（跨邊界呼叫成員）+ <code>lib/compose</code>（pipe 串接）+ <code>lib/trace</code>（調用鏈追蹤）+ <code>lib/compose_meta</code>（推導複合 metadata）。</p>

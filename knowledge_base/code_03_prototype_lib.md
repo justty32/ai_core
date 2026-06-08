@@ -78,8 +78,9 @@ manifest 最小欄位：`status`（`in_progress`｜`done`）、`mode`（`resume`
 - handler 簽名 `fn(req: dict) -> dict`；回傳包進 `{"ok": true, **result}`，拋例外則 `{"ok": false, "error": "..."}`。
 - 內建指令：`ping`（→pong）、`list`（列出 handler）、`shutdown`。
 - `serve(stdin, stdout, stderr)` 接受任意 readable/writable（預設 sys.std*），方便用 `io.StringIO` 測試。
+- **`serve_socket(socket_path)`（2026-06-08 新增，解 Gap G）**：與 `serve()` 同 lifecycle，但走 **Unix domain socket** 傳輸而非 stdin/stdout。關鍵差別：**多個獨立的 one-shot caller 可連上同一個 server 實例**，共用同一份 handler 閉包狀態（如 entry manager 的 `RateMeter`）→ consume rate 能**跨呼叫累計**——這正是 stdin/stdout 做不到、Gap G 要解的點。語意仍是 singleton（serial accept、一次處理一個連線、不開 thread）；單一連線內可送多行請求，連線 EOF 只結束該連線，唯有 `shutdown` 指令停整個 server 並清掉 socket 檔（啟動時也清 stale socket）。`serve()` 與 `serve_socket()` 共用 `_process_line()`（抽出的單行處理）。
 
-**設計決策**：介面用 stdin/stdout NDJSON（最 KISS，免 socket/port/http）；thinking_pending §3 指出此選項需重評——保留升 HTTP 的空間（handler 簽名不變，只換傳輸層），標為暫定。
+**設計決策**：預設介面用 stdin/stdout NDJSON（最 KISS，免 port/http）；`serve_socket` 提供長駐單例所需的「多 caller 連同一個」傳輸（選 Unix socket 而非 HTTP：純標準庫、POSIX 原生、免 port）。剩餘規範議題「persistent singleton 如何被多 one-shot caller 共用（連線/排隊/逾時語意）」是 DECISIONS E2，v0 真接小模型時正式化（見 [note_06_decisions_and_open_questions.md](note_06_decisions_and_open_questions.md)）。
 
 ### `singleton.py` — singleton 資源（queue + consume rate）
 
@@ -124,9 +125,14 @@ manifest 最小欄位：`status`（`in_progress`｜`done`）、`mode`（`resume`
                   postprocess=lambda o: o + " -- at 20240505")
   coding_q("how to sort a list?")
   ```
-- **可插拔 backend**：`class Backend`（介面 `complete(prompt, **opts)->str`）；`EchoBackend`（預設，回 `echo: {prompt}`）；`ScriptedBackend(responses)`（依序循環吐出，元素可為字串或 `fn(prompt)->str`，**用來在測試模擬「同輸入不同輸出」的隨機性**）；`FnBackend(fn)`。`set_default_backend()` 切換全域預設。真接 API 時實作 Backend 子類接 `lib/call.Http` 或官方 SDK，上層 bind/compose 不變。
+- **可插拔 backend**：`class Backend`（介面 `complete(prompt, **opts)->str`）；`EchoBackend`（預設，回 `echo: {prompt}`）；`ScriptedBackend(responses)`（依序循環吐出，元素可為字串或 `fn(prompt)->str`，**用來在測試模擬「同輸入不同輸出」的隨機性**）；`FnBackend(fn)`。`set_default_backend()` 切換全域預設。
+- **真 backend（2026-06-08 實作）**：上層 bind/compose 完全不變，新增兩個接真 API 的 Backend，都走 `lib/call.Http`（純 urllib、零外部相依）：
+  - **`OpenAIBackend(base_url, model, api_key=None, ...)`** — OpenAI 相容 `/chat/completions`，**吃本地小模型**（ollama → `http://localhost:11434/v1`、llama.cpp → `:8080/v1`、vLLM）與相容代理（OpenRouter）。這正是 roadmap「假設只剩便宜本地小模型」的目標 backend。prompt 整段當單一 user message（`bind()` 已把 system/prefix/suffix 疊進 prompt）。`temperature/top_p/stop/seed/max_tokens` 透傳。
+  - **`AnthropicBackend(base_url, model, api_key=None, version="2023-06-01", ...)`** — Anthropic Messages API `/v1/messages`，回應 content block 陣列串接所有 text block。
+  - 兩者都用**延遲 import `lib/call`**（只用 EchoBackend 時不付 trace 相依代價）。
+- **`backend_from_env(env=None)`** — 依環境變數挑 backend（元件 1「統一 LLM 呼叫入口」把 provider 選擇集中在環境，工具/bind 程式碼不必改）：`AI_CORE_LLM_PROVIDER`（openai|anthropic|echo，預設 echo）/ `_BASE_URL` / `_MODEL` / `_API_KEY` / `_MAX_TOKENS`。**未設定 / 未知 provider 則回 `EchoBackend`**（離線/測試友善）。entry manager 與 idea 工具都用它決定打哪個真 LLM。E1 已知小缺口：`OpenAIBackend` 送 `max_tokens`，對本地模型正確、但 OpenAI 官方新模型（o1/o3）要 `max_completion_tokens`（見 note_06 E 區）。
 
-**設計立場**：llm_call 是系統裡唯一的非確定性函式；馴化它的手段不寫在這裡，而在 `lib/compose`（同一套組合任意函式的組合子）。詳見 [doc_20_taming_framework.md](doc_20_taming_framework.md)。
+**設計立場**：llm_call 是系統裡唯一的非確定性函式；馴化它的手段不寫在這裡，而在 `lib/compose`（同一套組合任意函式的組合子）。詳見 [doc_20_taming_framework.md](doc_20_taming_framework.md)。真 backend 的首個真實應用 = 點子捕捉軌 dogfood，見 [doc_22_workflow_and_idea_track.md](doc_22_workflow_and_idea_track.md)。
 
 ---
 

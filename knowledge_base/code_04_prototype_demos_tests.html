@@ -16,17 +16,17 @@
   <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
 </nav>
 <main class="md">
-  <div class="filemeta">code_04_prototype_demos_tests.md · 109 行</div>
+  <div class="filemeta">code_04_prototype_demos_tests.md · 111 行</div>
 <h1>code_04 — 原型 demo、煙霧測試、範例函式與 store</h1>
 <blockquote>
 <p><strong>來源</strong>：<code>try_implement/demos/</code>（reliable_code_qa.py / call_chain_trace.py / resumable_batch.py）、<code>try_implement/smoke_test.py</code>、<code>try_implement/lib_smoke_test.py</code>、<code>try_implement/funcs/</code>（upper.py / reverse.py / c_linter.sh / py_linter.sh）、<code>try_implement/store/</code>（functions.json / index.json）
-<strong>狀態</strong>：原型／探索（demo + 自我測試）。<strong>測試結果已實機驗證</strong>：72 + 68 = <strong>140 項斷言全綠</strong>（執行於 repo 的 <code>.venv</code> Python 3.14）。
-<strong>一行摘要</strong>：三個自我驗證的端到端 demo、兩套純標準庫煙霧測試（共 140 斷言）、範例函式與已 seed 的 SFC store。</p>
+<strong>狀態</strong>：原型／探索（demo + 自我測試）。<strong>測試結果已實機驗證（2026-06-08）</strong>：83 + 78 = <strong>161 項斷言全綠</strong>（執行於 repo 的 <code>.venv</code> Python 3.14）。（2026-06-07 時為 72 + 68 = 140；點子捕捉軌 dogfood 與 Gap G 修復後增 21 項。）
+<strong>一行摘要</strong>：三個自我驗證的端到端 demo、兩套純標準庫煙霧測試（共 161 斷言）、範例函式與已 seed 的 SFC store。</p>
 </blockquote>
 <p>相關交叉引用：被測的工具見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a>；被測的 library 見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>；馴化框架見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>；組合維度見 <a href="doc_21_composition_dimension.html">doc_21_composition_dimension.md</a>。</p>
 <p>怎麼跑（cwd 須為 <code>try_implement/</code>）：</p>
-<pre><code class="language-bash">python3 smoke_test.py        # 工具：72 斷言
-python3 lib_smoke_test.py    # lib：68 斷言
+<pre><code class="language-bash">python3 smoke_test.py        # 工具：83 斷言
+python3 lib_smoke_test.py    # lib：78 斷言
 python3 demos/reliable_code_qa.py
 python3 demos/call_chain_trace.py
 python3 demos/resumable_batch.py
@@ -54,8 +54,8 @@ python3 demos/resumable_batch.py
 <p>驗證「標準狀態目錄慣例」+「中斷恢復慣例」參考實作真能扛中斷（<code>lib/recovery</code> + <code>lib/state_dirs</code>）。批次處理 <code>[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;d&quot;,&quot;e&quot;]</code>（範例處理=轉大寫）：成果寫 <code>.data/batch/results.json</code>、進度 offset 寫 <code>.state/batch/recovery/offset.json</code> + <code>recovery.json</code> manifest。第一次跑到 item 2 前「崩潰」（拋例外，recovery 停在 in_progress）；第二次重跑 <code>startup</code> 偵測到 in_progress + mode=resume → 從斷點接續，不重做已完成的。</p>
 <p>自我測試 assert：第一次應崩潰、崩潰後 detect=resume/status=in_progress、第二次從 index 2 接續、最終 <code>[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;,&quot;E&quot;]</code> 全部完成、完成後 detect=clean。<strong>證明兩個複合規範參考實作能扛中斷。</strong></p>
 <hr />
-<h2>兩套煙霧測試（140 斷言全綠，已實機確認）</h2>
-<h3><code>smoke_test.py</code> — 工具端到端（72 斷言）</h3>
+<h2>兩套煙霧測試（161 斷言全綠，已實機確認）</h2>
+<h3><code>smoke_test.py</code> — 工具端到端（83 斷言）</h3>
 <p>覆蓋面（依 <code>check()</code> label）：</p>
 <ul>
 <li><strong>indexer</strong>（5）：掃 funcs/ exit 0、找到 upper.py / c_linter.sh、markdown 格式 exit 0、markdown 含標題。</li>
@@ -65,20 +65,22 @@ python3 demos/resumable_batch.py
 <li><strong>sfc --metadata 變體</strong>（Gap A/B 修法驗證）：<code>shout --metadata</code> 不再被攔截 + 回該函式 metadata、頂層 <code>--metadata</code> = one_shot dispatcher、<code>forge --metadata</code> = <strong>persistent（與頂層不同）</strong>、<code>intake --metadata</code> = stateful_external、未知函式 <code>--metadata</code> → exit 1、對不存在函式回 exit 1。</li>
 <li><strong>sfc forge（Layer 2/3/4）</strong>：forge exit 0、回應 5 行、<code>cmd=list</code>、記憶體查表呼叫 shout → <code>FORGE!</code>、shell wc_words → <code>3</code>、不存在函式回 ok=false、shutdown 回 shutdown=true、<strong>add</strong> 動態加入 rev + 立刻能呼叫、<strong>remove</strong> 移除 shout + list 反映增刪、<strong>persist</strong> 回報已存 + 磁碟 store 含 rev 不含 shout、<strong>Layer 4</strong> shell 超時回 timeout 錯誤封套（含 function 欄位）、unknown_function 也是結構化封套。</li>
 <li><strong>hub</strong>（4）：<code>--metadata</code> exit 0、掃出 4 個 skill、含 upper.py/reverse.py、budget 過小時收斂並標註省略。</li>
-<li><strong>llm_entry_manager</strong>（5）：metadata = persistent、宣告 singleton 資源、complete 回 text+usage、usage 查詢、超預算 → rate limit exceeded（consume rate 守門）。</li>
+<li><strong>llm_entry_manager</strong>：metadata = persistent、宣告 singleton 資源、complete 回 text+usage、usage 查詢、超預算 → rate limit exceeded（consume rate 守門）；<strong><code>--provider echo</code> 覆寫 flag 跑通 complete</strong>（backend_from_env CLI 覆寫）。</li>
 <li><strong>chain</strong>（4）：<code>--metadata</code> exit 0、跑管線 upper→reverse 得 <code>IH</code>、derive 複合 lifecycle=one_shot、derive 複合 guarantee=none（最弱）。</li>
+<li><strong>idea（2026-06-08 新增）</strong>：metadata = one_shot、<code>idea clean</code> 宣告第九軸 <code>nondeterministic=true</code>、<code>ingest</code> = stateful_external、<code>clean</code> 經 entry manager 全鏈跑通（EchoBackend 回顯）、<code>clean --direct</code> 跳過 entry manager 也跑通、<code>ingest</code> raw 逐字保留（不經 LLM、無 echo 前綴）、<code>ingest</code> 產出 cleaned 與 notes、<code>ingest</code> slug 連字號後綴不跨主題污染。</li>
+<li><strong>Gap G 端到端（2026-06-08 新增）</strong>：<code>entry_manager --socket</code> 啟動並建立 socket 檔、<strong>兩個獨立 <code>idea</code> process 經長駐 socket entry manager → consume rate 跨呼叫累計</strong>（Gap G 修復實證）。</li>
 </ul>
-<h3><code>lib_smoke_test.py</code> — lib 各模組（68 斷言）</h3>
+<h3><code>lib_smoke_test.py</code> — lib 各模組（78 斷言）</h3>
 <p>覆蓋面：</p>
 <ul>
 <li><strong>state_dirs</strong>（2）：單檔 JSON 往返、<code>declared()</code> 合規範。</li>
 <li><strong>recovery</strong>（6）：半完成→detect=resume、startup 觸發 on_resume、complete→detect=clean、rollback 模式 detect + 觸發、reset 觸發。<strong>recovery 三模式全覆蓋。</strong></li>
 <li><strong>memoize</strong>（1）：第一次 miss、第二次 hit 且不重算。</li>
-<li><strong>server</strong>（7）：exit 0、ping→pong、list 含 handler、自訂 handler upper(hi)=HI、未知 cmd→ok=false、shutdown 回 shutdown=true、ready 訊號進 stderr。</li>
+<li><strong>server</strong>（7 + socket 2）：exit 0、ping→pong、list 含 handler、自訂 handler upper(hi)=HI、未知 cmd→ok=false、shutdown 回 shutdown=true、ready 訊號進 stderr；<strong><code>serve_socket</code> 跨獨立連線共用 server 狀態（累計 3→7）</strong>、<strong>收 shutdown 後清掉 socket 檔</strong>（Gap G 底層）。</li>
 <li><strong>singleton</strong>（RateMeter 4 + queue 4 + drain 2）：累計、remaining、would_exceed、尚未超限；queue cancel 中間項、pending 扣掉取消、dequeue 跳過取消項、dequeue 下一個；drain 因超限提前停（處理 3 個）、已超限。</li>
 <li><strong>trace</strong>（7）：只有一個 root、root=outer、inner 掛在 outer 下、兩段都 complete、render 縮排呈現巢狀、<strong>容忍 incomplete span（缺 end）</strong>、render 標記 incomplete。</li>
 <li><strong>call</strong>（4）：InProcess 反轉、Subprocess 轉大寫、<strong>Http round-trip（真實 HTTP）</strong>、from_spec 建 Subprocess。</li>
-<li><strong>llm_call</strong>（3）：預設 EchoBackend、bind 疊 system 進 prompt、bind 疊 postprocess 後綴。</li>
+<li><strong>llm_call</strong>（3 + 真 backend 8）：預設 EchoBackend、bind 疊 system 進 prompt、bind 疊 postprocess 後綴；<strong>真 backend round-trip（2026-06-08）</strong>——<code>OpenAIBackend</code> 解析 <code>choices[].message.content</code> / payload 帶 model+messages / 帶 Bearer 授權頭、<code>AnthropicBackend</code> 串接 text block / payload 帶 max_tokens / 帶 x-api-key 與 anthropic-version、<code>backend_from_env</code> 未設定回 EchoBackend / <code>openai</code> → OpenAIBackend。（用攔截式假 HTTP 驗 payload 與 header，不打真網路。）</li>
 <li><strong>compose</strong>（馴化組合子全覆蓋）：pipe、fanout、fanout_reduce 取最長、route 走 num/txt 分支、with_fallback 主拋例外走備援、decompose 拆-處理-合、retry_until_valid 抽到合格才回 / 用盡拋 ValidationError、vote 自一致取多數=4、best_of 取最高分、guard 驗證失敗走 repair。</li>
 <li><strong>interact</strong>（6）：run 收斂到 until、max_rounds 安全閥生效、actor_critic 修到驗收 / 第 3 輪收斂 / 永不驗收則用盡輪數、debate judge 取多數=A。</li>
 <li><strong>compose_meta</strong>（軸推導全覆蓋）：mpipe 行為正確、guarantee=最弱(none)、state=聯集、state_dirs=聯集、列出 persistent 相依；fanout 共用 dir→guarantee 退化 none + 帶 warning、不同 dir→guarantee=idempotent；mretry 拒絕包 guarantee=none（前置契約）、包 idempotent OK。</li>

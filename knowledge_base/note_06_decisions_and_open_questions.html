@@ -16,7 +16,7 @@
   <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
 </nav>
 <main class="md">
-  <div class="filemeta">note_06_decisions_and_open_questions.md · 169 行</div>
+  <div class="filemeta">note_06_decisions_and_open_questions.md · 190 行</div>
 <h1>note_06 — 規範決策清單與未決題</h1>
 <ul>
 <li><strong>來源</strong>：<code>try_implement/DECISIONS.md</code>（全文）＋ <code>roadmap.md §7</code>（目標逼出哪些待決規範）、<code>roadmap.md §8</code>（開放問題 / 待續討論）</li>
@@ -30,12 +30,13 @@
 <h2>0. DECISIONS.md 的性質與分區</h2>
 <p><code>DECISIONS.md</code> 把散在 README / docs / 各 lib 檔頭的「回饋規範」內容，收斂成一份<strong>決策清單</strong>。</p>
 <p><strong>關鍵前提</strong>：try_implement 的實驗都只是提案 / 原型；<strong>真正的 <code>src/ai_core/_core.py</code> 與 <code>core_nature/</code> 一行都沒動</strong>（指被扶正前的狀態）。下面每項都標明「現況 / 我的建議 / 你要決定什麼」，讓使用者回來能快速行動。</p>
-<p>分四區：</p>
+<p>分五區：</p>
 <ul>
 <li><strong>A</strong> — 已原型待扶正</li>
 <li><strong>B</strong> — 開放方向題</li>
 <li><strong>C</strong> — 候選新軸</li>
 <li><strong>D</strong> — 我已自行拍板待你追認</li>
+<li><strong>E</strong> — 審查 ttemp-workflow-sync 留下的低風險項（2026-06-08 新增）</li>
 </ul>
 <hr />
 <h2>1. ✅ 已收斂（2026-05-26）</h2>
@@ -66,10 +67,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>驗證</strong>：<code>smoke_test.py</code> 72 + <code>lib_smoke_test.py</code> 68 + <code>tests/test_core.py</code> 65 全綠，三個 demo 正常，各工具 <code>--metadata</code> / <code>&lt;sub&gt; --metadata</code> 行為端到端正確。</p>
+<p><strong>驗證</strong>：扶正當下 <code>smoke_test.py</code> 72 + <code>lib_smoke_test.py</code> 68 + <code>tests/test_core.py</code> 65 全綠；<strong>現況（2026-06-08）為 smoke 83 + lib_smoke 78 + pytest 84</strong>（點子捕捉軌 dogfood 與 Gap G 修復後），三個 demo 正常，各工具 <code>--metadata</code> / <code>&lt;sub&gt; --metadata</code> 行為端到端正確。</p>
 <p><strong>仍待你定</strong>：A4（組合軸推導）與 B 系列（B1 語意欄位 / B2 共用模組 / B3 沙箱）依 <code>roadmap.md §7</code> <strong>留給 v0 切片去逼出優先序</strong>（見下方各條的「狀態」）；D 區（我自行拍板的 7 項）仍待你追認。</p>
 <blockquote>
-<p>註：CLAUDE.md 標 <code>tests/test_core.py</code> 為 82 passed，本決策表寫 65 測試（此區為 register/intercept + nondeterministic 扶正當下的數字）；數字差異請以實際測試輸出為準。</p>
+<p>註：本決策表寫 65 測試（此區為 register/intercept + nondeterministic 扶正當下的數字）；CLAUDE.md 現標 <code>pytest -q</code> 全收集為 <strong>84 passed</strong>（2026-06-08）。數字差異是不同範圍（65 = 該輪扶正的核心測試子集；84 = 全收集）；請以實際測試輸出為準。</p>
 </blockquote>
 <hr />
 <h2>2. A 區 — 已做原型，待你決定是否扶正進規範</h2>
@@ -234,6 +235,47 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2>5b. E 區 — 審查 ttemp-workflow-sync 留下的低風險項（2026-06-08）</h2>
+<p>合併「點子捕捉軌 dogfood（<code>idea</code> 工具）+ Gap G 修復」（見 <a href="doc_22_workflow_and_idea_track.html">doc_22_workflow_and_idea_track.md</a>）時，審查另撈到三項<strong>不阻擋合併、原型遊樂場可接受</strong>的小缺口，記此待 v0 真接小模型時一併處理：</p>
+<table>
+<thead>
+<tr>
+<th>項</th>
+<th>來源</th>
+<th>性質</th>
+<th>暫定處置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>E1.</strong> <code>OpenAIBackend</code> 送 <code>max_tokens</code></td>
+<td><code>lib/llm_call.py</code></td>
+<td>對本地 ollama/llama.cpp/vLLM 正確，但 OpenAI 官方新模型（o1/o3 系）要求 <code>max_completion_tokens</code>、會拒 <code>max_tokens</code></td>
+<td>目標 backend 本就是本地小模型（roadmap 前提），先不動；真要接官方新模型時再依 provider 分流欄位名。</td>
+</tr>
+<tr>
+<td><strong>E2.</strong> <code>serve_socket</code> serial-accept 無逾時</td>
+<td><code>lib/server.py</code></td>
+<td>一次處理一連線、不開 thread、無 idle/逾時；單一 idle 連線會卡死整個 daemon</td>
+<td><strong>與 README「Gap G」尾段同一懸案</strong>——「persistent singleton 如何被多個 one-shot caller 共用（連線/排隊/逾時語意）」。歸入該題，v0 真接小模型時正式化。</td>
+</tr>
+<tr>
+<td><strong>E3.</strong> <code>_slugify</code> regex <code>一-鿿</code> 冗餘</td>
+<td><code>tools/idea.py</code></td>
+<td>Python <code>\w</code>（unicode）預設已含 CJK，<code>[^\w一-鿿]+</code> 的 <code>一-鿿</code> 多餘；純清理、無行為影響</td>
+<td>留待順手清理，不單獨開工。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>E1/E3 是純清理；E2 不是新題，是 Gap G 解法（socket daemon）暴露出「singleton 共用語意」尚未正式化的同一缺口，已並回該懸案。</p>
+</blockquote>
+<h3>Gap G（已修）— one-shot 工具經 entry manager 時 consume rate 無法跨呼叫累計</h3>
+<blockquote>
+<p><strong>✅ 已修（2026-06-08）</strong>。原缺口：<code>idea</code> 預設經 LLM Entry Manager 路由，但 subprocess 模式每次 completion 新開一個 entry manager process，<code>RateMeter</code> 每次從零開始——token/錢上限形同虛設。根因：entry manager 是 persistent server，但對外原本只有 stdin/stdout NDJSON，一個長駐 server 無法被多個獨立 one-shot process 連上同一個。</p>
+<p><strong>解法（已落地）</strong>：給 entry manager 一個 stdin/stdout 以外的長駐傳輸——<code>lib/server.serve_socket(path)</code>（Unix domain socket，純標準庫、POSIX 原生、免 port）。<code>llm_entry_manager --socket &lt;path&gt;</code> 長駐成 daemon，<code>idea</code> 經 <code>AI_CORE_LLM_SOCKET</code>／<code>--socket</code> 連上同一個 server，共用同一份 <code>RateMeter</code> → <strong>consume rate 跨呼叫累計</strong>。subprocess 模式保留為零設定 fallback。smoke_test 以「兩個獨立 idea process → usage 遞增」實證。剩餘規範議題見 E2。</p>
+</blockquote>
 <hr />
 <h2>6. 建議的處理順序（進度）</h2>
 <ol>

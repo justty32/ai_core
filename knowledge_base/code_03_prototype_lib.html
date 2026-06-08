@@ -16,7 +16,7 @@
   <span class="lvl-tag" style="color:var(--l2);background:rgba(0,0,0,.25)">② 原型</span>
 </nav>
 <main class="md">
-  <div class="filemeta">code_03_prototype_lib.md · 172 行</div>
+  <div class="filemeta">code_03_prototype_lib.md · 178 行</div>
 <h1>code_03 — 原型 library（try_implement/lib/）</h1>
 <blockquote>
 <p><strong>來源</strong>：<code>try_implement/lib/</code>（state_dirs / recovery / memoize / server / singleton / trace / call / llm_call / compose / interact / compose_meta / <code>__init__.py</code>）
@@ -87,8 +87,9 @@
 <li>handler 簽名 <code>fn(req: dict) -&gt; dict</code>；回傳包進 <code>{&quot;ok&quot;: true, **result}</code>，拋例外則 <code>{&quot;ok&quot;: false, &quot;error&quot;: &quot;...&quot;}</code>。</li>
 <li>內建指令：<code>ping</code>（→pong）、<code>list</code>（列出 handler）、<code>shutdown</code>。</li>
 <li><code>serve(stdin, stdout, stderr)</code> 接受任意 readable/writable（預設 sys.std*），方便用 <code>io.StringIO</code> 測試。</li>
+<li><strong><code>serve_socket(socket_path)</code>（2026-06-08 新增，解 Gap G）</strong>：與 <code>serve()</code> 同 lifecycle，但走 <strong>Unix domain socket</strong> 傳輸而非 stdin/stdout。關鍵差別：<strong>多個獨立的 one-shot caller 可連上同一個 server 實例</strong>，共用同一份 handler 閉包狀態（如 entry manager 的 <code>RateMeter</code>）→ consume rate 能<strong>跨呼叫累計</strong>——這正是 stdin/stdout 做不到、Gap G 要解的點。語意仍是 singleton（serial accept、一次處理一個連線、不開 thread）；單一連線內可送多行請求，連線 EOF 只結束該連線，唯有 <code>shutdown</code> 指令停整個 server 並清掉 socket 檔（啟動時也清 stale socket）。<code>serve()</code> 與 <code>serve_socket()</code> 共用 <code>_process_line()</code>（抽出的單行處理）。</li>
 </ul>
-<p><strong>設計決策</strong>：介面用 stdin/stdout NDJSON（最 KISS，免 socket/port/http）；thinking_pending §3 指出此選項需重評——保留升 HTTP 的空間（handler 簽名不變，只換傳輸層），標為暫定。</p>
+<p><strong>設計決策</strong>：預設介面用 stdin/stdout NDJSON（最 KISS，免 port/http）；<code>serve_socket</code> 提供長駐單例所需的「多 caller 連同一個」傳輸（選 Unix socket 而非 HTTP：純標準庫、POSIX 原生、免 port）。剩餘規範議題「persistent singleton 如何被多 one-shot caller 共用（連線/排隊/逾時語意）」是 DECISIONS E2，v0 真接小模型時正式化（見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>）。</p>
 <h3><code>singleton.py</code> — singleton 資源（queue + consume rate）</h3>
 <p>對應 thinking_pending §4。LLM Entry Manager 是具體實例：資源一次只能處理一個請求，請求者是多個互不認識的 caller → queue + consume rate（token/錢/算力多維度）。抽成三塊：</p>
 <ul>
@@ -124,9 +125,17 @@
 coding_q(&quot;how to sort a list?&quot;)
 </code></pre>
 </li>
-<li><strong>可插拔 backend</strong>：<code>class Backend</code>（介面 <code>complete(prompt, **opts)-&gt;str</code>）；<code>EchoBackend</code>（預設，回 <code>echo: {prompt}</code>）；<code>ScriptedBackend(responses)</code>（依序循環吐出，元素可為字串或 <code>fn(prompt)-&gt;str</code>，<strong>用來在測試模擬「同輸入不同輸出」的隨機性</strong>）；<code>FnBackend(fn)</code>。<code>set_default_backend()</code> 切換全域預設。真接 API 時實作 Backend 子類接 <code>lib/call.Http</code> 或官方 SDK，上層 bind/compose 不變。</li>
+<li><strong>可插拔 backend</strong>：<code>class Backend</code>（介面 <code>complete(prompt, **opts)-&gt;str</code>）；<code>EchoBackend</code>（預設，回 <code>echo: {prompt}</code>）；<code>ScriptedBackend(responses)</code>（依序循環吐出，元素可為字串或 <code>fn(prompt)-&gt;str</code>，<strong>用來在測試模擬「同輸入不同輸出」的隨機性</strong>）；<code>FnBackend(fn)</code>。<code>set_default_backend()</code> 切換全域預設。</li>
+<li><strong>真 backend（2026-06-08 實作）</strong>：上層 bind/compose 完全不變，新增兩個接真 API 的 Backend，都走 <code>lib/call.Http</code>（純 urllib、零外部相依）：
+<ul>
+<li><strong><code>OpenAIBackend(base_url, model, api_key=None, ...)</code></strong> — OpenAI 相容 <code>/chat/completions</code>，<strong>吃本地小模型</strong>（ollama → <code>http://localhost:11434/v1</code>、llama.cpp → <code>:8080/v1</code>、vLLM）與相容代理（OpenRouter）。這正是 roadmap「假設只剩便宜本地小模型」的目標 backend。prompt 整段當單一 user message（<code>bind()</code> 已把 system/prefix/suffix 疊進 prompt）。<code>temperature/top_p/stop/seed/max_tokens</code> 透傳。</li>
+<li><strong><code>AnthropicBackend(base_url, model, api_key=None, version=&quot;2023-06-01&quot;, ...)</code></strong> — Anthropic Messages API <code>/v1/messages</code>，回應 content block 陣列串接所有 text block。</li>
+<li>兩者都用<strong>延遲 import <code>lib/call</code></strong>（只用 EchoBackend 時不付 trace 相依代價）。</li>
 </ul>
-<p><strong>設計立場</strong>：llm_call 是系統裡唯一的非確定性函式；馴化它的手段不寫在這裡，而在 <code>lib/compose</code>（同一套組合任意函式的組合子）。詳見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>。</p>
+</li>
+<li><strong><code>backend_from_env(env=None)</code></strong> — 依環境變數挑 backend（元件 1「統一 LLM 呼叫入口」把 provider 選擇集中在環境，工具/bind 程式碼不必改）：<code>AI_CORE_LLM_PROVIDER</code>（openai|anthropic|echo，預設 echo）/ <code>_BASE_URL</code> / <code>_MODEL</code> / <code>_API_KEY</code> / <code>_MAX_TOKENS</code>。<strong>未設定 / 未知 provider 則回 <code>EchoBackend</code></strong>（離線/測試友善）。entry manager 與 idea 工具都用它決定打哪個真 LLM。E1 已知小缺口：<code>OpenAIBackend</code> 送 <code>max_tokens</code>，對本地模型正確、但 OpenAI 官方新模型（o1/o3）要 <code>max_completion_tokens</code>（見 note_06 E 區）。</li>
+</ul>
+<p><strong>設計立場</strong>：llm_call 是系統裡唯一的非確定性函式；馴化它的手段不寫在這裡，而在 <code>lib/compose</code>（同一套組合任意函式的組合子）。詳見 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>。真 backend 的首個真實應用 = 點子捕捉軌 dogfood，見 <a href="doc_22_workflow_and_idea_track.html">doc_22_workflow_and_idea_track.md</a>。</p>
 <hr />
 <h2>群組三：八/九軸之外的組合維度</h2>
 <h3><code>compose.py</code> — 組合子（組合維度）</h3>

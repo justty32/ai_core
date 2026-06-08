@@ -224,12 +224,13 @@ const DATA = [
   {f:"doc_17_arch_changelog.md",c:"doc",l:4,ln:31,s:"舊版完整變更紀錄（2026-04-28 ~ 05-18）。"},
   {f:"doc_20_taming_framework.md",c:"doc",l:2,ln:151,s:"LLM 隨機性馴化五層框架（契約/確定化/驗證/聚合/編排）對應已實作零件。"},
   {f:"doc_21_composition_dimension.md",c:"doc",l:2,ln:115,s:"組合維度（與軸正交）、軸推導規則、組合 vs 交互、blackboard 交互模型。"},
+  {f:"doc_22_workflow_and_idea_track.md",c:"doc",l:1,ln:106,s:"工作流 7 個 slash command + 點子捕捉軌（ideas/）+ idea.py dogfood（bind→entry manager→真 backend→API）；Gap G／E 區（2026-06-08）。"},
   {f:"doc_30_html_dashboard.md",c:"doc",l:4,ln:101,s:"HTML 儀表板（8 頁）的獨特內容：HL 角色對照表、2026-05-25 現況快照、各模組進度標記。"},
   // code_
   {f:"code_01_core_library.md",c:"code",l:1,ln:170,s:"src/ai_core/_core.py API、九軸驗證、pyproject、測試覆蓋（test_core.py = 65 passed）。"},
-  {f:"code_02_prototype_tools.md",c:"code",l:2,ln:285,s:"indexer/router/switch/sfc/hub/llm_entry_manager/chain 各工具職責、CLI、狀態。"},
-  {f:"code_03_prototype_lib.md",c:"code",l:2,ln:171,s:"lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta。"},
-  {f:"code_04_prototype_demos_tests.md",c:"code",l:2,ln:108,s:"3 個 demo、兩套煙霧測試（72+68=140 全綠）、範例函式、store seed。"},
+  {f:"code_02_prototype_tools.md",c:"code",l:2,ln:285,s:"indexer/router/switch/sfc/hub/llm_entry_manager/chain/idea 各工具職責、CLI、狀態（含 entry manager socket、idea dogfood）。"},
+  {f:"code_03_prototype_lib.md",c:"code",l:2,ln:171,s:"lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta（含真 LLM backend + serve_socket）。"},
+  {f:"code_04_prototype_demos_tests.md",c:"code",l:2,ln:108,s:"3 個 demo、兩套煙霧測試（83+78=161 全綠）、範例函式、store seed。"},
 ];
 
 const CAT_LABEL={note:"note 筆記想法",doc:"doc 文檔規範",code:"code 程式成果"};

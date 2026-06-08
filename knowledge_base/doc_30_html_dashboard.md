@@ -15,7 +15,7 @@
 > ⚠️ **與現行檔的數據衝突（以現行為準）**：
 > 1. **軸數**：儀表板全程稱「**8 軸**」（列 lifecycle/state/interruptible/guarantee/resources/entries/state_dirs/has_entries），並把 `nondeterministic` 當「候選新軸 C1」。**現行事實是 9 軸**（`nondeterministic` 已扶正為第九軸，見 `CLAUDE.md` 與 `doc_05_axes_metadata.md`）。儀表板停在「8 軸 + C1 待議」的較早狀態。
 > 2. **D 組決策數**：`decisions.html` 列 **D1–D7（7 項）**，但 `overview.html` 只列 D1–D4（且 D2–D4 內容與 decisions 頁的 D2–D4 不同——overview 把 decisions 頁的 D3/D5 之類重新編號）。兩頁內部不一致；以 `note_06_decisions_and_open_questions.md`（對照 `DECISIONS.md`）為準。
-> 3. **測試數**：儀表板稱「try_implement 140 assertions 全綠、3 demo」——與現行原型現況一致（72+68=140）。但儀表板**完全未提正式核心測試**；現行核心測試為 `tests/test_core.py`，pytest 全收集 82 passed（含 65 等）。
+> 3. **測試數**：儀表板稱「try_implement 140 assertions 全綠、3 demo」——這是 2026-05/06-07 的快照（72+68=140）；**現行（2026-06-08）為 83+78=161**（點子捕捉軌 dogfood 與 Gap G 修復後增 21 項，見 `code_04`）。另儀表板**完全未提正式核心測試**；現行核心測試為 `tests/test_core.py`，pytest 全收集 **84 passed**（含 65 等）。
 > 4. **里程碑**：儀表板稱「M0–M6 皆 0 完成、src/ai_core 只有 protocol helper」。
 
 ---

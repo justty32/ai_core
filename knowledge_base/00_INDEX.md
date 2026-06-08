@@ -6,7 +6,9 @@
 >
 > **建立日期**：2026-06-07。本索引由主代理彙整，內容檔由 12 個並行子代理產出（共 31 個內容檔）。
 >
-> **原始檔未被更動**：本資料夾只「新增」整合檔；`roadmap.md`、`core_nature/`、`try_implement/` 等原始檔一律保留原狀。
+> **增補（2026-06-08）**：併入 `ttemp-workflow-sync` 那批工作——**工作流 slash command + 點子捕捉軌 dogfood（`idea` 工具）+ Gap G 修復 + DECISIONS E 區**。新增 `doc_22`（工作流與點子軌），並更新 `code_02`（idea 工具 + entry manager socket）、`code_03`（真 LLM backend + serve_socket）、`code_04`（測試 140→161）、`note_06`（E 區 + Gap G 已修）。詳見各檔。
+>
+> **原始檔未被更動**：本資料夾只「新增」整合檔；`roadmap.md`、`core_nature/`、`try_implement/`、`.claude/commands/`、`ideas/` 等原始檔一律保留原狀。
 
 ---
 
@@ -58,6 +60,8 @@
 
 **想懂「規劃中的五大元件」** → `doc_12`（Entry Manager）/ `doc_13`（Hub）/ `doc_14`（author+SFC）（注意：④舊版架構，命名與現行不同）+ `doc_20`（馴化框架）
 
+**想懂「工作流 slash command / 點子捕捉軌 / 第一個真實 dogfood」** → `doc_22`（工作流與點子軌）→ `code_02`（idea 工具 + entry manager socket）→ `code_03`（真 LLM backend + serve_socket）
+
 **想懂「演化脈絡 / 被放棄的構想」** → `note_03~05`（歷史思考）→ `note_07~09`（更早的舊版世系）
 
 ---
@@ -100,6 +104,7 @@
 | [doc_17_arch_changelog.md](doc_17_arch_changelog.md) | ④ 舊版架構 | 舊版完整變更紀錄（2026-04-28 ~ 05-18） |
 | [doc_20_taming_framework.md](doc_20_taming_framework.md) | ② 原型概念 | LLM 隨機性馴化五層框架（契約/確定化/驗證/聚合/編排）對應已實作零件 |
 | [doc_21_composition_dimension.md](doc_21_composition_dimension.md) | ② 原型概念 | 組合維度（與軸正交）、軸推導規則、組合 vs 交互、blackboard 交互模型 |
+| [doc_22_workflow_and_idea_track.md](doc_22_workflow_and_idea_track.md) | ①操作面 / ②dogfood | **工作流 7 個 slash command + 點子捕捉軌（`ideas/`）+ `idea.py` dogfood**（bind→entry manager→真 backend→API）；Gap G／E 區缺口（2026-06-08 新增） |
 | [doc_30_html_dashboard.md](doc_30_html_dashboard.md) | ④/展示 | HTML 儀表板（8 頁）；捕捉其獨特內容（HL 角色對照表、2026-05-25 現況快照、各模組進度標記），其餘交叉引用 |
 
 ### code_ 程式成果
@@ -107,9 +112,9 @@
 | 檔 | 狀態 | 一行摘要 |
 |---|---|---|
 | [code_01_core_library.md](code_01_core_library.md) | ① 正式核心 | `src/ai_core/_core.py` API、九軸驗證、pyproject、測試覆蓋（test_core.py = 65 passed） |
-| [code_02_prototype_tools.md](code_02_prototype_tools.md) | ② 原型 | indexer/router/switch/sfc/hub/llm_entry_manager/chain 各工具職責、CLI、狀態 |
-| [code_03_prototype_lib.md](code_03_prototype_lib.md) | ② 原型 | lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta |
-| [code_04_prototype_demos_tests.md](code_04_prototype_demos_tests.md) | ② 原型 | 3 個 demo、兩套煙霧測試（72+68=140 全綠）、範例函式、store seed |
+| [code_02_prototype_tools.md](code_02_prototype_tools.md) | ② 原型 | indexer/router/switch/sfc/hub/llm_entry_manager/chain/**idea** 各工具職責、CLI、狀態（含 entry manager socket 長駐、idea dogfood）|
+| [code_03_prototype_lib.md](code_03_prototype_lib.md) | ② 原型 | lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta（含**真 LLM backend** OpenAI/Anthropic + **serve_socket**）|
+| [code_04_prototype_demos_tests.md](code_04_prototype_demos_tests.md) | ② 原型 | 3 個 demo、兩套煙霧測試（83+78=**161** 全綠）、範例函式、store seed |
 
 ---
 
@@ -117,10 +122,10 @@
 
 子代理在無損整合過程中發現以下**跨檔不一致**。一律記錄，不擅自抹平；現況事實以此處裁決為準：
 
-1. **測試數字三套並存（非矛盾，是不同範圍）**：
-   - `tests/test_core.py` = **65 passed**（正式核心 register/intercept/九軸；已實機確認，見 `code_01`）。
-   - `pytest -q` 全收集 = **82 passed**（CLAUDE.md 數字；含 `tests/` 下其他測試檔，差額 17）。
-   - 原型煙霧測試 = `smoke_test.py` **72** + `lib_smoke_test.py` **68** = **140**（已實機確認，見 `code_04`）。
+1. **測試數字三套並存（非矛盾，是不同範圍；2026-06-08 更新）**：
+   - `tests/test_core.py` = **65 passed**（register/intercept + 九軸扶正當下的核心子集，見 `code_01`/`note_06`）。
+   - `pytest -q` 全收集 = **84 passed**（CLAUDE.md 現行數字；含 `tests/` 下其他測試檔。2026-06-07 時為 82）。
+   - 原型煙霧測試 = `smoke_test.py` **83** + `lib_smoke_test.py` **78** = **161**（已實機確認，見 `code_04`；2026-06-07 時為 72+68=140，點子捕捉軌 dogfood 與 Gap G 修復後增 21 項）。
    - → 三個數字都對，指的是不同東西。引用時請註明範圍。
 
 2. **「八軸」vs「九軸」**：`roadmap.md`（含使用者原話）多處仍寫「八軸」，但現行定案已是**九軸**——第九軸 `nondeterministic` 於 2026-05-26 扶正（承載「拒絕為預設+憑證准入」治理）。`note_01` 依無損保留 roadmap 的「八軸」原措辭；**現行事實以 `doc_05` / `code_01` 的九軸為準**。

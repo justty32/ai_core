@@ -39,7 +39,7 @@
 <ol>
 <li><strong>軸數</strong>：儀表板全程稱「<strong>8 軸</strong>」（列 lifecycle/state/interruptible/guarantee/resources/entries/state_dirs/has_entries），並把 <code>nondeterministic</code> 當「候選新軸 C1」。<strong>現行事實是 9 軸</strong>（<code>nondeterministic</code> 已扶正為第九軸，見 <code>CLAUDE.md</code> 與 <code>doc_05_axes_metadata.md</code>）。儀表板停在「8 軸 + C1 待議」的較早狀態。</li>
 <li><strong>D 組決策數</strong>：<code>decisions.html</code> 列 <strong>D1–D7（7 項）</strong>，但 <code>overview.html</code> 只列 D1–D4（且 D2–D4 內容與 decisions 頁的 D2–D4 不同——overview 把 decisions 頁的 D3/D5 之類重新編號）。兩頁內部不一致；以 <code>note_06_decisions_and_open_questions.md</code>（對照 <code>DECISIONS.md</code>）為準。</li>
-<li><strong>測試數</strong>：儀表板稱「try_implement 140 assertions 全綠、3 demo」——與現行原型現況一致（72+68=140）。但儀表板<strong>完全未提正式核心測試</strong>；現行核心測試為 <code>tests/test_core.py</code>，pytest 全收集 82 passed（含 65 等）。</li>
+<li><strong>測試數</strong>：儀表板稱「try_implement 140 assertions 全綠、3 demo」——這是 2026-05/06-07 的快照（72+68=140）；<strong>現行（2026-06-08）為 83+78=161</strong>（點子捕捉軌 dogfood 與 Gap G 修復後增 21 項，見 <code>code_04</code>）。另儀表板<strong>完全未提正式核心測試</strong>；現行核心測試為 <code>tests/test_core.py</code>，pytest 全收集 <strong>84 passed</strong>（含 65 等）。</li>
 <li><strong>里程碑</strong>：儀表板稱「M0–M6 皆 0 完成、src/ai_core 只有 protocol helper」。</li>
 </ol>
 </blockquote>
@@ -177,7 +177,7 @@
 
 </main>
 <footer class="pager">
-<a class="prev" href="doc_21_composition_dimension.html"><span class="dir">← 上一篇</span><span class="fn">doc_21_composition_dimension</span></a>
+<a class="prev" href="doc_22_workflow_and_idea_track.html"><span class="dir">← 上一篇</span><span class="fn">doc_22_workflow_and_idea_track</span></a>
 <a class="next" href="note_01_vision_and_origin.html"><span class="dir">下一篇 →</span><span class="fn">note_01_vision_and_origin</span></a>
 </footer>
 <a class="backtop" href="#">↑ 回頂端</a>

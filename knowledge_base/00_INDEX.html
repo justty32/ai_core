@@ -16,13 +16,14 @@
   <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
 </nav>
 <main class="md">
-  <div class="filemeta">00_INDEX.md · 156 行</div>
+  <div class="filemeta">00_INDEX.md · 161 行</div>
 <h1>00_INDEX — ai_core 知識庫總索引</h1>
 <blockquote>
 <p><strong>這是什麼</strong>：把原本散落在 <code>roadmap.md</code> / <code>core_nature/</code> / <code>try_implement/</code> / <code>docs/</code> / <code>thinking*.md</code> / <code>other.md</code>／甚至 git 歷史中的<strong>所有筆記、想法、文檔、程式成果</strong>，做一次<strong>無損壓縮</strong>整合到本資料夾。去除了跨檔重複，但<strong>保留每一個獨特的想法、定義、數字、理由與決策</strong>。</p>
 <p><strong>整理原則</strong>：以較新者為標準事實（newer = truth）。較舊或已被取代的內容仍完整保留，但會在檔頭明確標註其狀態與「現行對應檔」。</p>
 <p><strong>建立日期</strong>：2026-06-07。本索引由主代理彙整，內容檔由 12 個並行子代理產出（共 31 個內容檔）。</p>
-<p><strong>原始檔未被更動</strong>：本資料夾只「新增」整合檔；<code>roadmap.md</code>、<code>core_nature/</code>、<code>try_implement/</code> 等原始檔一律保留原狀。</p>
+<p><strong>增補（2026-06-08）</strong>：併入 <code>ttemp-workflow-sync</code> 那批工作——<strong>工作流 slash command + 點子捕捉軌 dogfood（<code>idea</code> 工具）+ Gap G 修復 + DECISIONS E 區</strong>。新增 <code>doc_22</code>（工作流與點子軌），並更新 <code>code_02</code>（idea 工具 + entry manager socket）、<code>code_03</code>（真 LLM backend + serve_socket）、<code>code_04</code>（測試 140→161）、<code>note_06</code>（E 區 + Gap G 已修）。詳見各檔。</p>
+<p><strong>原始檔未被更動</strong>：本資料夾只「新增」整合檔；<code>roadmap.md</code>、<code>core_nature/</code>、<code>try_implement/</code>、<code>.claude/commands/</code>、<code>ideas/</code> 等原始檔一律保留原狀。</p>
 </blockquote>
 <hr />
 <h2>1. 三大分類（檔名前綴）</h2>
@@ -108,6 +109,7 @@
 <p><strong>想懂「規範現況」</strong> → <code>doc_01</code>（本質）→ <code>doc_03</code>（執行形式）→ <code>doc_05</code>（九軸）→ <code>doc_06</code>（library 契約）→ <code>doc_07</code>（CLI）→ <code>doc_08</code>（複合）</p>
 <p><strong>想懂「程式做到哪了」</strong> → <code>code_01</code>（正式核心）→ <code>code_02~04</code>（原型工具/lib/demos）</p>
 <p><strong>想懂「規劃中的五大元件」</strong> → <code>doc_12</code>（Entry Manager）/ <code>doc_13</code>（Hub）/ <code>doc_14</code>（author+SFC）（注意：④舊版架構，命名與現行不同）+ <code>doc_20</code>（馴化框架）</p>
+<p><strong>想懂「工作流 slash command / 點子捕捉軌 / 第一個真實 dogfood」</strong> → <code>doc_22</code>（工作流與點子軌）→ <code>code_02</code>（idea 工具 + entry manager socket）→ <code>code_03</code>（真 LLM backend + serve_socket）</p>
 <p><strong>想懂「演化脈絡 / 被放棄的構想」</strong> → <code>note_03~05</code>（歷史思考）→ <code>note_07~09</code>（更早的舊版世系）</p>
 <hr />
 <h2>5. 完整檔案目錄</h2>
@@ -269,6 +271,11 @@
 <td>組合維度（與軸正交）、軸推導規則、組合 vs 交互、blackboard 交互模型</td>
 </tr>
 <tr>
+<td><a href="doc_22_workflow_and_idea_track.html">doc_22_workflow_and_idea_track.md</a></td>
+<td>①操作面 / ②dogfood</td>
+<td><strong>工作流 7 個 slash command + 點子捕捉軌（<code>ideas/</code>）+ <code>idea.py</code> dogfood</strong>（bind→entry manager→真 backend→API）；Gap G／E 區缺口（2026-06-08 新增）</td>
+</tr>
+<tr>
 <td><a href="doc_30_html_dashboard.html">doc_30_html_dashboard.md</a></td>
 <td>④/展示</td>
 <td>HTML 儀表板（8 頁）；捕捉其獨特內容（HL 角色對照表、2026-05-25 現況快照、各模組進度標記），其餘交叉引用</td>
@@ -293,17 +300,17 @@
 <tr>
 <td><a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a></td>
 <td>② 原型</td>
-<td>indexer/router/switch/sfc/hub/llm_entry_manager/chain 各工具職責、CLI、狀態</td>
+<td>indexer/router/switch/sfc/hub/llm_entry_manager/chain/<strong>idea</strong> 各工具職責、CLI、狀態（含 entry manager socket 長駐、idea dogfood）</td>
 </tr>
 <tr>
 <td><a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a></td>
 <td>② 原型</td>
-<td>lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta</td>
+<td>lib/ 11 模組：state_dirs/recovery/memoize/server/singleton/trace/call/llm_call/compose/interact/compose_meta（含<strong>真 LLM backend</strong> OpenAI/Anthropic + <strong>serve_socket</strong>）</td>
 </tr>
 <tr>
 <td><a href="code_04_prototype_demos_tests.html">code_04_prototype_demos_tests.md</a></td>
 <td>② 原型</td>
-<td>3 個 demo、兩套煙霧測試（72+68=140 全綠）、範例函式、store seed</td>
+<td>3 個 demo、兩套煙霧測試（83+78=<strong>161</strong> 全綠）、範例函式、store seed</td>
 </tr>
 </tbody>
 </table>
@@ -312,11 +319,11 @@
 <p>子代理在無損整合過程中發現以下<strong>跨檔不一致</strong>。一律記錄，不擅自抹平；現況事實以此處裁決為準：</p>
 <ol>
 <li>
-<p><strong>測試數字三套並存（非矛盾，是不同範圍）</strong>：</p>
+<p><strong>測試數字三套並存（非矛盾，是不同範圍；2026-06-08 更新）</strong>：</p>
 <ul>
-<li><code>tests/test_core.py</code> = <strong>65 passed</strong>（正式核心 register/intercept/九軸；已實機確認，見 <code>code_01</code>）。</li>
-<li><code>pytest -q</code> 全收集 = <strong>82 passed</strong>（CLAUDE.md 數字；含 <code>tests/</code> 下其他測試檔，差額 17）。</li>
-<li>原型煙霧測試 = <code>smoke_test.py</code> <strong>72</strong> + <code>lib_smoke_test.py</code> <strong>68</strong> = <strong>140</strong>（已實機確認，見 <code>code_04</code>）。</li>
+<li><code>tests/test_core.py</code> = <strong>65 passed</strong>（register/intercept + 九軸扶正當下的核心子集，見 <code>code_01</code>/<code>note_06</code>）。</li>
+<li><code>pytest -q</code> 全收集 = <strong>84 passed</strong>（CLAUDE.md 現行數字；含 <code>tests/</code> 下其他測試檔。2026-06-07 時為 82）。</li>
+<li>原型煙霧測試 = <code>smoke_test.py</code> <strong>83</strong> + <code>lib_smoke_test.py</code> <strong>78</strong> = <strong>161</strong>（已實機確認，見 <code>code_04</code>；2026-06-07 時為 72+68=140，點子捕捉軌 dogfood 與 Gap G 修復後增 21 項）。</li>
 <li>→ 三個數字都對，指的是不同東西。引用時請註明範圍。</li>
 </ul>
 </li>

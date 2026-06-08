@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doc_22 — 工作流 slash command 與點子捕捉軌（dogfood） · ai_core 知識庫</title>
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">ai_core KB</a>
+  <a href="index.html">← 導覽首頁</a>
+  <a href="00_INDEX.html">總索引</a>
+  <span class="spacer"></span>
+  <span class="tag cat-doc">doc 文檔規範</span>
+  <span class="lvl-tag" style="color:var(--l1);background:rgba(0,0,0,.25)">① 定案</span>
+</nav>
+<main class="md">
+  <div class="filemeta">doc_22_workflow_and_idea_track.md · 107 行</div>
+<h1>doc_22 — 工作流 slash command 與點子捕捉軌（dogfood）</h1>
+<blockquote>
+<p><strong>來源</strong>：<code>.claude/commands/</code>（resume / test / spec / proto / intake / critique / expand）＋ <code>ideas/</code>（raw/cleaned/notes/brainstorm 骨架）＋ <code>try_implement/tools/idea.py</code>（dogfood 工具）＋ <code>CLAUDE.md</code>「工作流 Slash Command」節
+<strong>狀態</strong>：① 現行/操作面（slash command 與 <code>ideas/</code> 軌已 commit、在用）；其中 <strong>LLM 加工層為 ② 原型 dogfood</strong>（走 <code>idea.py</code> 打真 API，規範未定）。
+<strong>一行摘要</strong>：把本 repo 的循環工作拆成「每工作流一指令」的 slash command；並從 TTemp 借來「點子捕捉／頭腦風暴軌」，其 LLM 加工<strong>不派 Claude Code agent，改 shell out 給 <code>idea.py</code> 打真 API</strong>——這是 roadmap「廉價小模型消費者」的第一個真實 dogfood。</p>
+</blockquote>
+<p>相關交叉引用：<code>idea.py</code> 工具細節見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a>；其底層真 backend / socket 傳輸見 <a href="code_03_prototype_lib.html">code_03_prototype_lib.md</a>；Gap G 與 DECISIONS E 區見 <a href="note_06_decisions_and_open_questions.html">note_06_decisions_and_open_questions.md</a>；願景「資產工廠→笨模型消費者」見 <a href="note_01_vision_and_origin.html">note_01_vision_and_origin.md</a>；第九軸 <code>nondeterministic</code> 見 <a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>。</p>
+<blockquote>
+<p><strong>時間線</strong>：本軌於 <strong>2026-06-08</strong> 自 TTemp 同步並 ai_core 特化（commit <code>82f8e6f</code>→<code>0a3bef6</code>）。KB 主體（2026-06-07）建立<strong>之後</strong>才加入，故本檔是該批工作的整合記錄。</p>
+</blockquote>
+<hr />
+<h2>1. 為什麼有這一軌</h2>
+<p>兩件不同的事被同一個「同步 TTemp 模式」帶進來：</p>
+<ol>
+<li><strong>工作流 slash command</strong> — 把本 repo 自身的循環工作（接續、測試、規範扶正、原型探索）各做成一個 slash command，打一句即「變身」該模式。指令只是<strong>模式切換與重點摘要</strong>，權威來源仍是 <code>CLAUDE.md</code> 與對應文件。</li>
+<li><strong>點子捕捉／頭腦風暴軌</strong> — 一條與程式碼／規範工作<strong>並行、互不干擾</strong>的軌：把口述靈感落檔、清稿、彙整、找漏洞、擴展。產物統一落 <code>ideas/</code>。</li>
+</ol>
+<p>關鍵的 ai_core 特化：點子軌的 LLM 加工原本（在 TTemp）靠 Claude Code <strong>agent</strong>（甚至派背景 subagent）。本 repo 把那層 agent 換成 <strong>shell out 給 <code>try_implement/tools/idea.py</code> 打真 API</strong>——即用 ai_core 自己的 LLM 基礎設施去消費，<strong>dogfood</strong>。</p>
+<hr />
+<h2>2. 七個 slash command（<code>.claude/commands/</code>）</h2>
+<table>
+<thead>
+<tr>
+<th>指令</th>
+<th>用途</th>
+<th>權威來源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/resume</code></td>
+<td>接續工作：依固定閱讀順序重建上下文、給下一步</td>
+<td><code>CLAUDE.md</code>「接續工作的閱讀順序」、<code>roadmap.md</code>、<code>progress.md</code></td>
+</tr>
+<tr>
+<td><code>/test</code></td>
+<td>跑全部測試（pytest + 兩個 smoke test）並回報</td>
+<td><code>CLAUDE.md</code>「建置／測試指令」</td>
+</tr>
+<tr>
+<td><code>/spec</code></td>
+<td>規範扶正：把 <code>try_implement/</code> 提案收斂進 <code>core_nature/</code> 與 <code>_core.py</code></td>
+<td><code>DECISIONS.md</code>、<code>core_nature/</code></td>
+</tr>
+<tr>
+<td><code>/proto</code></td>
+<td>原型探索：在 <code>try_implement/</code> 先寫出來跑跑看、暴露設計缺口</td>
+<td><code>try_implement/README.md</code></td>
+</tr>
+<tr>
+<td><code>/intake</code></td>
+<td>口述線一條龍：原文逐字→初步整理→匯總筆記（落 <code>ideas/</code>）</td>
+<td>指令內含鐵則</td>
+</tr>
+<tr>
+<td><code>/critique</code></td>
+<td>頭腦風暴・找漏洞 → <code>ideas/brainstorm/</code></td>
+<td>指令自含</td>
+</tr>
+<tr>
+<td><code>/expand</code></td>
+<td>頭腦風暴・擴展靈感 → <code>ideas/brainstorm/</code></td>
+<td>指令自含</td>
+</tr>
+</tbody>
+</table>
+<p>前四個（resume/test/spec/proto）是 repo 自身工作的模式切換；後三個（intake/critique/expand）是點子捕捉軌。</p>
+<hr />
+<h2>3. 點子捕捉軌的資料流與 <code>ideas/</code> 骨架</h2>
+<p><code>ideas/</code> 是四個並列子目錄（各帶 <code>.gitkeep</code> 佔位）：</p>
+<pre><code>ideas/
+├── raw/         # WF1 口述原文逐字（一字不改）
+├── cleaned/     # WF2 初步整理（去語音錯字/贅字/缺字，最大保留原意）
+├── notes/       # WF3 匯總筆記（結構化）
+└── brainstorm/  # WF4 找漏洞 / WF5 擴展的產物
+</code></pre>
+<p>工作流階段（WF 編號沿用 TTemp）：</p>
+<table>
+<thead>
+<tr>
+<th>階段</th>
+<th>slash command</th>
+<th>idea 子命令</th>
+<th>性質</th>
+<th>落點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WF1 原文逐字</td>
+<td><code>/intake</code></td>
+<td>（ingest 內含，不過 LLM）</td>
+<td>一字不改 append</td>
+<td><code>ideas/raw/</code></td>
+</tr>
+<tr>
+<td>WF2 初步整理</td>
+<td><code>/intake</code></td>
+<td><code>idea clean</code></td>
+<td>純 filter（過 LLM）</td>
+<td><code>ideas/cleaned/</code></td>
+</tr>
+<tr>
+<td>WF3 匯總筆記</td>
+<td><code>/intake</code></td>
+<td><code>idea notes</code></td>
+<td>純 filter（過 LLM）</td>
+<td><code>ideas/notes/</code></td>
+</tr>
+<tr>
+<td>WF4 找漏洞</td>
+<td><code>/critique</code></td>
+<td><code>idea critique</code></td>
+<td>純 filter（過 LLM）</td>
+<td><code>ideas/brainstorm/</code></td>
+</tr>
+<tr>
+<td>WF5 擴展</td>
+<td><code>/expand</code></td>
+<td><code>idea expand</code></td>
+<td>純 filter（過 LLM）</td>
+<td><code>ideas/brainstorm/</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>/intake</code> 的執行模式特化</strong>：只有 <code>/intake</code>（語音輸入友善）保留「<strong>主 agent 即時回應</strong>」模式，但實際動作丟的是<strong>背景 Bash 呼叫 <code>idea ingest</code></strong>（口述一條龍 orchestrator，自己寫檔），而非派背景 subagent。<code>/critique</code>、<code>/expand</code> 則<strong>同步 shell out</strong> 給 <code>idea critique</code>／<code>idea expand</code>。</p>
+<p><strong>鐵則 1（主題隔離 + raw 不可變）</strong>：<code>raw/</code> 一字不改、不經 LLM；同一主題（slug）跨多則口述沿用同一份檔，讓 raw 累積、cleaned/notes 整份刷新。slug 比對用<strong>嚴格整檔名</strong>（<code>&lt;時間戳&gt;-&lt;slug&gt;.md</code>）而非 glob，避免某 slug 撞進「以它為連字號後綴」的另一主題檔（審查發現的污染 bug，commit <code>8e77f54</code> 修）。</p>
+<hr />
+<h2>4. dogfood 串接：第一個真實「廉價小模型消費者」</h2>
+<p><code>idea.py</code> 把點子軌的 LLM 加工從「派 agent」換成「打真 API」，<strong>串起 ai_core 三元件成完整一條</strong>：</p>
+<pre><code>bind() 打包（元件 2，lib/llm_call）
+  → LLM Entry Manager 單例守門 + consume rate（元件 1，tools/llm_entry_manager）
+    → 真 backend（OpenAIBackend / AnthropicBackend，lib/llm_call）
+      → 真 API
+</code></pre>
+<p>這正是 roadmap 願景的具體落地：成熟期的系統由「廉價小模型消費者」去用上層生出的資產，本軌是第一個真實串接。</p>
+<ul>
+<li><strong>backend 路由</strong>：預設<strong>經由 LLM Entry Manager</strong>（尊重「LLM 是 singleton 資源、集中守 consume rate」立場）；<code>--direct</code> 跳過 entry manager 直接呼叫 backend（測試/不需 rate 管理時）。</li>
+<li><strong>打哪個真 LLM</strong>：由環境變數 <code>AI_CORE_LLM_PROVIDER</code> / <code>AI_CORE_LLM_BASE_URL</code> / <code>AI_CORE_LLM_MODEL</code>（＋ <code>API_KEY</code> / <code>MAX_TOKENS</code>）決定（見 <code>lib/llm_call.backend_from_env</code>）；<strong>未設定則 EchoBackend 回顯</strong>，離線可跑、煙霧測試友善。</li>
+<li><strong>第九軸誠實宣告</strong>：每個 LLM 子命令（clean/notes/critique/expand/ingest）的 <code>--metadata</code> 都宣告 <code>nondeterministic: true</code>——這正是 LLM 工具在治理原則下的預設身分：<strong>尚未領證書前，誠實標記自己會吐隨機</strong>。</li>
+</ul>
+<blockquote>
+<p>連線模式（socket vs subprocess）與 consume rate 跨呼叫累計（Gap G 修復）詳見 <a href="code_02_prototype_tools.html">code_02_prototype_tools.md</a> 的 <code>idea.py</code> 與 <code>llm_entry_manager.py</code> 節。</p>
+</blockquote>
+<hr />
+<h2>5. 這一軌暴露/修復的設計缺口</h2>
+<table>
+<thead>
+<tr>
+<th>缺口</th>
+<th>性質</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gap G</strong> — one-shot 工具經 entry manager 時 consume rate 無法跨呼叫累計</td>
+<td>subprocess 模式每次新開 entry manager process，RateMeter 從零開始</td>
+<td><strong>✅ 已修（2026-06-08）</strong>：<code>lib/server.serve_socket</code> + <code>llm_entry_manager --socket</code> 長駐單例，多 caller 共用同一 RateMeter。詳見 note_06。</td>
+</tr>
+<tr>
+<td><strong>E1</strong> — <code>OpenAIBackend</code> 送 <code>max_tokens</code></td>
+<td>對本地 ollama/llama.cpp/vLLM 正確，但 OpenAI 官方新模型（o1/o3）要求 <code>max_completion_tokens</code></td>
+<td>低風險，留待 v0 真接官方新模型時依 provider 分流欄位</td>
+</tr>
+<tr>
+<td><strong>E2</strong> — <code>serve_socket</code> serial-accept 無逾時</td>
+<td>單一 idle 連線會卡死整個 daemon</td>
+<td>歸入「persistent singleton 如何被多 caller 共用」同一懸案，v0 正式化</td>
+</tr>
+<tr>
+<td><strong>E3</strong> — <code>_slugify</code> regex <code>一-鿿</code> 冗餘</td>
+<td>Python <code>\w</code> 已含 CJK，純清理無行為影響</td>
+<td>順手清理</td>
+</tr>
+</tbody>
+</table>
+<p>（E1/E2/E3 = DECISIONS E 區；整合於 note_06。）</p>
+<hr />
+<h2>6. 與 KB 其他層的關係</h2>
+<ul>
+<li>本軌<strong>與程式碼／規範工作並行、互不干擾</strong>：它消費 ai_core 的 LLM 基礎設施（元件 1+2），但不動軸定義、不動 <code>_core.py</code> 契約。</li>
+<li>對 KB 整體而言：slash command 與 <code>ideas/</code> 是<strong>操作面新增</strong>（① 現行）；<code>idea.py</code> 與其依賴的真 backend / socket 傳輸是 <strong>② 原型 dogfood</strong>，扶正成規範前仍待定奪。</li>
+<li>它把「roadmap 願景」與「已實作零件」第一次接成一條可跑的鏈，故也是 <a href="doc_20_taming_framework.html">doc_20_taming_framework.md</a>（馴化框架）「契約層 bind」在真實任務上的首次應用。</li>
+</ul>
+
+</main>
+<footer class="pager">
+<a class="prev" href="doc_21_composition_dimension.html"><span class="dir">← 上一篇</span><span class="fn">doc_21_composition_dimension</span></a>
+<a class="next" href="doc_30_html_dashboard.html"><span class="dir">下一篇 →</span><span class="fn">doc_30_html_dashboard</span></a>
+</footer>
+<a class="backtop" href="#">↑ 回頂端</a>
+</body>
+</html>

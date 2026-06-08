@@ -14,12 +14,13 @@
 
 **關鍵前提**：try_implement 的實驗都只是提案 / 原型；**真正的 `src/ai_core/_core.py` 與 `core_nature/` 一行都沒動**（指被扶正前的狀態）。下面每項都標明「現況 / 我的建議 / 你要決定什麼」，讓使用者回來能快速行動。
 
-分四區：
+分五區：
 
 - **A** — 已原型待扶正
 - **B** — 開放方向題
 - **C** — 候選新軸
 - **D** — 我已自行拍板待你追認
+- **E** — 審查 ttemp-workflow-sync 留下的低風險項（2026-06-08 新增）
 
 ---
 
@@ -33,11 +34,11 @@
 | **C：`nondeterministic` 軸** | **新增第九軸**。`true`＝未認證的隨機環節（開機期）；`{model, test_set, stability}`＝證書（成熟期，可稽核可撤照）。承載 `roadmap.md §3.4` 治理原則。 | `src/ai_core/_core.py`、`lib_spec.md §9`、`axis_spec.md §9`、`execution_forms.md §0` 表、`tests/test_core.py`。 |
 | **C：`memoized`** | **不入軸**，維持純 runtime（`lib/memoize.py`）。理由：快取是呼叫方/library 的優化決策，且可由「`nondeterministic` 缺席 + `stateless`」隱含可快取性——不像 `nondeterministic` 那樣無既有軸值可隱含。 | `lib_spec.md`「未入軸的決策：memoized」節。 |
 
-**驗證**：`smoke_test.py` 72 + `lib_smoke_test.py` 68 + `tests/test_core.py` 65 全綠，三個 demo 正常，各工具 `--metadata` / `<sub> --metadata` 行為端到端正確。
+**驗證**：扶正當下 `smoke_test.py` 72 + `lib_smoke_test.py` 68 + `tests/test_core.py` 65 全綠；**現況（2026-06-08）為 smoke 83 + lib_smoke 78 + pytest 84**（點子捕捉軌 dogfood 與 Gap G 修復後），三個 demo 正常，各工具 `--metadata` / `<sub> --metadata` 行為端到端正確。
 
 **仍待你定**：A4（組合軸推導）與 B 系列（B1 語意欄位 / B2 共用模組 / B3 沙箱）依 `roadmap.md §7` **留給 v0 切片去逼出優先序**（見下方各條的「狀態」）；D 區（我自行拍板的 7 項）仍待你追認。
 
-> 註：CLAUDE.md 標 `tests/test_core.py` 為 82 passed，本決策表寫 65 測試（此區為 register/intercept + nondeterministic 扶正當下的數字）；數字差異請以實際測試輸出為準。
+> 註：本決策表寫 65 測試（此區為 register/intercept + nondeterministic 扶正當下的數字）；CLAUDE.md 現標 `pytest -q` 全收集為 **84 passed**（2026-06-08）。數字差異是不同範圍（65 = 該輪扶正的核心測試子集；84 = 全收集）；請以實際測試輸出為準。
 
 ---
 
@@ -124,6 +125,26 @@
 | Switch 條件表達 | 純資料規則表（equals），值來源 arg/ext，無 DSL/eval | `tools/switch.py` |
 | Layer 4 錯誤封套 | `{"ok":false,"error":{"type","message","function"}}`，type 分流可重試性 | `tools/sfc.py` |
 | 交互安全閥 | `max_rounds` 強制必有，防 actor↔critic 無限互踢 | `lib/interact.py` |
+
+---
+
+## 5b. E 區 — 審查 ttemp-workflow-sync 留下的低風險項（2026-06-08）
+
+合併「點子捕捉軌 dogfood（`idea` 工具）+ Gap G 修復」（見 [doc_22_workflow_and_idea_track.md](doc_22_workflow_and_idea_track.md)）時，審查另撈到三項**不阻擋合併、原型遊樂場可接受**的小缺口，記此待 v0 真接小模型時一併處理：
+
+| 項 | 來源 | 性質 | 暫定處置 |
+|---|---|---|---|
+| **E1.** `OpenAIBackend` 送 `max_tokens` | `lib/llm_call.py` | 對本地 ollama/llama.cpp/vLLM 正確，但 OpenAI 官方新模型（o1/o3 系）要求 `max_completion_tokens`、會拒 `max_tokens` | 目標 backend 本就是本地小模型（roadmap 前提），先不動；真要接官方新模型時再依 provider 分流欄位名。 |
+| **E2.** `serve_socket` serial-accept 無逾時 | `lib/server.py` | 一次處理一連線、不開 thread、無 idle/逾時；單一 idle 連線會卡死整個 daemon | **與 README「Gap G」尾段同一懸案**——「persistent singleton 如何被多個 one-shot caller 共用（連線/排隊/逾時語意）」。歸入該題，v0 真接小模型時正式化。 |
+| **E3.** `_slugify` regex `一-鿿` 冗餘 | `tools/idea.py` | Python `\w`（unicode）預設已含 CJK，`[^\w一-鿿]+` 的 `一-鿿` 多餘；純清理、無行為影響 | 留待順手清理，不單獨開工。 |
+
+> E1/E3 是純清理；E2 不是新題，是 Gap G 解法（socket daemon）暴露出「singleton 共用語意」尚未正式化的同一缺口，已並回該懸案。
+
+### Gap G（已修）— one-shot 工具經 entry manager 時 consume rate 無法跨呼叫累計
+
+> **✅ 已修（2026-06-08）**。原缺口：`idea` 預設經 LLM Entry Manager 路由，但 subprocess 模式每次 completion 新開一個 entry manager process，`RateMeter` 每次從零開始——token/錢上限形同虛設。根因：entry manager 是 persistent server，但對外原本只有 stdin/stdout NDJSON，一個長駐 server 無法被多個獨立 one-shot process 連上同一個。
+>
+> **解法（已落地）**：給 entry manager 一個 stdin/stdout 以外的長駐傳輸——`lib/server.serve_socket(path)`（Unix domain socket，純標準庫、POSIX 原生、免 port）。`llm_entry_manager --socket <path>` 長駐成 daemon，`idea` 經 `AI_CORE_LLM_SOCKET`／`--socket` 連上同一個 server，共用同一份 `RateMeter` → **consume rate 跨呼叫累計**。subprocess 模式保留為零設定 fallback。smoke_test 以「兩個獨立 idea process → usage 遞增」實證。剩餘規範議題見 E2。
 
 ---
 
