@@ -122,6 +122,20 @@
 
 ---
 
+## E. 審查 ttemp-workflow-sync 留下的低風險項（2026-06-08）
+
+合併「點子捕捉軌 dogfood（`idea` 工具）+ Gap G 修復」時，審查另外撈到三項**不阻擋合併、原型遊樂場可接受**的小缺口，記此待 v0 真接小模型時一併處理：
+
+| 項 | 來源 | 性質 | 暫定處置 |
+|---|---|---|---|
+| E1. `OpenAIBackend` 送 `max_tokens` | `lib/llm_call.py` | 對本地 ollama/llama.cpp/vLLM 正確，但 OpenAI 官方新模型（o1/o3 系）要求 `max_completion_tokens`、會拒 `max_tokens` | 目標 backend 本就是本地小模型（roadmap 前提），先不動；真要接官方新模型時再依 provider 分流欄位名。 |
+| E2. `serve_socket` serial-accept 無逾時 | `lib/server.py` | 一次處理一連線、不開 thread、無 idle/逾時；單一 idle 連線會卡死整個 daemon | **與 README「Gap G」尾段所標同一懸案**——「persistent singleton 如何被多個 one-shot caller 共用（連線/排隊/逾時語意）」。歸入該題，v0 真接小模型時正式化。 |
+| E3. `_slugify` regex `一-鿿` 冗餘 | `tools/idea.py` | Python `\w`（unicode）預設已含 CJK，`[^\w一-鿿]+` 的 `一-鿿` 是多餘；純清理、無行為影響 | 留待順手清理，不單獨開工。 |
+
+> E1/E3 是純清理；E2 不是新題，是 Gap G 解法（socket daemon）暴露出「singleton 共用語意」尚未正式化的同一缺口，已並回該懸案。
+
+---
+
 ## 建議的處理順序（進度）
 
 1. ~~**A1+A2+A3**（register 的三個 import-time 問題）一起處理——同源，且 A1 是阻塞級。~~ ✅ 完成（2026-05-26）
