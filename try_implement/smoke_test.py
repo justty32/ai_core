@@ -352,6 +352,106 @@ def test_chain() -> None:
     check("chain derive 複合 guarantee=none（最弱）", derived["guarantee"] == "none", str(derived))
 
 
+# ---------------------------------------------------------------------------
+# 8. idea：點子捕捉軌的 LLM 工具（bind → entry manager → backend 全鏈）
+# ---------------------------------------------------------------------------
+
+def test_idea() -> None:
+    idea = [PY, str(TOOLS / "idea.py")]
+
+    # metadata 契約：頂層 one_shot；LLM 子命令宣告第九軸；ingest 為 stateful_external
+    meta = json.loads(run(idea + ["--metadata"]).stdout)
+    check("idea metadata = one_shot", meta.get("lifecycle") == "one_shot", str(meta))
+    clean_meta = json.loads(run(idea + ["clean", "--metadata"]).stdout)
+    check("idea clean 宣告第九軸 nondeterministic=true",
+          clean_meta.get("nondeterministic") is True, str(clean_meta))
+    ingest_meta = json.loads(run(idea + ["ingest", "--metadata"]).stdout)
+    check("idea ingest = stateful_external",
+          ingest_meta.get("state") == "stateful_external", str(ingest_meta))
+
+    # 純 filter 全鏈（預設經 entry manager；無 env → EchoBackend）：echo backend 會回顯
+    proc = run(idea + ["clean"], stdin="一些 點子")
+    check("idea clean 經 entry manager 全鏈跑通（EchoBackend 回顯）",
+          proc.returncode == 0 and "一些 點子" in proc.stdout, repr(proc.stdout))
+    proc = run(idea + ["clean", "--direct"], stdin="直接路由")
+    check("idea clean --direct 跳過 entry manager 也跑通",
+          proc.returncode == 0 and "直接路由" in proc.stdout, repr(proc.stdout))
+
+    # ingest：raw 必須逐字（不經 LLM、無 echo 前綴），cleaned/notes 須產出
+    with tempfile.TemporaryDirectory() as d:
+        proc = run(idea + ["ingest", "--slug", "t", "--ideas-dir", d], stdin="逐字保留測試")
+        out = json.loads(proc.stdout)
+        raw_txt = Path(out["raw"]).read_text(encoding="utf-8")
+        check("idea ingest raw 逐字保留（不經 LLM，無 echo 前綴）",
+              "逐字保留測試" in raw_txt and "echo:" not in raw_txt, raw_txt)
+        check("idea ingest 產出 cleaned 與 notes",
+              Path(out["cleaned"]).exists() and Path(out["notes"]).exists(), str(out))
+
+    # slug 主題隔離：slug 是另一主題的「連字號後綴」時，不可撞進對方的 raw 檔（鐵則 1）。
+    with tempfile.TemporaryDirectory() as d:
+        run(idea + ["ingest", "--slug", "my-idea", "--ideas-dir", d], stdin="主題甲")
+        out2 = json.loads(
+            run(idea + ["ingest", "--slug", "idea", "--ideas-dir", d], stdin="主題乙").stdout)
+        raw2 = Path(out2["raw"]).read_text(encoding="utf-8")
+        check("idea ingest slug 連字號後綴不跨主題污染（idea 不吃 my-idea 檔）",
+              "my-idea" not in out2["raw"] and "主題甲" not in raw2 and "主題乙" in raw2,
+              f"{out2['raw']} :: {raw2!r}")
+
+    # entry manager 新增的 CLI provider 覆寫 flag：--provider echo 跑一次 complete 仍通
+    req = json.dumps({"cmd": "complete", "prompt": "hi"}) + "\n"
+    proc = run([PY, str(TOOLS / "llm_entry_manager.py"), "--provider", "echo"], stdin=req)
+    resp = json.loads(proc.stdout.splitlines()[0])
+    check("entry_manager --provider echo 覆寫 flag 跑通 complete",
+          resp.get("ok") and "echo:" in resp.get("text", ""), str(resp))
+
+
+def test_idea_socket() -> None:
+    """Gap G 修復：長駐 socket entry manager，多個 one-shot idea 連同一個 → rate 累計。"""
+    import socket
+    import time
+
+    idea = [PY, str(TOOLS / "idea.py")]
+    sock = str(Path(tempfile.mkdtemp()) / "em.sock")
+    daemon = subprocess.Popen(
+        [PY, str(TOOLS / "llm_entry_manager.py"), "--socket", sock],
+        cwd=str(HERE), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        for _ in range(200):  # 等 daemon 建好 socket
+            if os.path.exists(sock):
+                break
+            time.sleep(0.01)
+        check("entry_manager --socket 啟動並建立 socket 檔", os.path.exists(sock), sock)
+
+        def usage():
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.connect(sock)
+            c.sendall(b'{"cmd":"usage"}\n')
+            line = c.makefile("r", encoding="utf-8").readline()
+            c.close()
+            return json.loads(line)["usage"].get("token", 0)
+
+        env = dict(os.environ, AI_CORE_LLM_SOCKET=sock)
+        run(idea + ["clean"], stdin="第一筆口述", env=env)
+        u1 = usage()
+        run(idea + ["clean"], stdin="第二筆口述", env=env)
+        u2 = usage()
+        check("idea 經長駐 socket entry manager → consume rate 跨呼叫累計（Gap G 修復）",
+              u2 > u1 > 0, f"u1={u1} u2={u2}")
+    finally:
+        try:
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.connect(sock)
+            c.sendall(b'{"cmd":"shutdown"}\n')
+            c.close()
+        except OSError:
+            pass
+        try:
+            daemon.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            daemon.kill()
+
+
 def main() -> int:
     print("=== try_implement 煙霧測試開始 ===\n")
     test_metadata_contract()
@@ -362,6 +462,8 @@ def main() -> int:
     test_hub()
     test_entry_manager()
     test_chain()
+    test_idea()
+    test_idea_socket()
     print(f"\n=== 全部通過：{_passed} 項斷言 ===")
     return 0
 

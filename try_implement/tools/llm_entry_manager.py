@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from _common import ensure_ai_core_importable, ensure_lib_importable
@@ -90,11 +91,28 @@ def main() -> int:
     p = argparse.ArgumentParser(prog="llm_entry_manager")
     p.add_argument("--limit-token", type=float, default=None,
                    help="token 預算上限；超過後 complete 回 rate limit")
+    p.add_argument("--provider", default=None,
+                   help="覆寫 AI_CORE_LLM_PROVIDER（openai|anthropic|echo）")
+    p.add_argument("--model", default=None, help="覆寫 AI_CORE_LLM_MODEL")
+    p.add_argument("--base-url", default=None, help="覆寫 AI_CORE_LLM_BASE_URL")
+    p.add_argument("--socket", default=None,
+                   help="以長駐 Unix socket server 監聽此路徑（多個 one-shot caller 連同一個 → "
+                        "consume rate 跨呼叫累計）；省略則用 stdin/stdout 一次性模式")
     args = p.parse_args()
 
-    # 真接 API 時把這裡換成接 lib/call.Http 或官方 SDK 的 Backend
-    backend = llm_call.EchoBackend()
+    # backend 由環境變數決定（元件 1「統一 LLM 呼叫入口」把 provider 選擇集中在環境）；
+    # CLI flag 可臨時覆寫。未設定則 backend_from_env 回 EchoBackend（離線/測試友善）。
+    env = dict(os.environ)
+    if args.provider:
+        env["AI_CORE_LLM_PROVIDER"] = args.provider
+    if args.model:
+        env["AI_CORE_LLM_MODEL"] = args.model
+    if args.base_url:
+        env["AI_CORE_LLM_BASE_URL"] = args.base_url
+    backend = llm_call.backend_from_env(env)
     srv = build_server(args.limit_token, backend)
+    if args.socket:
+        return srv.serve_socket(args.socket)
     return srv.serve()
 
 

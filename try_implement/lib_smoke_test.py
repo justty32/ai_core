@@ -111,6 +111,45 @@ def test_server() -> None:
     check("server shutdown 回 shutdown=true", lines[4].get("shutdown") is True, str(lines[4]))
     check("server ready 訊號進 stderr", "ready" in err.getvalue(), err.getvalue())
 
+    # serve_socket：多個獨立連線共用同一 server 實例的狀態（Gap G 的傳輸層解法）
+    import os
+    import socket as _socket
+    import time as _time
+
+    sock_srv = server.NDJSONServer("sock")
+    counter = {"n": 0}
+
+    @sock_srv.handler("inc")
+    def _inc(req):
+        counter["n"] += req.get("by", 1)
+        return {"total": counter["n"]}
+
+    sock_path = os.path.join(tempfile.mkdtemp(), "srv.sock")
+    th = threading.Thread(target=sock_srv.serve_socket,
+                          args=(sock_path,), kwargs={"stderr": io.StringIO()}, daemon=True)
+    th.start()
+    for _ in range(200):  # 等 socket 檔出現
+        if os.path.exists(sock_path):
+            break
+        _time.sleep(0.01)
+
+    def _send(obj):
+        c = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+        c.connect(sock_path)
+        c.sendall((json.dumps(obj) + "\n").encode("utf-8"))
+        line = c.makefile("r", encoding="utf-8").readline()
+        c.close()
+        return json.loads(line)
+
+    r1 = _send({"cmd": "inc", "by": 3})       # 連線 1
+    r2 = _send({"cmd": "inc", "by": 4})       # 連線 2（不同連線）
+    check("serve_socket 跨獨立連線共用 server 狀態（3→7）",
+          r1["total"] == 3 and r2["total"] == 7, f"{r1} -> {r2}")
+    _send({"cmd": "shutdown"})
+    th.join(timeout=3)
+    check("serve_socket 收 shutdown 後清掉 socket 檔",
+          not os.path.exists(sock_path), sock_path)
+
 
 # --------------------------------------------------------------------------
 # singleton（queue + consume rate）
@@ -231,6 +270,61 @@ def test_llm_call() -> None:
     out = coding_q("how to sort?")
     check("bind 疊 system 進 prompt", "professor of coding" in out, out)
     check("bind 疊 postprocess 後綴", out.endswith("-- at 20240505"), out)
+
+    # 真 backend（OpenAI 相容 / Anthropic）：對本地 stub server round-trip，
+    # 驗 payload 組裝與回應解析正確（不需真 API）。
+    captured: dict = {}
+
+    def _serve(handler_cls):
+        httpd = HTTPServer(("127.0.0.1", 0), handler_cls)
+        threading.Thread(target=httpd.handle_request, daemon=True).start()
+        return httpd, httpd.server_address[1]
+
+    class OpenAIStub(BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            captured["openai"] = json.loads(self.rfile.read(n))
+            captured["openai_auth"] = self.headers.get("Authorization")
+            body = json.dumps({"choices": [{"message": {"content": "OA-回覆"}}]}).encode()
+            self.send_response(200); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+
+    httpd, port = _serve(OpenAIStub)
+    oa = llm_call.OpenAIBackend(f"http://127.0.0.1:{port}/v1", "m", api_key="k")
+    check("OpenAIBackend 解析 choices[].message.content", oa.complete("問題") == "OA-回覆")
+    check("OpenAIBackend payload 帶 model+messages",
+          captured["openai"]["model"] == "m"
+          and captured["openai"]["messages"][0]["content"] == "問題", str(captured["openai"]))
+    check("OpenAIBackend 帶 Bearer 授權頭", captured["openai_auth"] == "Bearer k")
+    httpd.server_close()
+
+    class AnthropicStub(BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            captured["anthropic"] = json.loads(self.rfile.read(n))
+            captured["anthropic_key"] = self.headers.get("x-api-key")
+            captured["anthropic_ver"] = self.headers.get("anthropic-version")
+            body = json.dumps({"content": [{"type": "text", "text": "AN-"},
+                                           {"type": "text", "text": "回覆"}]}).encode()
+            self.send_response(200); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+
+    httpd, port = _serve(AnthropicStub)
+    an = llm_call.AnthropicBackend(f"http://127.0.0.1:{port}", "claude-x", api_key="kk")
+    check("AnthropicBackend 串接 text block", an.complete("問題") == "AN-回覆")
+    check("AnthropicBackend payload 帶 max_tokens", "max_tokens" in captured["anthropic"],
+          str(captured["anthropic"]))
+    check("AnthropicBackend 帶 x-api-key 與 anthropic-version",
+          captured["anthropic_key"] == "kk" and captured["anthropic_ver"], str(captured))
+    httpd.server_close()
+
+    # backend_from_env：未設定 → EchoBackend；指定 openai → OpenAIBackend
+    check("backend_from_env 未設定回 EchoBackend",
+          isinstance(llm_call.backend_from_env({}), llm_call.EchoBackend))
+    be = llm_call.backend_from_env({"AI_CORE_LLM_PROVIDER": "openai",
+                                    "AI_CORE_LLM_BASE_URL": "http://x/v1",
+                                    "AI_CORE_LLM_MODEL": "m"})
+    check("backend_from_env openai → OpenAIBackend", isinstance(be, llm_call.OpenAIBackend))
 
 
 # --------------------------------------------------------------------------
