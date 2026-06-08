@@ -68,6 +68,7 @@ ai_core/
 │   └── lib_smoke_test.py   #   68 項斷言
 ├── funcs/                  # 範例函式（echo.sh …）
 ├── progress.md             # 接續上次工作的 resume 指標
+├── ideas/                  # 點子捕捉／頭腦風暴軌（intake/critique/expand 產物，借自 TTemp）
 ├── .claude/commands/       # 循環工作的專屬 slash command（見下「工作流 slash command」）
 └── pyproject.toml          # hatchling 打包；無 runtime 相依
 ```
@@ -82,6 +83,11 @@ ai_core/
 | `/test` | 跑全部測試（pytest + 兩個 smoke test）並回報 | 本檔「建置／測試指令」 |
 | `/spec` | 規範扶正：把 `try_implement/` 提案收斂進 `core_nature/` 與 `_core.py` | `DECISIONS.md`、`core_nature/` |
 | `/proto` | 原型探索：在 `try_implement/` 先寫出來跑跑看、暴露設計缺口 | `try_implement/README.md` |
+| `/intake` | 口述線一條龍：原文逐字→初步整理→匯總筆記（落 `ideas/`） | 指令內含鐵則 |
+| `/critique` | 頭腦風暴・找漏洞 → `ideas/brainstorm/` | 指令自含 |
+| `/expand` | 頭腦風暴・擴展靈感 → `ideas/brainstorm/` | 指令自含 |
+
+`/intake`、`/critique`、`/expand` 是從 TTemp 借來的**點子捕捉／頭腦風暴軌**，產物統一落在 `ideas/`（`raw/cleaned/notes/brainstorm`），與本 repo 的程式碼／規範工作並行、互不干擾。其中只有 `/intake`（語音輸入）採「**主 agent 即時回應、動作丟背景 subagent**」模式；其餘指令不套用此模式。
 
 ## 建置 / 測試指令
 
