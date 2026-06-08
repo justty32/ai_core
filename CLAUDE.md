@@ -64,7 +64,7 @@ ai_core/
 │   ├── tools/              #   indexer/router/switch/sfc/hub/llm_entry_manager/chain/idea
 │   ├── lib/                #   複合規範參考實作 + 基礎設施 + llm_call
 │   ├── demos/              #   3 個可跑 demo
-│   ├── smoke_test.py       #   82 項斷言
+│   ├── smoke_test.py       #   83 項斷言
 │   └── lib_smoke_test.py   #   78 項斷言
 ├── funcs/                  # 範例函式（echo.sh …）
 ├── progress.md             # 接續上次工作的 resume 指標
@@ -98,10 +98,10 @@ ai_core/
 .venv/bin/pip install -e ".[dev]"
 
 # 跑正式核心測試（src/ai_core + tests/）
-.venv/bin/python -m pytest -q                 # 目前 82 passed
+.venv/bin/python -m pytest -q                 # 目前 84 passed
 
 # 跑原型煙霧測試（不需 pytest，純標準庫）
-.venv/bin/python try_implement/smoke_test.py      # 82 項斷言
+.venv/bin/python try_implement/smoke_test.py      # 83 項斷言
 .venv/bin/python try_implement/lib_smoke_test.py  # 78 項斷言
 
 # 跑原型工具（範例）

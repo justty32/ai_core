@@ -186,8 +186,13 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 
     base = _ideas_dir(args.ideas_dir)
     # 同一主題（slug）跨多則口述沿用同一份檔，讓 raw 累積、cleaned/notes 整份刷新；
-    # 找不到既有檔才用當下時間戳開新檔。
-    existing = sorted((base / "raw").glob(f"*-{slug}.md")) if (base / "raw").is_dir() else []
+    # 找不到既有檔才用當下時間戳開新檔。**嚴格比對整個檔名「<時間戳>-<slug>.md」**——
+    # 不能用 glob(f"*-{slug}.md")，因為 * 會跨連字號，導致某 slug 撞進「以它為連字號後綴」
+    # 的另一主題檔（例：slug=idea 會吃到 ...-my-idea.md），違反 /intake 鐵則 1 的主題隔離。
+    raw_dir = base / "raw"
+    name_re = re.compile(r"\d{8}-\d{4}-" + re.escape(slug) + r"\.md")
+    existing = (sorted(p for p in raw_dir.glob("*.md") if name_re.fullmatch(p.name))
+                if raw_dir.is_dir() else [])
     fname = existing[0].name if existing else f"{ts}-{slug}.md"
     raw_p = base / "raw" / fname
     cleaned_p = base / "cleaned" / fname

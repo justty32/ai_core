@@ -18,7 +18,7 @@
    組合維度**（compose）。
 3. **概念拓展文件**（`docs/`）：多函數交互、LLM 隨機性馴化框架。
 
-兩套煙霧測試合計 **156 項斷言全綠**（`smoke_test.py` 80 + `lib_smoke_test.py` 76），外加三個可跑 demo。
+兩套煙霧測試合計 **161 項斷言全綠**（`smoke_test.py` 83 + `lib_smoke_test.py` 78），外加三個可跑 demo。
 
 > 📋 **回來先讀 [`DECISIONS.md`](DECISIONS.md)** —— 把這裡所有「回饋規範」的發現收斂成一頁
 > 決策清單（每項標「待你決定 X 還是 Y」），是對你細調 `core_nature/` 規範最直接有用的入口。
@@ -85,9 +85,9 @@
 ```bash
 cd try_implement
 
-# 兩套煙霧測試（合計 156 斷言）
-python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager/idea（80）
-python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta + 真 backend round-trip（76）
+# 兩套煙霧測試（合計 161 斷言）
+python3 smoke_test.py        # 工具：indexer/router/switch/sfc/hub/entry_manager/idea（83）
+python3 lib_smoke_test.py    # lib：…/compose/interact/compose_meta + 真 backend round-trip（78）
 
 # --- 各工具單獨玩 ---
 

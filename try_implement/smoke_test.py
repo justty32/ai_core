@@ -387,6 +387,16 @@ def test_idea() -> None:
         check("idea ingest 產出 cleaned 與 notes",
               Path(out["cleaned"]).exists() and Path(out["notes"]).exists(), str(out))
 
+    # slug 主題隔離：slug 是另一主題的「連字號後綴」時，不可撞進對方的 raw 檔（鐵則 1）。
+    with tempfile.TemporaryDirectory() as d:
+        run(idea + ["ingest", "--slug", "my-idea", "--ideas-dir", d], stdin="主題甲")
+        out2 = json.loads(
+            run(idea + ["ingest", "--slug", "idea", "--ideas-dir", d], stdin="主題乙").stdout)
+        raw2 = Path(out2["raw"]).read_text(encoding="utf-8")
+        check("idea ingest slug 連字號後綴不跨主題污染（idea 不吃 my-idea 檔）",
+              "my-idea" not in out2["raw"] and "主題甲" not in raw2 and "主題乙" in raw2,
+              f"{out2['raw']} :: {raw2!r}")
+
     # entry manager 新增的 CLI provider 覆寫 flag：--provider echo 跑一次 complete 仍通
     req = json.dumps({"cmd": "complete", "prompt": "hi"}) + "\n"
     proc = run([PY, str(TOOLS / "llm_entry_manager.py"), "--provider", "echo"], stdin=req)
