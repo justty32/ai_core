@@ -18,4 +18,6 @@ Good. So best to do, uh, next one is to, um, format my... format these, uh, text
 
 And so we're gonna make a chain, uh, a chain, yes, to to connect this into a useful workflow. I mean, we have to... just like we provide... we pour we proposed. So there's two work for one is to change my speaking into notes, and second work... workflow is is change the notes into some AI advice. Second, uh, I mean, the third the third word is orangement arrangement yes, to turn this on just like the fire is a... is put on everywhere, and this workflow will gather this and arrange that into some format of files I can read, which is... clearly... and, which has its yes, form it. Okay. And the final one is turn the markdown or some text file into HTML, which let user understand easily. Okay. So we have four workflow, and this workflow will compost by these functions.
 
+Okay. Great. So we have these workflows. And by this AI core, we have to make a standard tool set to implement these workflows. And, yes, uh, okay. Maybe later, I will create an Adrian work, which, yes, to create it create an agent what work to do this. So just now, just push to master.
+
 
