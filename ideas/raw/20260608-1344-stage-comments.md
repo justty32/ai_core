@@ -6,3 +6,5 @@ Uh, okay. Uh, at the first workflow is about the, um, aiming Bristol. I don't kn
 
 And the second one, you just keep going on by yourself. I mean, you can easily to influence these rest rest things.
 
+Well, uh, only one and two. You're right. And the third will be on the the other part of the whole system. Just ignore that. And then So we have a function of this. Okay? And then we're gonna... went to... we're gonna go into the
+
