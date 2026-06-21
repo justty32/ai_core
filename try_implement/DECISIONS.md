@@ -25,6 +25,28 @@
 
 ---
 
+## ✅ 已收斂（2026-06-21）：ATP v0 — V0 垂直切片的資料結構定案
+
+`kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE）三輪收斂出 V0 的具體規格 **ATP v0（Asset Transfer Protocol）**。**注意：這是 `kb-ext/` 的設計收斂，尚未寫成 code，`_core.py` / `core_nature/` 一行未動。** 開工後才落地成 `try_implement/` 並回填狀態。
+
+| 凍結項 | 決策 | 出處 |
+|---|---|---|
+| **V0 任務** | 在錨點 `# AI_CORE:INSERT_HERE` 插入一個函式；成功用確定性驗證（`ast.parse` 過 + 目標節點存在 + 簽名符合）。 | round_2_synthesis C1 |
+| **單一資料結構** | append-only asset JSON，逐站追加不改寫上游（P1 條文化）。四角色訴求全掛其上。 | round_2_synthesis §2、round_3 P1 |
+| **裁剪** | `skeletonize()` 純 `ast`；`pruning.strategy ∈ {raw, ast_skeleton}`（Q1）。 | round_3 Q1 |
+| **隔離** | `subprocess(env=白名單)` 軟隔離；V0 不上 bubblewrap。`execute_in_isolation` 介面定義、`sandbox` 欄位權威產出。 | round_2 SSE/SGA |
+| **溯源** | 一個 `AI_CORE_TRACE_ID` 環境變數 + asset 內 `trace[]`；落盤 NDJSON 不上 sqlite。 | round_2 SSE/SSA、round_3 Q2 |
+| **治理** | 證書＝asset 的 `certificate` 欄（寄生第九軸 dict），標註不攔截；`status ∈ {uncertified, syntax_ok, rejected}`，`rejected` 帶 `reason ∈ {guardrail_violation, retry_exhausted}`（P2）。 | round_3 Q3、P2 |
+| **安全護欄** | AST 裁剪三層 A/B/C 全做、fail-closed；`SENSITIVE_NAMES` 為 `lib/skeleton.py` 頂層黑名單種子常數。 | round_3 SGA |
+| **評測** | `TrimTrace` + tier×method pivot（raw vs ast_skeleton）；配對主鍵 `task_id`、每格 N≥30；token 用 `split` 粗估（僅同源相對比較，P3）。 | round_3 Q1/P3 |
+
+**待建檔（純標準庫，不破壞 `dependencies=[]`）**，開工次序：
+`asset.py → trace.py → skeleton.py → isolation.py → line_assistant.py → demos/v0_pipeline.py`。
+
+> 這一輪正好**回答了 §7 表中「v0 會逼出的懸案」的一部分**：B1（語意欄位）→ asset 的 `origin/payload/target` 已給最小形狀；B3（沙箱）→ `execute_in_isolation` 軟隔離定案；`nondeterministic` 證書 → 落成 asset `certificate` 欄。B2（共用模組）、A4（組合軸推導）仍待開工驗證。
+
+---
+
 ## A. 已做原型，待你決定是否扶正進規範
 
 ### A1. `--metadata` 攔截 vs subcommand CLI（原 Gap A，阻塞級）— ✅ 已扶正
