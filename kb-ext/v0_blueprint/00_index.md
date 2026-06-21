@@ -15,7 +15,8 @@ roadmap §6 v0 切片
    │                   ↑ pipe/guard/retry/route/decompose
    ├─[03] coding agent ─ ＝確定性組合子樹（用 02 的組合子 + 01 的模組拼成），非 ReAct
    ├─[04] judge ────── 事實判斷函數＝classify 特例（02 的一個應用範例）
-   └─[05] judge 訓練 ── 把 04「凹」到零錯誤＝固化引擎 + 第九軸證書 + 飛輪 的最小實例
+   ├─[05] judge 訓練 ── 把 04「凹」到零錯誤＝**怎麼固化**（三層三明治）
+   └─[06] 固化引擎 ──── **何時固化 + 怎麼治理 + 系統形態**（roadmap §3.6 最硬題的答案）
 ```
 
 共同底層：全純標準庫（`ast`/`json`/`subprocess`/`uuid`/`os`），不破壞 `dependencies=[]`。三套（01/03/05）共用同一批底層檔，開工時可一起做。
@@ -29,6 +30,7 @@ roadmap §6 v0 切片
 | [03_coding_agent.md](03_coding_agent.md) | coding agent | 確定性組合子樹，LLM 只在葉子填洞/貼標籤 | agent_round_1 |
 | [04_judge.md](04_judge.md) | 事實判斷函數 | judge = classify 特例（labels=yes/no/unknown）| judge_round_1 |
 | [05_judge_training.md](05_judge_training.md) | 零錯誤函數訓練 | 三層三明治；零錯誤＝證書 stability=100% on test_set | judge_round_2 |
+| [06_crystallization.md](06_crystallization.md) | 固化引擎 | 何時固化（ready 四閘）+ 治理三籠 + 三段 chain | crystallization_round_1 |
 
 ## 跨主題的共同信念（五場反覆出現）
 
