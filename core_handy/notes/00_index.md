@@ -1,0 +1,100 @@
+# core_handy 設計筆記 — 索引
+
+## 這是什麼
+
+`core_handy/` 是 ai_core 現有設計的一次**嚴謹濃縮 demo**：用 C++（最嚴謹、使用者最熟）把現有設計
+一軸一軸重新審視，濃縮成最精煉的形狀。**每一步都經使用者確認**；會經歷多輪討論，最終才進入實作。
+
+- **產物目標**：`ac_helper.hpp`（header-only）＋ `main.cpp`（示範）。
+- **與 `src/ai_core` 的關係**：那條線是「純 Python 標準庫」；`core_handy` 是另一條刻意分開的 C++ 濃縮線。
+- **權威來源**：濃縮的對象是 `src/ai_core/_core.py`（九軸驗證）、`core_nature/`（規範）、`roadmap.md`（北極星）。
+  濃縮時若與權威來源分歧，會在筆記裡標明「為何分歧、在哪邊還原」。
+
+## ★ lib 是什麼：輔助寫「符合標準的 shell 程式」（2026-06-24 定錨）
+
+`ac_helper` 的**目的**：作者**依託此 lib 寫 shell 程式**，產物即**自動符合九軸標準定義**。
+這是 `src/ai_core/_core.py` 的 `register()`／`intercept()` 模型的 **C++ 對應**。
+
+| 層 | 對作者 | 對外（hub / LLM） |
+|---|---|---|
+| **defs（描述）** | 作者**填宣告**（三層欄位：必須/推薦/額外） | 被**序列化成 `--metadata` JSON** 給 hub 讀 |
+| **impl（設施）** | 作者**選用託管**（狀態目錄…），少寫輪子 | 行為符合慣例（副作用範圍可預測） |
+| **膠水** | `main()` 裡呼叫一個 intercept 級進入點 | 命中 `--metadata` 吐 JSON 並 exit，否則交還控制 |
+
+推論：**`--metadata` 序列化是 defs 層的核心職責**（不是可選 demo）——lib 的存在意義就是產出
+「會正確回應 `--metadata` 的 shell 程式」。C++ 版進入點草圖（筆記層，先不寫碼）：
+
+```cpp
+int main(int argc, char** argv) {
+    ac::Meta meta{ /* 九軸型別拼成 */ };
+    ac::intercept(argc, argv, meta);   // 命中 --metadata → 吐 JSON + exit；否則 return 續跑本體
+    ... // 程式本體
+}
+```
+
+## ★ 三層 ↔ 三欄位通則（2026-06-24 確立，治所有 defs/ 型別）
+
+定義的重要度分三級，一比一對應 C++ 型別的欄位種類：
+
+| 定義層 | 實作欄位 | C++ 形狀 | 性質 |
+|---|---|---|---|
+| **最小必須** | 固定欄位 | `T field = default;`（純值，恆在） | hub 永遠可依賴；KISS 那端 |
+| **推薦** | opt 欄位 | `std::optional<具體型別>` | 結構化、有型別，但可缺席 |
+| **額外** | extra 欄位 | `std::optional<std::map<std::string,std::string>>` | 自由字串袋，最低保真，逃生艙 |
+
+- **extra 故意低保真**（string→string）：巢狀資料須壓平成字串 → 刻意製造張力，逼重要欄位往上升級。
+- **升級壓力**：`extra →（常見且重要）→ opt 欄位 →（普遍且必須）→ 固定欄位`。
+  這條路**一次回答所有「某欄位該放哪」的懸案**（mode/streaming/terminal_binding…）：先進 extra，夠格再升。
+- **三槽選用**：不是每軸都填滿。可只有固定（軸 3 `bool stateful`），或跳過 opt 直接到 extra（軸 1）。
+- **三層直接塑形 `--metadata` JSON**：固定＝必出鍵、opt＝有才出、extra＝原樣攤平。
+
+## ★ 兩層區分：標準定義 vs 標準實作庫（2026-06-24 確立）
+
+這是讀懂 `core_handy` 內容構成的關鍵框架：
+
+- **九軸標準定義（spec）**：目標是對函數狀態做**統一描述**。純描述性。在這層，程式狀態該由程式自管，
+  描述性軸只到「軸 3：函數有沒有外部狀態（`stateful`）」。**軸 4 不屬於描述性九軸。**
+- **標準實作庫（＝ `core_handy` / `ac_helper`）**：依託九軸標準、建在其上。它有**兩類內容**：
+  1. **描述性 metadata 型別**（軸 1/2/3…）——描述一個函數「是什麼」。
+  2. **提供的設施／實作**——不描述，而是「替程式做掉」的功能碼。**軸 4「狀態統一託管」是第一個例子**：
+     標準目錄慣例（config/cache/state/data）的現成實作（路徑解析、建目錄、JSON 讀寫），程式選擇性託管。
+
+> 推論：本筆記的「九軸進度表」其實混了兩類東西。描述性軸做的是「濃縮型別」；設施軸（軸 4…）做的是「設計 API」。
+
+## 工作節奏
+
+1. 一軸一軸來，順序＝`_core.py` 的 `_KNOWN_FIELDS`。
+2. 每軸先**攤定義 → 提案濃縮 → 多輪討論 → 拍板**，過程記在該軸的筆記檔。
+3. 全部軸拍板後，才動手寫 `ac_helper.hpp` 與 `main.cpp`。
+4. 筆記用詞：**討論中**＝未定；**Round N**＝第幾輪；**✅ 拍板**＝使用者確認。
+
+## 慣例（暫定，討論中）
+
+- 語言標準：C++20（concepts / designated initializers 可用，利於嚴謹約束）。已驗證可編。
+- 工具鏈：MinGW64 g++ + CMake（`MinGW Makefiles` generator）。
+- 設計原則繼承 roadmap：KISS / Lightweight / No wheel-remake / Least dependency。
+  C++ 版額外加一條：**讓非法狀態無法被表達**（make illegal states unrepresentable）。
+
+## 九軸進度表
+
+順序出自 `_core.py` 的 `_KNOWN_FIELDS`。
+
+> **🎉 描述面收尾（2026-06-24）**：軸 1/2/3/5/6/7/8/9 描述面全部濃縮定案；軸 4 為純設施（描述面外包給軸 3）。
+> 下一階段：回頭**重看全部 impl 筆記、統一重做實作設計**（軸 1 統一 I/O 為地基 → 軸 2 serve、軸 4 狀態託管、
+> 軸 5 rate-meter、軸 6/7 transaction、軸 8 dry-run plumbing、軸 9 馴化框架），再寫 `ac_helper.hpp` + `main.cpp`。
+
+| # | 軸 | 筆記檔 | 狀態 |
+|---|---|---|---|
+| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 11，重新設計）：`bool text=false` + `bool writable=false` + `optional<map<string,string>> extra` |
+| 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R3 修正）：`bool persistent`(預設false=one_shot)＋統一 `extra`（取代裸 detail） |
+| 3 | `state`（跨呼叫狀態） | [axis_3_state.md](axis_3_state.md) | ✅ 定案：單一 `bool stateful = false`（false=stateless 預設、true=stateful_external），無 detail |
+| 4 | `state_dirs`（狀態目錄） | [axis_4_state_dirs.md](axis_4_state_dirs.md) | 討論中（Round 1 提案） |
+| 5 | `resources`（資源特性） | [axis_5_resources.md](axis_5_resources.md) | ✅ 定案（R2）：無固定欄位、opt 預定義(memory/cpu/gpu/time/disk/network)+extra；network 帶 traffic、cpu 本線新增 |
+| 6 | `interruptible`（可中斷性） | [axis_6_interruptible.md](axis_6_interruptible.md) | ✅ 定案（R2）：`unsigned level`(開放碼表 0=unsafe/1=safe/…/5=graceful,≥6 自定義；zero-init=unsafe)＋extra |
+| 7 | `guarantee`（執行保證） | [axis_7_guarantee.md](axis_7_guarantee.md) | ✅ 定案（R1）：封閉 `enum class Guarantee : unsigned`（none=0 預設/idempotent/transactional）＋統一 `extra`；與軸 6 開放碼表相反（值集封閉故用 enum） |
+| 8 | `dry_run`（乾跑） | [axis_8_dry_run.md](axis_8_dry_run.md) | ✅ 定案：描述層只留 `bool allow_dry_run = false`（同軸 3 純 bool）；object 細節 flag/state_entry/error_entry 全降級到實作層待設計 |
+| 9 | `nondeterministic`（確定性/治理證書） | [axis_9_nondeterministic.md](axis_9_nondeterministic.md) | ✅ 定案（R1）：單一 `unsigned uncertainty = 0`（0=完全確定；愈高愈不確定；馴化使其下降）＋`extra`（承載 model/test_set/stability 證書）。權威三態摺成單調量尺 |
+
+## 跨軸的待決議題（隨討論累積）
+
+- ~~**序列化**：demo 要不要做 `--metadata` JSON？~~ → **已定（2026-06-24）：要，且是 defs 層核心職責**（見上「lib 是什麼」）。
