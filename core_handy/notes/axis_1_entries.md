@@ -1,10 +1,10 @@
 # 軸 1：`entries`（I/O 出入口）
 
-> 狀態：✅ 定案（Round 11，**重新設計，supersede Round 1–9**）。
-> Entry = `bool text=false` + `bool writable=false` + `optional<map<string,string>> extra`。
-> 仍開放：被排除項的去向（mode/流動軸、terminal_binding），屬「別的軸」的事，不阻擋 entries。
+> 狀態：✅ 定案（Round 12，**三張開放整數碼表，supersede Round 11**）。
+> Entry = `unsigned direction=0` + `unsigned content=0` + `unsigned access=0` + `optional<map<string,string>> extra`。
+> 仍開放：流動模式 / 傳輸身分的正式家，屬「別的軸 / hub 階段」的事，不阻擋 entries。
 
-> ⚠️ Round 1–9 是 enum 路線的演化軌跡（保留供回溯）；**最終定案以 Round 11 為準**。
+> ⚠️ Round 1–9 是 enum 路線、Round 10–11 是扁平 bool 路線（皆保留供回溯）；**最終定案以 Round 12 為準**。
 
 ---
 
@@ -432,6 +432,64 @@ struct Entry {
 
 using Entries = std::map<std::string, Entry>;  // 具名通道 → entry
 ```
+
+---
+
+## Round 12（✅ 最終：bool → 三張開放整數碼表，supersede Round 10/11）
+
+回應 `defs_review/axis_1_entries.md` 的審查。使用者決定：**用開放整數碼表取代 bool**，
+讓 bool 的 0/1 成為碼表子集（同軸 6 `unsigned level`）——動機是**向前擴充相容**：
+未來加碼 2/3/4… 不破壞只懂 0/1 的舊讀者。三個正交性質各一張表，全 `unsigned`、zero-init 預設、具名常數補可讀性。
+
+### 三張開放碼表（拍板）
+
+| 欄位 | 碼 | 標準值 | 預設語意 |
+|---|---|---|---|
+| `direction` | 0 / 1 / 2 / ≥3 | in / out / in_out / 擴充 | 0=in（純輸入；與 access=0 readonly 相配、不衝突） |
+| `content`   | 0 / 1 / ≥2 | binary / text / 擴充(int/json…) | 0=binary（**沿用舊 bool text 極性 false=binary，選相容而非修預設**） |
+| `access`    | 0 / 1 / ≥2 | readonly / writable / 擴充(owned/consume…) | 0=readonly（保守端） |
+
+### 使用者拍板的三個決定
+1. **content 極性 = 0=binary**：選「跟舊 bool 值相容」而非「修預設極性」。忘填→binary 的 hazard 接受。
+2. **改名**：`text`→`content`、`writable`→`access`（多值碼表，名實相符）。
+3. **方向碼表**：`in=0`、`out=1`、`in_out=2`；≥3 擴充。
+   （初版指定 `in_out=0`，後改 `in=0`：避免 zero-init 的 `in_out` 與 `access=0 readonly` 字面衝突。）
+
+### 解掉的審查發現
+- **#2 方向回歸**：`direction` 與 `access` **分立** → 方向(in/out/inout) 與可變性(讀/寫) 正式解耦。
+  **in-place = `direction:in_out` + `access:writable`**，Round 5 標記「in-place 暫不表達」的缺口補上。
+- **#1 數值通道**：exit code/int/json = `content` 碼 ≥2 → Round 7「自由字串 content」以整數碼表還魂
+  （與軸 6/9 同語言：整數碼＋具名常數），Round 11 打回的回歸再次解掉。
+- **#5 預設極性**：依使用者選擇，content 維持 0=binary（相容優先）；不修極性。
+
+### 型別草圖（定案）
+
+```cpp
+struct Entry {
+  unsigned direction = 0;  // 0=in(預設) 1=out 2=in_out      ≥3 擴充
+  unsigned content   = 0;  // 0=binary(預設) 1=text          ≥2 擴充(int/json…)
+  unsigned access    = 0;  // 0=readonly(預設) 1=writable     ≥2 擴充(owned/consume…)
+  std::optional<std::map<std::string, std::string>> extra;
+};
+using Entries = std::map<std::string, Entry>;
+
+namespace dir   { constexpr unsigned in = 0, out = 1, in_out = 2; }
+namespace ctype { constexpr unsigned binary = 0, text = 1; }
+namespace acc   { constexpr unsigned readonly = 0, writable = 1; }
+```
+
+### 與 Round 10/11 的取捨
+Round 10/11 砍成兩 bool，丟了方向與數值通道；Round 12 用三張開放碼表補回，
+但保持「扁平、無 union、序列化為整數」的 KISS——三個 `unsigned` 在 `--metadata` 直接輸出為整數。
+
+### 全 zero-init 的語意（已校正）
+全 zero-init 的 Entry ＝ `in × binary × readonly` ＝「唯讀的二進位輸入通道」，方向×可變性**自洽**
+（純輸入本就唯讀），且是最小常見 case。**這正是把 `direction` 預設從 `in_out` 改成 `in` 的理由**：
+避免 zero-init 的 `in_out × readonly`（雙向卻唯讀）字面衝突。
+
+### 仍延後（hub 階段）
+- 流動模式（batch/streaming/interactive）的正式家——見軸 2 審查；現以 extra 暫存。
+- 傳輸身分（檔案/stdin/tcp）——組合配對需求，留 hub；現以 map-key + extra 暫存。
 
 ---
 

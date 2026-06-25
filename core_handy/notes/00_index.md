@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 
 | # | 軸 | 筆記檔 | 狀態 |
 |---|---|---|---|
-| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 11，重新設計）：`bool text=false` + `bool writable=false` + `optional<map<string,string>> extra` |
+| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 12，三張開放整數碼表，supersede R11）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充) + `unsigned access`(0=readonly/1=writable) + `optional<map<string,string>> extra` |
 | 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R3 修正）：`bool persistent`(預設false=one_shot)＋統一 `extra`（取代裸 detail） |
 | 3 | `state`（跨呼叫狀態） | [axis_3_state.md](axis_3_state.md) | ✅ 定案：單一 `bool stateful = false`（false=stateless 預設、true=stateful_external），無 detail |
 | 4 | `state_dirs`（狀態目錄） | [axis_4_state_dirs.md](axis_4_state_dirs.md) | 討論中（Round 1 提案） |
