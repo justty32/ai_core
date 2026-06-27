@@ -2,6 +2,10 @@
 
 > 狀態：進行中。描述面九軸已全部定案（見各 `axis_N_*.md`）；本階段把散落各軸的**設施面定位**收攏、
 > 統一重做設計。**仍是筆記層討論、逐步確認、不寫碼**（沿用描述面階段的鐵則）。
+>
+> ⚠️ 重照修正（2026-06-27）：**「別管 hub」與 impl 正交**——它砍的是 defs 欄位（給 hub 看什麼），
+> impl 設施服務的是**作者**（幫他寫合規程式），不受 hub 消費題影響。故金字塔在 defs 重新思考後**基本完好**，
+> 只做：rate-meter 輸入去掉 cpu（軸 5 砍 cpu，且 cpu 本非 consume-rate 輸入）、新增 shell-out helper（見下）。
 
 ## 為什麼有這份文件
 
@@ -16,24 +20,25 @@
 | 2 lifecycle | serve helper：one-shot 本體 → 長駐 server | `lib/server.serve_socket` | 軸 1 tcp/pipe 特化 |
 | 3 state | **無獨立設施**（委派軸 4） | — | 設施面外包軸 4 |
 | 4 state_dirs | 狀態託管：config/cache/state/data 路徑+建目錄+JSON+語意 | — | 軸 1 **檔案傳輸特化** |
-| 5 resources | rate-meter：consume-rate 計量 / 限流 / 配額 | `RateMeter` | 相對獨立計量 |
+| 5 resources | rate-meter：consume-rate 計量 / 限流 / 配額（輸入 memory/gpu/time/network.traffic，**不含 cpu**） | `RateMeter` | 相對獨立計量 |
 | 6 interruptible | signal(SIGTERM graceful)、checkpoint/resume、reset/rollback | — | **與軸 7 重疊** |
 | 7 guarantee | 冪等/交易機器：journal、commit/rollback、dedup key | — | **與軸 6 共用** |
 | 8 dry_run | `--dry-run` flag 約定、`is_dry_run()`、預覽輸出導向 | — | 消費軸 1 + 關聯軸 7 |
 | 9 nondeterministic | 馴化框架(retry/vote/guard) + 證書簽發/撤照 + 串 entry manager | 馴化 docs | **最大、最上層** |
 | 〔膠水〕 | `intercept(argc,argv,meta)`：命中 `--metadata` 序列化 JSON+exit | `_core.py intercept()` | 跨切面，消費 defs、輸出走軸 1 stdout |
+| 〔shell-out〕 | wrapper helper：spawn 子程序＋接 stdin/stdout/stderr＋wait/exit code | `subprocess` | **軸 1 pipe 特化**；brownfield=wrapper 的本職 |
 
 ## 依賴金字塔
 
 ```
 L3 願景頂   軸 9 馴化框架（retry/vote/guard + 證書 + 串 entry manager）
 L2 行為層   軸 6+7 transaction/journal/checkpoint ｜ 軸 8 dry-run ｜ 軸 5 rate-meter
-L1 特化層   軸 2 serve（tcp/pipe）｜ 軸 4 state store（檔案）｜ 膠水 intercept 序列化（stdout）
-L0 地基  ──────────────  軸 1 統一 I/O（檔案 / pipe / shm / tcp）  ──────────────
+L1 特化層   軸 2 serve（tcp/pipe）｜ 軸 4 state store（檔案）｜ shell-out helper（pipe·wrapper）｜ 膠水 intercept 序列化（stdout）
+L0 地基  ──────────────  軸 1 統一 I/O（檔案 / pipe / shm / tcp / subprocess）  ──────────────
 ```
 
 **三個結構洞見：**
-1. **軸 1 是唯一地基**——軸 2、軸 4、膠水序列化全是它的特化或消費者。先定軸 1 I/O 介面，上面三層才有地基。
+1. **軸 1 是唯一地基**——軸 2、軸 4、shell-out helper、膠水序列化全是它的特化或消費者。先定軸 1 I/O 介面，上面才有地基。
 2. **軸 6 與軸 7 合併**成一套 transaction/journal/checkpoint helper（兩軸筆記都各自寫了「高度重疊、歸同一設施」）。
 3. **軸 5、軸 9 相對獨立但朝上串**——rate-meter 是計量單元；馴化框架坐頂，把下面全部當零件用。
 
@@ -41,7 +46,7 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 
 ```
 ① 軸 1 D-IO（地基介面）＋ 軸 4 D-API（一起拍，因軸4⊂軸1）   → impl_1_io.md
-② 軸 2 serve（建在①的 tcp/pipe）＋ 膠水 intercept 序列化（建在①的 stdout）
+② 軸 2 serve（建在①的 tcp/pipe）＋ shell-out helper（建在①的 pipe/subprocess）＋ 膠水 intercept 序列化（建在①的 stdout）
 ③ 軸 6+7 合併 transaction helper
 ④ 軸 8 dry-run plumbing、軸 5 rate-meter
 ⑤ 軸 9 馴化框架（坐頂，串前面全部 + entry manager）

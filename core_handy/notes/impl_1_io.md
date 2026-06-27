@@ -1,8 +1,11 @@
 # 軸 1 impl：統一 I/O 設施（地基）
 
 > 狀態：探索中（Round 1 窮舉）。impl 金字塔的地基（見 `impl_overview.md`）。
-> 描述面已定案（`axis_1_entries.md` Round 11：`Entry{text, writable, extra}`）；本檔設計**設施面**。
+> 描述面已定案（`axis_1_entries.md` **Round 13**：`Entry{direction, content, extra}`，已砍 writable）；本檔設計**設施面**。
 > **筆記層、不寫碼。**
+>
+> ⚠️ 重照修正（2026-06-27）：本檔 Round 1 是對著**舊軸 1 Round 11（含 writable）**寫的，已更新欄位引用。
+> 「別管 hub」砍的是 defs 欄位、不砍 impl 設施（設施服務作者、與 hub 正交，見 `impl_overview.md`）。
 
 ## 設施的兩半（收攏時看清）
 
@@ -11,7 +14,8 @@
 | **A. 讀寫核心** | 真的去讀/寫一個通道 | 傳輸身分 → bytes/text |
 | **B. 接線解析** | 把通道名綁到具體傳輸（terminal_binding 的新家） | 通道名 + CLI args → 傳輸身分 |
 
-描述面 `Entry{text, writable}` 傳輸無關、給 hub 看；傳輸身分（路徑/`-`/endpoint/名稱）不在 defs，是設施層輸入。
+描述面 `Entry{direction, content}` 傳輸無關、給 hub/呼叫方看；傳輸身分（路徑/`-`/endpoint/名稱）**不在 defs**，
+是設施層輸入——brownfield=wrapper 裁決後更明確：傳輸身分**純屬 impl**，defs 永不承載（見 `00_index.md` 全域立場）。
 
 ---
 
@@ -31,6 +35,7 @@
 | 8 | unix socket | 本機 IPC（軸 2 serve 用） |
 | 9 | tcp | 跨機 byte stream |
 | 10 | http(s) | 建在 tcp 上的 request/response |
+| 11 | **subprocess（shell-out）** | spawn 子程序、接其 stdin/stdout/stderr＋wait/exit code（**wrapper 的本職**） |
 
 ### 分類維度（驅動設施設計的軸）
 
@@ -72,6 +77,16 @@
 
 > 這正好印證先前 (c) 綜合案：**batch 群走自由函式糖、stream 群下沉 Channel 物件，一份實作兩種門面**。
 > 但**先別拍**——本輪只窮舉。下一輪再決定介面長相（D-IO）與傳輸身分表示法。
+
+### subprocess（#11）的歸群與定位（2026-06-27 brownfield 裁決後新增）
+
+subprocess 不是單一原始通道，而是**組合多個 pipe 通道 + 程序管理**：spawn 子程序、把它的
+stdin/stdout/stderr 各接成一條 pipe（stream 群）、wait 並收 exit code。歸 **stream 群**（一次性消費、
+需握住程序）。它建在軸 1 pipe 之上，**是 pipe 的特化/組合**——與軸 2 serve 同性質（serve 也是 pipe/socket
+的特化）。
+
+因為 brownfield=wrapper 是一等公民路線（既有 CLI 一律經 wrapper 進系統），**wrapper 的本職就是 subprocess
+管理**——這使「shell-out helper」成為軸 1 I/O 的正式消費者，列入金字塔 L1（見 `impl_overview.md`）。
 
 ---
 
