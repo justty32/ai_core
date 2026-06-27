@@ -26,6 +26,15 @@ int main(int argc, char** argv) {
   std::cout << "core_handy demo — ac_helper version " << ac::helper_version << '\n';
   std::cout << "(帶 --metadata 跑可看九軸 JSON)\n";
 
+  // ── 設施示範：軸 1 B 接線解析 ＋ 軸 8 dry-run。
+  //    resolve 把 `--input <addr>` 解成位址字串（無 flag → 預設 "-"=stdin），
+  //    這串字串可直接餵 ac::io::read_all——串起 entry 宣告 → 真實 I/O。
+  const std::string in_addr = ac::cli::resolve(argc, argv, "--input", "-");
+  std::cout << "input 位址解析: " << in_addr << '\n';
+
+  const bool dry = ac::cli::is_dry_run(argc, argv);
+  std::cout << "乾跑模式 (--dry-run): " << (dry ? "true" : "false") << '\n';
+
   // ── 軸 4 StateStore 示範：託管「跑了幾次」這個 state 值。
   //    program_name 綁定一次；用單檔形式把計數存進 state（<root>/state.json）。
   ac::state::StateStore store{"core_handy_demo"};
@@ -37,13 +46,19 @@ int main(int argc, char** argv) {
     runs = std::stol(store.load(ac::state::Dir::state));
   }
   ++runs;
-  store.save(ac::state::Dir::state, std::to_string(runs));
-  std::cout << "本程式（在此工作目錄下）已跑第 " << runs << " 次\n";
 
-  // 順帶示範資料夾形式：把一行成果寫進 data/ 下具名子檔。
-  store.save(ac::state::Dir::data, "last_run.txt",
-             "run #" + std::to_string(runs) + '\n');
-  std::cout << "成果已寫入: " << store.entry_path(ac::state::Dir::data, "last_run.txt")
-            << '\n';
+  if (dry) {
+    // 乾跑：只演練、不真寫（「不碰外部狀態」是程式本體邏輯，設施只給 is_dry_run 查詢）。
+    std::cout << "[dry-run] 將會把計數寫成第 " << runs << " 次（未真寫）\n";
+  } else {
+    store.save(ac::state::Dir::state, std::to_string(runs));
+    std::cout << "本程式（在此工作目錄下）已跑第 " << runs << " 次\n";
+
+    // 順帶示範資料夾形式：把一行成果寫進 data/ 下具名子檔。
+    store.save(ac::state::Dir::data, "last_run.txt",
+               "run #" + std::to_string(runs) + '\n');
+    std::cout << "成果已寫入: " << store.entry_path(ac::state::Dir::data, "last_run.txt")
+              << '\n';
+  }
   return 0;
 }

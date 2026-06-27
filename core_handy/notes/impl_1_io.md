@@ -134,8 +134,37 @@ namespace ac::io {
 
 ---
 
+## B 接線解析設施（✅ 落地，2026-06-27）
+
+「設施的兩半」表的 **B 半**（通道名 + CLI args → 傳輸身分）落地成一個無狀態小函式，
+是 terminal_binding 的新家。實作於 `impl/cli.hpp`（namespace `ac::cli`）。
+
+### API 決定
+
+```cpp
+namespace ac::cli {
+  std::string resolve(int argc, char** argv,
+                      std::string_view flag,       // 通道綁定 flag，如 "--input"
+                      std::string_view fallback);  // 預設位址，如 "-"
+}
+```
+
+- **輸入＝(argv, flag 名, 預設位址)，輸出＝位址字串**——正是 B 半的「通道名 + CLI args → 傳輸身分」。
+  flag 名就是「通道名」的 CLI 化身（`--input`/`--output`/…），呼叫方一通道一次 resolve。
+- 命中 `flag <value>` 回 `value`；未提供或 flag 在 argv 末尾無值 → 回 `fallback`。
+- 回傳的位址字串**直接餵 `ac::io::read_all/write_all`**——這是 A 半（讀寫核心）與 B 半的接點，
+  一條線串起 `Entry{direction}` 宣告 → resolve 拿位址 → 真實 batch I/O。
+
+### 理由（KISS）
+
+- 與 D-IO「傳輸身分＝位址字串」一致：resolve 不解析 scheme、不分檔案/std，純粹「找 flag 取值」，
+  scheme 語意全交給下游 `read_all/write_all`（單一真相）。
+- 風格比照 `impl/intercept.hpp`：直接線性掃 argv、零相依、邊界小心（不越界讀 `argv[i+1]`）。
+- 不引入 argparse 級框架（least-dependency / no-wheel-remake）：v0 工具的 I/O flag 就一兩個，
+  線性掃足矣；真需要完整 parser 時再說（屆時 resolve 仍是薄糖）。
+
 ## 待續（下一輪要拍的）
-- 軸 4 D-API：StateStore 介面（建在 `read_all/write_all` 檔案分支）。
-- 膠水：`Meta → --metadata JSON` 序列化形狀 + `intercept(argc,argv,meta)` 進入點（用 `write_all("-")`）。
-- B 接線解析（terminal_binding 新家）：`--input <path>` → 位址字串。
+- 軸 4 D-API：StateStore 介面（建在 `read_all/write_all` 檔案分支）。— ✅ 已落地（`impl/state.hpp`）。
+- 膠水：`Meta → --metadata JSON` 序列化形狀 + `intercept(argc,argv,meta)` 進入點（用 `write_all("-")`）。— ✅ 已落地。
+- ~~B 接線解析（terminal_binding 新家）：`--input <path>` → 位址字串。~~ ✅ 已落地（見上節 `ac::cli::resolve`）。
 - stream 群 Channel 物件——延後到軸 2 serve / LLM 串流逼出。

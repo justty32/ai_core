@@ -104,3 +104,32 @@ review 設想的「object form 描述 git `-n`」對應的是另一個模型（a
 ```cpp
 bool allow_dry_run = false;   // false=不支援(預設)、true=支援乾跑
 ```
+
+---
+
+## 設施 Round（is_dry_run 落地，2026-06-27）
+
+描述面只回答「支不支援」（`bool allow_dry_run`）；**設施面**負責「怎麼觸發查詢」。落地於
+`impl/cli.hpp`（namespace `ac::cli`）。
+
+### 決定
+
+```cpp
+namespace ac::cli {
+  bool is_dry_run(int argc, char** argv);  // 掃 argv 有無 --dry-run，回 bool
+}
+```
+
+- **flag 約定 ＝ `--dry-run`（lib 統一、寫死）**：呼應 greenfield-wrap 模型（Round 2）——對外永遠是
+  lib 標準 flag，程式不自訂；brownfield 的 `-n`/`--dry-run` 差異由 wrapper 內部翻譯，不進此設施。
+  因為 flag 名固定，`is_dry_run` 不需參數化 flag（與 `resolve` 不同：resolve 一程式多通道、需傳 flag；
+  dry-run 全 lib 一個約定、寫死最 KISS）。
+- **純查詢、零副作用**：給程式本體一個布林「現在是不是乾跑」。真正「不碰外部狀態」仍是 app 邏輯
+  （設施代勞不了）——main.cpp 示範即 `if (dry) { 印預覽 } else { 真寫 StateStore }`。
+- **風格**：比照 `intercept.hpp`/`resolve` 線性掃 argv，邊界安全。
+
+### 延後（KISS，明確不做）
+
+- **預覽輸出導向**（原 state_entry/error_entry：把「會發生什麼」/錯誤導向約定輸出口）**先不做**。
+  目前 app 自己決定預覽往哪印（demo 直接 `std::cout`）。等真有消費者逼出「標準預覽口」需求，
+  再接到軸 1 entries（屆時很可能就是 `resolve` 出一個 preview 位址 + `write_all`）。不憑空造。
