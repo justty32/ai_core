@@ -1,6 +1,6 @@
 # 軸 1 impl：統一 I/O 設施（地基）
 
-> 狀態：探索中（Round 1 窮舉）。impl 金字塔的地基（見 `impl_overview.md`）。
+> 狀態：✅ D-IO 拍板（Round 2）：位址字串 + batch 先（`read_all/write_all`），stream 群延後。impl 金字塔的地基（見 `impl_overview.md`）。
 > 描述面已定案（`axis_1_entries.md` **Round 13**：`Entry{direction, content, extra}`，已砍 writable）；本檔設計**設施面**。
 > **筆記層、不寫碼。**
 >
@@ -90,9 +90,52 @@ stdin/stdout/stderr 各接成一條 pipe（stream 群）、wait 並收 exit code
 
 ---
 
+## Round 2（✅ D-IO 拍板，2026-06-27）
+
+用「目標問題＝停止鍵」照：第一目標問題（程式碼輔助助手）的工具全是 **batch I/O**（讀 stdin/檔案、
+寫 stdout/檔案）；socket/streaming 是 server/LLM 那群（少數），**現在零消費者**。據此兩個決定：
+
+### 決定一：傳輸身分 = 位址字串（URI-ish）
+
+選字串而非結構化 variant：KISS、單參數、shell 天生友善、scheme 可擴充，與專案（軸值皆 string、
+shell 一等公民、least-dependency）一致。
+
+- scheme 缺省 ＝ 檔案路徑；`-` ＝ std（in/out 看用在 read 還是 write）。
+- `tcp://host:port`、`unix:/sock`、`shm:name` 等 scheme **保留、延後**（stream 群才需要）。
+
+### 決定二：v0 範圍 = batch 先（方案 A），stream 群延後
+
+v0 只做兩個自由函式，涵蓋 std + 檔案（batch 群）：
+
+```cpp
+// 概念草圖（筆記層，先不寫進 hpp）
+namespace ac::io {
+  std::string read_all(const std::string& addr);                          // "-"=stdin / "path"=檔案
+  void        write_all(const std::string& addr, std::string_view data);  // "-"=stdout / "path"=檔案
+}
+```
+
+**延後（等真消費者逼出形狀）**：
+- **Channel 物件 + stream 群**（std 串流/pipe/socket/tcp/http）：握連線、`read_chunk`、背壓、SIGPIPE、
+  fan-out——這些重機器正是**軸 2 serve / LLM 串流**才逼得出來的，讓那些軸去逼，不憑空猜。
+- **subprocess(#11) / shell-out helper**：跟 stream 群一起延後（本就是 L1 特化、非核心通道）。
+- **`shm:` / `tcp://` / `unix:` scheme**：同上。
+
+**A 不是死路**：屆時自由函式 `read_all/write_all` 原封不動變成 Channel 的薄糖（(c) 綜合案），
+呼叫點零改動。
+
+### 連帶定位
+
+- **軸 4 StateStore ⊂ 軸 1**：建在 `read_all/write_all` 的**檔案分支**上（限定 config/cache/state/data
+  4 目錄 + JSON 語意）。待軸 4 D-API 一起拍。
+- **膠水 intercept 序列化已解鎖**：`Meta → --metadata JSON` 的輸出就是 `write_all("-", json)`——
+  不需 stream 群，現在就能做（見 `impl_overview.md` 設計順序②，膠水那半可先行）。
+- **B 接線解析**（entry 名 + CLI args → addr，如 `--input path`）：另一個小 resolver，稍後接。
+
+---
+
 ## 待續（下一輪要拍的）
-- D-IO：讀寫核心介面長相（自由函式 / 通道物件 / 綜合）。
-- 傳輸身分表示法：URI/路徑字串 vs 結構化 variant。
-- B 接線解析（terminal_binding 新家）：`--input <path>` → 傳輸身分。
-- 與軸 4 分層：StateStore 包 io（軸4⊂軸1 檔案傳輸）。
-- 維度是否窮盡／要不要增刪通道（待你補）。
+- 軸 4 D-API：StateStore 介面（建在 `read_all/write_all` 檔案分支）。
+- 膠水：`Meta → --metadata JSON` 序列化形狀 + `intercept(argc,argv,meta)` 進入點（用 `write_all("-")`）。
+- B 接線解析（terminal_binding 新家）：`--input <path>` → 位址字串。
+- stream 群 Channel 物件——延後到軸 2 serve / LLM 串流逼出。
