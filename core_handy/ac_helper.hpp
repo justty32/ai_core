@@ -6,7 +6,10 @@
 // 狀態：九軸描述面定案落地（2026-06-27）。defs 型別見 defs/axes.hpp。
 #pragma once
 
-#include "defs/axes.hpp"  // 九軸描述性 metadata 型別（ac::Meta 等）
+#include "defs/axes.hpp"       // 九軸描述性 metadata 型別（ac::Meta 等）
+#include "impl/io.hpp"         // 軸 1 統一 I/O（read_all/write_all，batch 先）
+#include "impl/meta_json.hpp"  // 膠水：Meta → --metadata JSON
+#include "impl/intercept.hpp"  // 膠水：intercept(argc,argv,meta)
 
 namespace ac {
 
