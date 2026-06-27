@@ -53,3 +53,28 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 ```
 
 全部設施面拍板後，才動手寫 `ac_helper.hpp` + `main.cpp`。
+
+---
+
+## 落地進度（2026-06-27 — batch-greenfield 切片完成，自然收）
+
+依「目標問題＝停止鍵 / 無消費者就延後」，已落地一個**完整可用的 batch-greenfield 垂直切片**，
+餘下全部卡在「現在沒有消費者」→ 停。
+
+| 設施 | 狀態 | 落地處 |
+|---|---|---|
+| 軸 1 I/O：`read_all`/`write_all`/`write_atomic` | ✅ | `impl/io.hpp`（D-IO Round 2：位址字串 + batch） |
+| 膠水 intercept + `Meta→--metadata JSON` 序列化 | ✅ | `impl/intercept.hpp`、`impl/meta_json.hpp` |
+| 軸 4 StateStore（已原子化） | ✅ | `impl/state.hpp`（D-API Round 2） |
+| 軸 1 B 接線解析 + 軸 8 `is_dry_run` | ✅ | `impl/cli.hpp` |
+| 軸 6+7 transaction（`write_atomic`） | ✅ | `impl/io.hpp` + `impl/state.hpp`（`impl_transaction.md`） |
+| **軸 2 serve、shell-out helper** | ⏸ 延後 | stream 群 Channel 重機器——待 serve / LLM 串流逼出 |
+| **軸 5 rate-meter** | ⏸ 延後 | 無消費者——C++ 線尚無 LLM 呼叫路徑可計量（真消費者是軸 9） |
+| 軸 8 預覽輸出導向 | ⏸ 延後 | 小；`is_dry_run` 已足供 app 自行分流 |
+| **軸 9 馴化框架** | ⏸ 延後 | 坐頂、最大——需 LLM entry-manager + 真 API（Python 線元件 1/2，C++ 線未有） |
+
+**已成形的契約**：一支依託 ac_helper 寫的程式現在能——宣告九軸 metadata、回應 `--metadata`（吐合法 JSON）、
+原子託管狀態（StateStore）、接線解析 I/O、乾跑判斷。g++ 與 CMake 兩條 build 鏈皆綠、零警告。
+
+**再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。
+不該在無消費者時憑空蓋——等真需求來。
