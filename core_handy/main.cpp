@@ -3,7 +3,9 @@
 // register/intercept 模型的 C++ 示範：
 //   1. 純宣告 Meta（零副作用）；
 //   2. main() 開頭顯式 intercept()——命中 --metadata 吐 JSON 並 exit，否則跑本體。
+#include <filesystem>
 #include <iostream>
+#include <string>
 
 #include "ac_helper.hpp"
 
@@ -60,5 +62,26 @@ int main(int argc, char** argv) {
     std::cout << "成果已寫入: " << store.entry_path(ac::state::Dir::data, "last_run.txt")
               << '\n';
   }
+
+  // ── 軸 6+7 transaction 示範：write_atomic 原子寫 + 驗證無 .tmp 殘檔。
+  //    寫到同目錄 <addr>.tmp → rename(tmp, addr)；rename 後 tmp 應消失（commit 完成）。
+  {
+    namespace fs = std::filesystem;
+    const std::string addr = "core_handy_txn_demo.txt";  // CWD 下臨時驗證檔
+    const std::string tmp  = addr + ".tmp";
+    const std::string body = "atomic write payload — 完整或原檔不動\n";
+
+    ac::io::write_atomic(addr, body);
+
+    const std::string got = ac::io::read_all(addr);
+    const bool content_ok = (got == body);
+    const bool no_tmp     = !fs::exists(tmp);  // rename 後 tmp 必已消失
+    std::cout << "[txn] write_atomic 內容完整: " << (content_ok ? "true" : "false") << '\n';
+    std::cout << "[txn] rename 後無 .tmp 殘檔: " << (no_tmp ? "true" : "false") << '\n';
+
+    // 清掉臨時驗證檔（示範用，不留垃圾）。
+    fs::remove(addr);
+  }
+
   return 0;
 }

@@ -79,7 +79,8 @@ class StateStore {
   void save(Dir d, std::string_view data) const {
     const std::string p = file_path(d);
     ensure_parent(p);
-    ac::io::write_all(p, data);
+    // 原子寫：託管狀態天生 all-or-nothing，state 檔永不因中斷半截（軸 4「data 需保護」）。
+    ac::io::write_atomic(p, data);
   }
 
   // 資料夾形式。
@@ -89,7 +90,8 @@ class StateStore {
   void save(Dir d, const std::string& key, std::string_view data) const {
     const std::string p = entry_path(d, key);
     ensure_parent(p);
-    ac::io::write_all(p, data);
+    // 原子寫：同上，資料夾形式具名子檔亦免費獲得軸 6 rollback + 軸 7 transactional。
+    ac::io::write_atomic(p, data);
   }
 
  private:
