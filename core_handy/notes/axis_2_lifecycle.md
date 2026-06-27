@@ -1,6 +1,7 @@
 # 軸 2：`lifecycle`（生命週期）
 
-> 狀態：✅ 定案（Round 3 修正）。`bool persistent`（預設 false=one_shot）+ 統一 `extra`（取代原 `detail`）。
+> 狀態：✅ 定案（Round 4 複查確認）。`bool persistent`（預設 false=one_shot）+ 統一 `extra`。
+> Round 3 的形狀不動；Round 4 只做兩件事：流動模式正式判給軸 1、軸 2 不收。
 
 ---
 
@@ -113,3 +114,36 @@ struct Lifecycle {
 ## 開放問題 / 後續輪次
 
 - 軸 2 設施 API 形狀（serve 進入點、與軸 1 傳輸/軸 5 singleton 的分層）——待 impl 集中重做設計。
+
+---
+
+## Round 4（✅ 複查確認，defs 重新思考 2026-06-27）
+
+對照 `defs_review/axis_2_lifecycle.md`。結論：**Round 3 的 `bool persistent` 核心已對，不動**
+（review 自證預設極性 false=one_shot 正確、無 hazard；是不可由他軸推導的二元本質界線、無冗餘欄可砍）。
+只做兩件事：
+
+### 1. 流動模式正式判給軸 1，軸 2 不收（止住跨軸流浪）
+
+review 最尖一條：streaming/batch/interactive 在軸 1、軸 2 之間互相推諉、無正式家。裁決——
+**它是「某通道的資料怎麼遞送」＝通道（entry）屬性，不是 process 生命週期屬性**。
+一個 one_shot process 照樣能串流輸出；從 process 角度仍 one_shot。權威佐證：lib_spec 把 interactive
+標在 stdin、streaming 標在 stdout（都掛在通道上）。
+
+→ **流動模式 home = 軸 1 `entry.extra["mode"]`（Round 13 #4 已就位）；軸 2 正式聲明「不承載流動模式」。**
+此題 hub-independent，現在閉合，不再以 extra 在兩軸間暫存漂流。
+
+### 2. 變體描述留 extra，不結構化
+
+常駐子型（lazy/warm 首呼啟動、eager daemon、periodic 定時）、detached/fire-and-forget——
+一律留 `extra` 自由描述，**不升 opt 欄位**。依「後續別管 hub」原則（2026-06-27 使用者定），
+不再為 hub 排程是否需要區分常駐子型而糾結；要結構化時自有需求逼出，現在不預設。
+
+### 型別（定案不變）
+
+```cpp
+struct Lifecycle {
+  bool persistent = false;                                  // 自我終止 vs 顯式終止
+  std::optional<std::map<std::string,std::string>> extra;   // 常駐子型 / detached 等變體描述
+};                                                          // 流動模式不在此，歸軸 1
+```

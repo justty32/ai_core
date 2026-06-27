@@ -85,16 +85,30 @@ int main(int argc, char** argv) {
 
 | # | 軸 | 筆記檔 | 狀態 |
 |---|---|---|---|
-| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 12，三張開放整數碼表，supersede R11）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充) + `unsigned access`(0=readonly/1=writable) + `optional<map<string,string>> extra` |
-| 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R3 修正）：`bool persistent`(預設false=one_shot)＋統一 `extra`（取代裸 detail） |
+| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 13，砍 access，supersede R12）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充) + `optional<map<string,string>> extra`；mutation/傳輸身分/流動模式全 PARKED-HUB |
+| 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R4 複查）：`bool persistent`(預設false=one_shot)＋統一 `extra`；流動模式正式判給軸 1、軸 2 不收（止住跨軸流浪） |
 | 3 | `state`（跨呼叫狀態） | [axis_3_state.md](axis_3_state.md) | ✅ 定案：單一 `bool stateful = false`（false=stateless 預設、true=stateful_external），無 detail |
 | 4 | `state_dirs`（狀態目錄） | [axis_4_state_dirs.md](axis_4_state_dirs.md) | 討論中（Round 1 提案） |
-| 5 | `resources`（資源特性） | [axis_5_resources.md](axis_5_resources.md) | ✅ 定案（R2）：無固定欄位、opt 預定義(memory/cpu/gpu/time/disk/network)+extra；network 帶 traffic、cpu 本線新增 |
-| 6 | `interruptible`（可中斷性） | [axis_6_interruptible.md](axis_6_interruptible.md) | ✅ 定案（R2）：`unsigned level`(開放碼表 0=unsafe/1=safe/…/5=graceful,≥6 自定義；zero-init=unsafe)＋extra |
+| 5 | `resources`（資源特性） | [axis_5_resources.md](axis_5_resources.md) | ✅ 定案（R3，砍 cpu）：無固定欄位、opt 預定義(memory/gpu/time/disk/network)+extra；network 帶 traffic（consume-rate）；cpu 移除（唯一消費者是 hub）回歸權威 |
+| 6 | `interruptible`（可中斷性） | [axis_6_interruptible.md](axis_6_interruptible.md) | ✅ 定案（R3，序→名目）：`unsigned level`(**名目分類碼·禁大小比較**，0=unsafe/1=safe/…/5=graceful,≥6 自定義；zero-init=unsafe)＋extra |
 | 7 | `guarantee`（執行保證） | [axis_7_guarantee.md](axis_7_guarantee.md) | ✅ 定案（R1）：封閉 `enum class Guarantee : unsigned`（none=0 預設/idempotent/transactional）＋統一 `extra`；與軸 6 開放碼表相反（值集封閉故用 enum） |
 | 8 | `dry_run`（乾跑） | [axis_8_dry_run.md](axis_8_dry_run.md) | ✅ 定案：描述層只留 `bool allow_dry_run = false`（同軸 3 純 bool）；object 細節 flag/state_entry/error_entry 全降級到實作層待設計 |
 | 9 | `nondeterministic`（確定性/治理證書） | [axis_9_nondeterministic.md](axis_9_nondeterministic.md) | ✅ 定案（R1）：單一 `unsigned uncertainty = 0`（0=完全確定；愈高愈不確定；馴化使其下降）＋`extra`（承載 model/test_set/stability 證書）。權威三態摺成單調量尺 |
 
-## 跨軸的待決議題（隨討論累積）
+## 跨軸的全域立場 / 待決議題（隨討論累積）
 
 - ~~**序列化**：demo 要不要做 `--metadata` JSON？~~ → **已定（2026-06-24）：要，且是 defs 層核心職責**（見上「lib 是什麼」）。
+- **★ 跨軸型別強制：放棄，退文件約束（2026-06-27 defs 重新思考定）。**
+  defs 層**不做**跨軸 cross-field 驗證。跨軸無意義/非法組合——`stateless × transactional`(3×7)、
+  `one_shot × idle`(2×5)、`stateless × state_dirs`(3×4)、`uncertainty × 證書`(9 內) 等——一律**文件約束**，
+  不靠型別 unrepresentable。理由：跨軸強制要嘛把獨立軸綁死成巢狀型別（毀掉單軸乾淨）、要嘛得另立
+  「總 metadata cross-field 驗證器」（過度工程）。**「讓非法狀態無法被表達」只在單軸內貫徹，跨軸明文放棄。**
+  → 一次收口 defs_review 索引「跨軸主題 2」的所有實例。
+- **★ 「別管 hub」原則（2026-06-27 使用者定）。** 逐軸 defs 只按「描述本身」定形，不讓 hub 消費題當尺。
+  純 hub 動機的補欄/結構化一律不採（已據此：軸 1 砍 access、軸 5 砍 cpu、軸 6 拒 optional、軸 7 冪等鍵留 extra）。
+  非核心描述丟 extra 了事。
+- **★ brownfield 模型：greenfield-wrap（2026-06-27 使用者選「前」）。**
+  **ac_helper = greenfield 創作 lib，既有 CLI（git/rsync/terraform）一律經 wrapper 進系統。**
+  有 `--metadata` 的實體永遠是 wrapper（greenfield ac_helper 程式），不是被包的 CLI；既有程式的特殊 flag/介面
+  （git `-n`、rsync `--dry-run`）是 **wrapper 的 impl 細節，不進 defs**。
+  → 一次收掉 defs_review 索引「主題 4 brownfield 盲點」：軸 8 維持 bool、軸 1 不為 brownfield 保留傳輸/介面欄位。

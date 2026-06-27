@@ -1,6 +1,8 @@
 # 軸 8：`dry_run`（乾跑）
 
-> 狀態：✅ 定案。描述層只留 `bool allow_dry_run = false`；object 細節（flag/state_entry/error_entry）全降級到實作層，待之後設計。
+> 狀態：✅ 定案（Round 2 複查確認，bool 不動）。描述層只留 `bool allow_dry_run = false`；
+> object 細節（flag/state_entry/error_entry）全降級到實作層。
+> R2 釘死前提：**ac_helper = greenfield 創作 lib，brownfield 一律經 wrapper 進來** → bool 夠（見下 Round 2）。
 
 ---
 
@@ -69,3 +71,36 @@ bool allow_dry_run = false;   // false=不支援(預設)、true=支援乾跑
 
 ## 開放問題 / 後續輪次
 - 設施層 dry-run flag 約定、`is_dry_run()` API、預覽輸出接線——待 impl 集中重做設計時一併處理。
+
+---
+
+## Round 2（✅ 複查確認 bool 不動，defs 重新思考 2026-06-27）
+
+對照 `defs_review/axis_8_dry_run.md`。review 核心：bool 對 greenfield 完美，但 git `-n` / rsync
+`--dry-run` / terraform `plan` 各不同、lib 管不到，bool 丟失「乾跑要傳什麼」——brownfield 盲點。
+
+### 化解：靠 ac_helper 的定位，不靠加欄位
+
+關鍵反問：**git 會直接帶 `--metadata` 出現在系統裡嗎？不會。** ac_helper 定位是「作者依託此 lib
+寫 shell 程式」（greenfield 創作 lib）。git 沒有 `--metadata`、進不了系統，除非有人寫一個**用 ac_helper
+的 wrapper** shell out 給它。於是：
+
+- 有 `--metadata` 的實體永遠是 wrapper（greenfield ac_helper 程式），不是 git。
+- wrapper 對外用 lib 標準乾跑 flag（`--dry-run`），對內翻譯成 git 的 `-n`。
+- **git 的 `-n` 是 wrapper 的 impl 細節，不是 defs。** 消費者只看到 lib 標準 flag，靠 bool 就知道怎麼觸發。
+
+review 設想的「object form 描述 git `-n`」對應的是另一個模型（ac_helper 直接描述既有 CLI），
+**那不是 core_handy 的模型**。state_entry/error_entry 同理：wrapper 把 git stdout 接到 lib 約定預覽口，
+接線是 wrapper 的 impl。
+
+### 前提已拍（2026-06-27 使用者選「前」）
+
+**ac_helper = greenfield 創作 lib，brownfield 一律經 wrapper 進來。** → bool 夠，brownfield flag/接線
+歸 wrapper impl，不進 defs。此前提同時收掉 defs_review 索引「主題 4 brownfield 盲點」，並回頭確認
+軸 1 不必為 brownfield 保留傳輸/介面欄位（見 `00_index.md` 全域立場）。
+
+### 型別（定案不變）
+
+```cpp
+bool allow_dry_run = false;   // false=不支援(預設)、true=支援乾跑
+```

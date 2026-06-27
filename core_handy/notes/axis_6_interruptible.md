@@ -1,6 +1,7 @@
 # 軸 6：`interruptible`（可中斷性）
 
-> 狀態：✅ 定案（Round 2）。`unsigned level = 0`（開放碼表，0=unsafe 預設）+ 統一 `extra`。
+> 狀態：✅ 定案（Round 3，序→名目，supersede R2）。`unsigned level = 0`（**名目分類碼，禁大小比較**，0=unsafe 預設）+ 統一 `extra`。
+> R3 撤掉 R2 的「有序階梯」框架（safe(1)/graceful(5) 在「能否直接 kill」上幾乎相反，本就非序）。type 不變。
 
 ---
 
@@ -120,3 +121,42 @@ struct Interruptible {
 - 設施面（signal/checkpoint/rollback helper）API ——待 impl 集中重做設計。
 - §5a（單次執行內可暫停/恢復）目前未在 metadata 顯式建模；權威也只用單一 level 概括，暫不另開。
 - 碼 ≥6 自定義若日後常用（如 conditional），可考慮升為標準碼。
+
+---
+
+## Round 3（✅ 序→名目，supersede R2，defs 重新思考 2026-06-27）
+
+對照 `defs_review/axis_6_interruptible.md`，套「別管 hub」原則。定性：安全攸關軸，任何 caller
+（人/script/hub）都要知道「能不能 kill」→ 非純 hub，「別管 hub」不溶掉它。
+
+### 唯一實質改動（review ②）：`level` 從「有序階梯」改判「名目分類碼」
+
+R2 把 0–5 當「越大越可恢復/越溫和」的有序階梯，但 ≥6 的 conditional 不在此單調軸上 →
+unsigned「同時聲稱有序、又裝不可比值」自相矛盾。**更根本**：0–5 本就不是乾淨的序——
+`safe(1)`＝隨時可 kill（最 kill-friendly）、`graceful(5)`＝不能直接 kill（最不 kill-friendly），
+1 與 5 在「能否直接砍」幾乎相反；6 值混了損毀/恢復/能否 kill 三件事（Round 1 已自承）。
+
+→ **正式撤掉序的框架：`level` 是名目分類碼（nominal，像 errno），禁大小比較。**
+矛盾消失（無序的宣稱 → ≥6 不再破壞序）。conditional 細節照舊進 extra。
+
+**type 維持 `unsigned` 開放碼表**——更貼軸 7 判準：軸 7 因「值集封閉」用 enum；軸 6 權威明確允許
+conditional/自定義（值集開放）→ 同一判準在此導出「開放碼表」。errno 即此形狀：開放、具名、無序。
+
+### review 另兩條：不改
+
+- **① zero-init 抹平信任級別**：對安全軸，「沒想過」當「unsafe」對待本就正確且最保守——
+  正是 zero-init=unsafe 的漂亮處（忘填→自動落最保守端）。review 要的「未宣告 vs unsafe」更細區分
+  （hub 先問 vs 別 kill）是 hub kill 策略 → 別管 hub，丟掉。**保留 zero-init，不上 optional。**
+- **③ graceful × resumable 正交**：接受限制，不拆正交三欄（entries 過度拆解的教訓）。
+  真同時具備者填操作上更關鍵那個、另一個註記 extra。
+
+### 型別草圖（定案）
+
+```cpp
+struct Interruptible {
+  static constexpr unsigned unsafe=0, safe=1, resettable=2,
+                            rollback=3, resumable=4, graceful=5;
+  unsigned level = 0;   // 名目分類碼（nominal，像 errno）；≥6 自定義；禁大小比較；0=unsafe(zero-init)
+  std::optional<std::map<std::string,std::string>> extra;   // condition/reset_hint/正交補充
+};
+```
