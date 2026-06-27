@@ -8,6 +8,7 @@
 
 #include "defs/axes.hpp"       // 九軸描述性 metadata 型別（ac::Meta 等）
 #include "impl/io.hpp"         // 軸 1 統一 I/O（read_all/write_all，batch 先）
+#include "impl/state.hpp"      // 軸 4 狀態託管設施（StateStore；⊂ 軸 1 檔案分支）
 #include "impl/meta_json.hpp"  // 膠水：Meta → --metadata JSON
 #include "impl/intercept.hpp"  // 膠水：intercept(argc,argv,meta)
 

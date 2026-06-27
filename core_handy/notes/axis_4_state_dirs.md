@@ -125,3 +125,86 @@ std::optional<StateDirs> stateful;   // 取代 軸3 的 bool stateful
 - **D-API**：設施 API 形狀（自由函式 vs 託管物件）。
 - 設施是否需要回頭和軸 3 `stateful` 連動（e.g. 託管即隱含 stateful）——目前不連動，純選用。
 - 舊描述性提案的 D1/D2/D3 已因重定位作廢，不再追。
+
+---
+
+## Round 2（✅ D-API 拍板，2026-06-27 — `impl/state.hpp`）
+
+接 `impl_overview.md` 設計順序①（軸 4 ⊂ 軸 1），建在 `impl_1_io.md` Round 2 拍板的
+`ac::io::read_all/write_all` 檔案分支上。落地為 `impl/state.hpp`（header-only，namespace `ac::state`）。
+
+### 決定一：物件式 `StateStore`（採 notes 既有傾向 (2)）
+
+沿用筆記傾向：託管物件而非自由函式。`program_name` 綁定一次，四目錄與讀寫掛其上，貼「託管 (custody)」語意。
+
+```cpp
+namespace ac::state {
+
+enum class Dir : unsigned { config, cache, state, data };   // 封閉值集（同軸 7 風格）
+std::string dir_name(Dir d);                                // "config"/"cache"/"state"/"data"
+
+class StateStore {
+ public:
+  explicit StateStore(std::string program_name = "");
+
+  std::string name() const;                                     // 綁定的 program_name
+  std::string root() const;                                     // 解析後的根（見決定二）
+
+  // ── 路徑解析（純組字串、不碰 FS）──
+  std::string file_path (Dir d) const;                          // 單檔形式 <root>/<dir>.json
+  std::string entry_path(Dir d, const std::string& key) const;  // 資料夾形式 <root>/<dir>/<key>
+
+  // ── 存在檢查（不建目錄）──
+  bool exists(Dir d) const;                                     // 單檔
+  bool exists(Dir d, const std::string& key) const;             // 資料夾項
+
+  // ── 讀寫（建在 ac::io；save 按需建父目錄）──
+  std::string load(Dir d) const;                                // 單檔
+  std::string load(Dir d, const std::string& key) const;        // 資料夾項
+  void save(Dir d, std::string_view data) const;                          // 單檔
+  void save(Dir d, const std::string& key, std::string_view data) const;  // 資料夾項
+};
+
+}
+```
+
+### 決定二：`program_name` 命名根，預設空＝CWD 直下（一次和解兩個來源）
+
+權威/任務說「四目錄位於 **CWD 下**」；notes 又傾向 `StateStore{program_name}` 綁定。兩者張力用一個
+預設參數收掉：
+
+- `StateStore{}`（空）→ 根 ＝ CWD → 四目錄就在 `./config ./cache ./state ./data`（**忠於「CWD 下」字面**）。
+- `StateStore{"myprog"}` → 根 ＝ `./myprog` → `./myprog/config …`（**per-program 託管**，多程式共用 CWD 不互撞，
+  像 XDG `~/.config/<app>`）。
+
+> 用 `std::filesystem::path` join 根與目錄名，根為空時 join 出純相對路徑（`config.json`），相對 CWD 解析。
+> **拿不準需你拍**：到底要 CWD 直下（共用慣例）還是強制 program_name 子目錄（強託管）。v0 兩者都給、預設前者。
+
+### 決定三：兩種「目錄形式」用「有無 key」的多載區分（對齊權威語意表）
+
+權威語意表：每個標準目錄「**可為資料夾或單一 `.json` 檔**」。落成兩組多載：
+
+| 形式 | 路徑 | API |
+|---|---|---|
+| **單檔形式**（整個 dir 就是一顆 json） | `<root>/<dir>.json` | `load(d)` / `save(d,data)` / `exists(d)` |
+| **資料夾形式**（dir 內多個具名檔） | `<root>/<dir>/<key>` | `load(d,key)` / `save(d,key,data)` / `exists(d,key)` |
+
+兩形式路徑不同（`config.json` vs `config/…`），可並存；由呼叫方按需求選。`save` 用
+`std::filesystem::create_directories` 按需建父目錄（**no-wheel-remake：用標準庫，不手刻 mkdir -p**）。
+
+### 決定四（★ KISS 取捨）：v0 只做**原始字串** load/save，不解析 JSON
+
+本線目前只有 JSON **emitter**（`meta_json.hpp`），**沒有 parser**。為 StateStore 手刻完整 JSON parser
+違反 KISS / least-dependency。故 v0：
+
+- `load/save` 進出**原始字串（bytes）**，**內容格式由程式自決**（要存 JSON 就自己序列化）。
+- 權威語意「單檔須為 JSON 物件」**降級為註記**（命名用 `.json` 提示意圖、但設施不驗證、不解析），
+  留待日後真有需求再加 parser 並升級成「強制 JSON 物件」。
+- `load(...)` 讀不存在的路徑回**空字串**（沿用 `ac::io::read_all` 的 ifstream 失敗行為）；
+  要分辨「空內容 vs 不存在」用 `exists(...)`。
+
+### 連帶
+
+- 設施**不與軸 3 `stateful` 連動**（沿用 Round 1 結論：純選用，託管不隱含改 metadata）。
+- 四目錄語意（config 唯讀/cache 可丟/state 可重置/data 需保護）設施**不 enforce**，僅靠命名與本筆記文件約束
+  （延續軸 4「資訊性宣告、非強制合約」基調）。
