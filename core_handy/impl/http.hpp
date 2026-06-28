@@ -1,9 +1,10 @@
 // impl/http.hpp — 零相依 HTTP/1.1 client（raw POSIX socket）
 //
 // LLM 呼叫路徑的地基（對應 Python 線 lib/call.Http 的 urllib）。
-// 範圍：**明文 http://**——服務本地小模型（ollama/llama.cpp/vLLM 在 localhost），
-//   正是 roadmap「只剩便宜本地模型」的目標世界。
-// HTTPS（雲端 API）：C++ 標準庫無 TLS → 不在此；規劃 shell-out 給 curl（見 LLM 路徑決策）。
+// 範圍：
+//   - **明文 http://**：raw POSIX socket（零相依）——服務本地小模型（ollama/llama.cpp/vLLM）。
+//   - **https://**：C++ 標準庫無 TLS → shell-out 給 curl（零 library 相依；2026-06-28 使用者定）。
+//     runtime 依賴 curl 二進位；dogfood ac::shell::run。
 // 簡化：送 `Connection: close`，讀到 EOF 即整個回應——免處理 chunked / keep-alive。
 #pragma once
 
@@ -19,6 +20,8 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "shell.hpp"  // https 走 curl shell-out（C++ 標準庫無 TLS）
 
 namespace ac::http {
 
@@ -56,6 +59,28 @@ inline Url parse_url(const std::string& url) {
 inline Response post(const std::string& url, const std::string& body,
                      const Headers& headers = {}) {
   std::signal(SIGPIPE, SIG_IGN);
+
+  // https：C++ 標準庫無 TLS → shell-out 給 curl（零 library 相依，dogfood shell::run）。
+  if (url.rfind("https://", 0) == 0) {
+    std::vector<std::string> cmd = {"curl", "-sS", "--data-binary", "@-",
+                                    "-w", "\n%{http_code}"};
+    for (const auto& [k, v] : headers) { cmd.push_back("-H"); cmd.push_back(k + ": " + v); }
+    cmd.push_back(url);
+    const ac::shell::Result cr = ac::shell::run(cmd, body);
+    if (cr.code != 0)
+      throw std::runtime_error("ac::http: curl 失敗（exit " + std::to_string(cr.code) +
+                               "）：" + cr.err);
+    Response r;
+    const std::size_t nl = cr.out.rfind('\n');  // 末行＝%{http_code}
+    if (nl != std::string::npos) {
+      r.status = std::atoi(cr.out.c_str() + nl + 1);
+      r.body = cr.out.substr(0, nl);
+    } else {
+      r.body = cr.out;
+    }
+    return r;
+  }
+
   const detail::Url u = detail::parse_url(url);
 
   // 解析位址 → 連 TCP。
