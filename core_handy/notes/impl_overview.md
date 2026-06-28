@@ -83,6 +83,8 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 **長駐成 server（`serve_socket`）**、**以 wrapper 身分 spawn 既有 CLI（`shell::run`）**。g++ 與 CMake 兩鏈皆綠、零警告。
 
 > **更新（2026-06-28）**：地基 + L1 非 LLM 設施基本補齊（串流 I/O、AF_UNIX serve、shell-out）。
+> **整合切片 `examples/wrapcli` 已把全套非 LLM 設施串成一個真工具跑通**（metadata + io + shell + serve +
+> state，one-shot/server 兩用、跨程序計數持久；見 `examples/wrapcli.md`）——證實各設施能協作，非只各自單測。
 > 餘下卡在「需 C++ 側 LLM 呼叫路徑」：軸 5 rate-meter、軸 9 馴化框架；及無消費者的 tcp serve / fan-out。
 
 **再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。

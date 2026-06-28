@@ -15,3 +15,7 @@ target_include_directories(ac_helper INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(demo main.cpp)
 target_link_libraries(demo PRIVATE ac_helper)
+
+# 垂直切片：把既有 CLI 馴化成 one-shot+server 兩用的 ac_helper（串起全套非 LLM 設施）
+add_executable(wrapcli examples/wrapcli.cpp)
+target_link_libraries(wrapcli PRIVATE ac_helper)
