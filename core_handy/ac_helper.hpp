@@ -14,6 +14,7 @@
 #include "impl/intercept.hpp"  // 膠水：intercept(argc,argv,meta)
 #include "impl/serve.hpp"      // 軸 2 serve：把 handler 託管成 Unix socket daemon
 #include "impl/shell.hpp"      // 軸 1 #11 / brownfield-wrap：spawn 子程序、收 stdout/stderr+exit
+#include "impl/http.hpp"       // LLM 路徑地基：零相依 HTTP/1.1 client（raw socket，本地明文）
 
 namespace ac {
 

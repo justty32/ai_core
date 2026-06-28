@@ -86,6 +86,10 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 > **整合切片 `examples/wrapcli` 已把全套非 LLM 設施串成一個真工具跑通**（metadata + io + shell + serve +
 > state，one-shot/server 兩用、跨程序計數持久；見 `examples/wrapcli.md`）——證實各設施能協作，非只各自單測。
 > 餘下卡在「需 C++ 側 LLM 呼叫路徑」：軸 5 rate-meter、軸 9 馴化框架；及無消費者的 tcp serve / fan-out。
+>
+> **LLM 路徑開工（2026-06-28）**：L0 地基 `impl/http.hpp`（零相依 raw-socket HTTP/1.1 client，
+> 服務本地明文模型 ollama/llama.cpp/vLLM）已落地並對 python echo server 驗證（status 200 / body / https 拒絕）。
+> 待決岔路：HTTPS 傳輸（curl shell-out?）、回應 JSON 解析（最小 parser?）；定後續建 LLM backend → entry manager → rate-meter → 馴化框架。
 
 **再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。
 不該在無消費者時憑空蓋——等真需求來。
