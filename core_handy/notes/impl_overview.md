@@ -78,7 +78,8 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 | LLM backend / 路徑 | ✅ | `impl/http.hpp`（http raw socket + https curl）、`impl/json.hpp`、`impl/llm.hpp`（OpenAI 相容 chat→Reply{content,tokens}） |
 | 元件1 LLM Entry Manager | ✅ | `examples/llm_entry.cpp`（one-shot + serve daemon；共用 RateMeter 跨呼叫計量；env 設定） |
 | 軸 8 預覽輸出導向 | ⏸ 延後 | 小；`is_dry_run` 已足供 app 自行分流 |
-| **軸 9 馴化框架** | ⏸ 延後 | 坐頂、最大——需 LLM entry-manager + 真 API（Python 線元件 1/2，C++ 線未有） |
+| 軸 9 馴化原語（A） | ✅ | `impl/taming.hpp`（2026-06-28；`vote` 多數決 / `best_of` 打分，L3 聚合降方差；驗證 `examples/taming_demo`） |
+| **軸 9 證書引擎（B）** | ⏸ 延後 | 只定形狀（`cert.*` 走 `extra`，見 `axis_9`§3）；簽發/撤照引擎需 v0 真 test_set/asset 逼出 |
 
 **已成形的契約**：一支依託 ac_helper 寫的程式現在能——宣告九軸 metadata、回應 `--metadata`（吐合法 JSON）、
 原子託管狀態（StateStore）、接線解析 I/O（batch `read_all/write_all` + 串流 `Reader/Writer`）、乾跑判斷、
@@ -96,7 +97,12 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 > **LLM 路徑 layer 0–2 + 元件1 完成（2026-06-28）**：HTTPS=curl shell-out、JSON=最小 parser（皆已定並落地）；
 > `llm.chat`（OpenAI 相容）+ `rate.Meter`（軸 5）+ `examples/llm_entry`（元件1：one-shot/serve daemon、
 > 跨呼叫 consume-rate 累計）皆對 mock OpenAI server 端到端驗通。
-> **只剩 L3 軸 9 馴化框架（retry/vote/guard + 證書）**——願景頂、設計最重，待單獨開一輪設計。
+>
+> **軸 9 設施面開工（2026-06-28）**：經一輪設計收斂（範圍＝A 全做 / B 只定形狀），A 馴化原語落地
+> `impl/taming.hpp`（蒙地卡羅 `vote` + 打分 `best_of`，L3 聚合降方差，組合子可疊；`examples/taming_demo` 驗通、兩鏈零警告）。
+> B 證書引擎只在 `axis_9`§3 釘形狀（`cert.*` 走 `extra`），簽發/撤照引擎 + retry/guard/memoize **待 v0 真 test_set/asset 逼出**。
+> **L0–L3 設施面金字塔到此補齊；餘下全卡在「需 v0 切片當消費者」——依鐵則停在這。**
 
-**再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。
+**再往下的前提**：餘下塊（軸 9 證書引擎 + retry/guard/memoize、tcp serve / fan-out）各需一個**新的目標問題**
+逼出形狀——首要消費者是 roadmap §6 的 **v0 最小垂直切片**（框架→生資產→笨模型+馴化做正確程式碼編輯）。
 不該在無消費者時憑空蓋——等真需求來。

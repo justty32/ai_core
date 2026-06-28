@@ -23,3 +23,7 @@ target_link_libraries(wrapcli PRIVATE ac_helper)
 # 元件1 LLM Entry Manager：one-shot + serve daemon，共用 RateMeter（串起 http+json+llm+rate+serve）
 add_executable(llm_entry examples/llm_entry.cpp)
 target_link_libraries(llm_entry PRIVATE ac_helper)
+
+# 軸 9 馴化原語端到端驗證（不需真 LLM；用確定性 flaky f 驗 vote/best_of）
+add_executable(taming_demo examples/taming_demo.cpp)
+target_link_libraries(taming_demo PRIVATE ac_helper)

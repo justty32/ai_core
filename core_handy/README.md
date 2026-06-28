@@ -10,7 +10,7 @@
 | 角色 | 位置 | 說明 |
 |---|---|---|
 | **事實基準・描述面** | [`defs/axes.hpp`](defs/axes.hpp) | 九軸描述性 metadata 型別。**唯一可信現況。** |
-| **事實基準・設施面** | [`impl/*.hpp`](impl/) | 替程式做掉某事的設施碼（I/O、state、transaction、cli、meta_json…）。 |
+| **事實基準・設施面** | [`impl/*.hpp`](impl/) | 替程式做掉某事的設施碼（I/O、state、transaction、cli、meta_json、serve、shell、http/json/llm、rate、taming…）。 |
 | 膠水 / 示範 | `ac_helper.hpp`、`main.cpp` | 對外進入點與示範。 |
 | **歷史討論記錄** | [`notes/`](notes/) | 設計如何走到定案的 WHY。各軸只留最終拍板；舊輪次見 `notes/archived/`。**衝突時以 `defs/`、`impl/` 為準。** |
 | 封存 | [`notes/archived/`](notes/archived/) | 被 supersede 的舊輪次 + 已結案的 `defs_review/`。非現況。 |
@@ -29,7 +29,7 @@
 
 > ★ **單一 extra（2026-06-28 決定）**：各軸不再各帶 extra；全軸的低保真補充收斂成**唯一一個 `Meta::extra`**
 > （`optional<map<string,string>>`）。序列化為頂層 `"extra":{...}`（有值才出）。原各軸 PARKED 的東西
-> （軸 1 transport/mode、軸 9 治理證書 model/test_set/stability…）一律落這個袋，靠 key 命名自辨歸屬。
+> （軸 1 transport/mode、軸 9 治理證書 `cert.status`/`cert.model`/`cert.test_set`/`cert.stability`…）一律落這個袋，靠 key 命名自辨歸屬。
 
 ## 建置
 

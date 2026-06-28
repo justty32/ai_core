@@ -4,8 +4,13 @@
 >
 > **2026-06-28 再收斂：軸 9 內聯進 `../defs/axes.hpp` 的 `Meta`（裸 `unsigned uncertainty`，不再包 struct）；治理證書改走單一 `Meta::extra`。**
 
-> 狀態：✅ 定案（Round 1）。單一 `unsigned uncertainty = 0`（0＝完全確定；愈高愈不確定；馴化使其下降）+ `extra`。
+> 狀態：✅ 描述面定案（Round 1）。單一 `unsigned uncertainty = 0`（0＝完全確定；愈高愈不確定；馴化使其下降）+ `extra`。
 > 九軸的靈魂軸：治理原則「拒絕為預設＋憑證准入」的資料載體。**九軸描述面到此收尾。**
+>
+> **設施面開工（2026-06-28）**：A 馴化原語落地 `../impl/taming.hpp`（`vote` 多數決 / `best_of` 打分；L3 聚合「降方差」段，
+> 共用 `sample()` 蒙地卡羅核心，組合子可疊）；驗證見 `../examples/taming_demo.cpp`。
+> B 證書引擎**只定形狀**（見 §3，status/model/test_set/stability → `Meta::extra`）；簽發/撤照引擎待 v0 真 test_set 逼出。
+> retry/guard/memoize（L1/L2）亦待真消費者逼出。
 
 ---
 
@@ -84,14 +89,60 @@ struct Meta {
 
 ---
 
-## def/impl 定位（2026-06-24）
+## 3. 設施面落地與證書形狀（2026-06-28）
+
+設施面分兩塊（範圍決策：**A 全做、B 只定形狀**）：
+
+### A. 馴化原語（✅ 落地 `../impl/taming.hpp`）
+
+把「不可靠的 `f(str)→str`」收成「可靠的」。本輪只取 **L3 聚合**兩支（蒙地卡羅 + 打分）——
+其餘層（L0 契約 bind＝字串拼接、L1 確定化 memoize、L2 驗證 retry/guard、L4 編排 hub/router）
+待真消費者逼出。原語是**組合子（decorator）**：吃 `Fn` 回 `Fn`，可層層疊。
+
+| 原語 | 層 | 語意 | 平手規則 / 邊界 |
+|---|---|---|---|
+| `sample(f, in, n)` | 核心 | 同輸入抽 n 次、回 `vector<string>` | n≤0 → 空 |
+| `vote(f, n)` | L3 | self-consistency 多數決（蒙地卡羅）；同答案抽多了浮上來 | 平手取先抽到者（`>` 非 `>=`）；n=1 退化原函式；n≤0 回空 |
+| `best_of(f, n, score)` | L3 | 抽 n 次、`score`（高=好）取最高分；冷熱分工 f 熱·score 冷 | 平手取先抽到者；n≤0 回空 |
+
+> 與描述面對位：本層是「把 `uncertainty` 往 0 推」的**降方差段力**。但**只跑、不寫 uncertainty**——
+> 改寫 `Meta::uncertainty` / 簽證書是 B 證書引擎的職責（本輪未做）。
+
+### B. 證書形狀（只定形狀，引擎延後）
+
+roadmap §3.4：證書＝「此環節經測試組 Y、用模型 X、認證穩定度 Z%」，寄生 `Meta::extra`（string→string）。
+**本輪只釘形狀，不蓋引擎**（無真 test_set/asset 可認證 → 憑空抽象，違反「無消費者就延後」）。
+
+證書在 `Meta::extra` 的約定鍵（沿用 §1 權威三鍵 + roadmap §3.5 的 status）：
+
+| `extra` 鍵 | 值（string） | 語意 |
+|---|---|---|
+| `cert.status` | `uncertified` / `syntax_ok` / `rejected` | 治理狀態；`rejected` 另帶 reason |
+| `cert.reason` | `guardrail_violation` / `retry_exhausted` | 僅 rejected：安全否決 vs 能力不足（撤照意義不同） |
+| `cert.model` | 如 `qwen2.5` | 用哪個模型認證 |
+| `cert.test_set` | 如 `code_edit_v0` | 經哪組測試 |
+| `cert.stability` | 如 `92`（百分比整數） | 認證穩定度% |
+
+> 為何寄生 `extra` 而非結構化欄位：沿用軸 9 描述面決策——量值（`uncertainty`）承載「多不確定」、
+> `extra` 承載「憑什麼認證」；「從粗糙到嚴整」，待 v0 真資料收緊。鍵用 `cert.` 前綴避免與其他軸的 extra 撞名。
+
+### 證書引擎（⏸ 延後，待 v0）
+
+簽發＝跑 `test_set × model` → 算 pass rate（穩定度）→ 寫上表 `cert.*` + 降 `uncertainty`；
+撤照＝重跑掉到門檻下 → 清 `cert.*` + 彈回 `uncertainty`。消費者＝roadmap §6 v0 切片
+「框架→生資產→笨模型+馴化做出正確程式碼編輯」那條線——它跑出來才有 asset/test_set 可認證。
+原語（A）已備好當引擎零件（retry/guard 補上後，引擎用它們跑 test_set）。
+
+---
+
+## def/impl 定位（2026-06-24，2026-06-28 更新落地狀態）
 
 - **描述面（→ defs）✅**：內聯 `unsigned uncertainty`（裸欄位，不再包 struct）；治理證書走 `Meta::extra`——治理的資料載體，hub 必讀（不像軸 8 可推給 impl）。
-- **設施面（→ impl）＝全九軸最大的一塊**：
-  - **馴化框架**（retry / vote / guard …，見 `try_implement/docs/`）：把高 uncertainty 收斂到低，是 roadmap 核心願景的機器。
-  - **證書簽發 / 撤照**：跑 `test_set × model` 算穩定度 → 更新 uncertainty（往下推）/ 撤照（往上彈）。
-  - **與元件 1 LLM Entry Manager 串接**：隨機環節的實際 LLM 呼叫由 entry manager 路由。
-  - **僅定位，待 impl 集中重做設計**（且應與整個馴化框架願景一起談）。
+- **設施面（→ impl）＝全九軸最大的一塊**（2026-06-28 部分落地，見 §3）：
+  - **馴化原語**（見 `../impl/taming.hpp`）：✅ L3 聚合 `vote`/`best_of` 落地（降方差）；retry/guard/memoize 待真消費者逼出。
+  - **證書簽發 / 撤照**：⏸ 只定形狀（§3 B，`cert.*` 走 `extra`）；引擎（跑 `test_set × model` → 更新 uncertainty / 撤照）待 v0 切片逼出。
+  - **與元件 1 LLM Entry Manager 串接**：隨機環節的實際 LLM 呼叫由 `../examples/llm_entry.cpp` 路由；馴化原語包在其外。
+  - 餘下與整個馴化框架願景一起談（v0）。
 
 ---
 

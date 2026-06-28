@@ -18,6 +18,7 @@
 #include "impl/http.hpp"       // LLM 路徑地基：HTTP client（http=raw socket / https=curl shell-out）
 #include "impl/llm.hpp"        // LLM backend：OpenAI 相容 chat（prompt→completion）
 #include "impl/rate.hpp"       // 軸 5：consume-rate 計量（RateMeter）
+#include "impl/taming.hpp"     // 軸 9：馴化原語（vote 多數決 / best_of 打分；把方差換穩定）
 
 namespace ac {
 
