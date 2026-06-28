@@ -83,5 +83,22 @@ int main(int argc, char** argv) {
     fs::remove(addr);
   }
 
+  // ── 軸 1 flow=streaming 示範：Writer 逐塊寫 → Reader 逐行讀（自我驗證）。
+  //    同一對 read/write、不分通道種類——這裡用檔案，換成 "-" 即 stdin/stdout。
+  {
+    namespace fs = std::filesystem;
+    const std::string saddr = "core_handy_stream_demo.txt";
+    {
+      ac::io::Writer w(saddr);
+      for (int i = 1; i <= 3; ++i) w.write("line " + std::to_string(i) + "\n");
+    }  // Writer 解構自動 flush
+    ac::io::Reader r(saddr);
+    std::string line;
+    int n = 0;
+    while (r.read_line(line)) ++n;
+    std::cout << "[stream] Reader 逐行讀到 " << n << " 行 (flow=streaming)\n";
+    fs::remove(saddr);
+  }
+
   return 0;
 }

@@ -169,4 +169,40 @@ namespace ac::cli {
 - 軸 4 D-API：StateStore 介面（建在 `read_all/write_all` 檔案分支）。— ✅ 已落地（`impl/state.hpp`）。
 - 膠水：`Meta → --metadata JSON` 序列化形狀 + `intercept(argc,argv,meta)` 進入點（用 `write_all("-")`）。— ✅ 已落地。
 - ~~B 接線解析（terminal_binding 新家）：`--input <path>` → 位址字串。~~ ✅ 已落地（見上節 `ac::cli::resolve`）。
-- stream 群 Channel 物件——延後到軸 2 serve / LLM 串流逼出。
+- ~~stream 群 Channel 物件~~——✅ **基本 Reader/Writer 已落地**（`impl/io.hpp`，見 Round 3）；範圍 std+檔案。
+  socket/tcp/FIFO scheme、SIGPIPE/背壓、fan-out 等重機器仍延後到軸 2 serve / LLM 串流逼出。
+
+---
+
+## Round 3（✅ 串流基本落地，2026-06-28）— Reader/Writer
+
+接 axis_1 **Round 14**（Entry 補 `flow`：batch/streaming）的描述面，補上 `flow=streaming` 的設施半。
+用使用者定錨的「一切都是檔案、同一對 read/write」：串流就是 batch 的「持有流、逐塊」版。
+
+### 形狀（落在 `impl/io.hpp`）
+
+```cpp
+class Reader {                          // flow=streaming 的 in；"-"=stdin、其餘=檔案
+  explicit Reader(const std::string& addr);
+  std::string read(std::size_t max = 65536);  // binary：讀一塊，空＝EOF
+  bool read_line(std::string& line);          // text：讀一行，false＝EOF
+  bool eof() const;
+};
+class Writer {                          // flow=streaming 的 out；"-"=stdout、其餘=檔案
+  explicit Writer(const std::string& addr);
+  void write(std::string_view data);          // 寫一塊
+  void flush();                               // 解構自動 flush
+};
+```
+
+### 決定
+
+- **持有原始流 → 不可複製/移動**（避免 `istream*` 懸空）：就地構造、就地用。RAII 開關流。
+- **范圍同 batch**：`-`=std、其餘=檔案。換 `tcp://`/`shm:` 等 scheme＝改建構子的 open 分支，介面不動
+  （呼應 D-IO Round 2「A 不是死路：自由函式→Channel 薄糖、呼叫點零改」的精神）。
+- **read 兩種粒度**：`read(max)`（binary 逐塊）＋ `read_line`（text 逐行），對上 Entry::content 的兩值。
+- **延後（無消費者）**：socket/tcp/FIFO scheme、SIGPIPE/背壓、多連線 fan-out——待軸 2 serve / LLM 串流逼出。
+
+### 驗證
+`main.cpp` 加串流示範（Writer 逐塊寫→Reader 逐行讀）；另測 `Reader("-")`/`Writer("-")` 串 stdin→stdout。
+g++ `-std=c++20 -Wall -Wextra` 零警告。
