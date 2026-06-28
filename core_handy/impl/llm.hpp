@@ -21,8 +21,13 @@ struct Config {
   std::string api_key;    // 選填：有則加 Authorization: Bearer
 };
 
-// 單輪對話：prompt → 模型回覆內容。HTTP 非 2xx 或無 content 即丟例外。
-inline std::string chat(const Config& cfg, const std::string& prompt) {
+struct Reply {
+  std::string content;       // 模型回覆內容
+  long long total_tokens = 0;  // usage.total_tokens（0=未提供）；餵軸 5 rate-meter
+};
+
+// 單輪對話：prompt → Reply（content + token 用量）。HTTP 非 2xx 或無 content 即丟例外。
+inline Reply chat(const Config& cfg, const std::string& prompt) {
   const std::string body =
       "{\"model\":" + ac::detail::json_str(cfg.model) +
       ",\"messages\":[{\"role\":\"user\",\"content\":" + ac::detail::json_str(prompt) +
@@ -36,10 +41,14 @@ inline std::string chat(const Config& cfg, const std::string& prompt) {
     throw std::runtime_error("ac::llm: HTTP " + std::to_string(r.status) + "：" + r.body);
 
   const ac::json::Value j = ac::json::parse(r.body);
-  const std::string content = j["choices"][0]["message"]["content"].as_string();
-  if (content.empty() && !j["choices"][0]["message"]["content"].is_valid())
+  const ac::json::Value& c = j["choices"][0]["message"]["content"];
+  if (!c.is_valid())
     throw std::runtime_error("ac::llm: 回應無 choices[0].message.content：" + r.body);
-  return content;
+
+  Reply rep;
+  rep.content = c.as_string();
+  rep.total_tokens = static_cast<long long>(j["usage"]["total_tokens"].as_number(0));
+  return rep;
 }
 
 }  // namespace ac::llm

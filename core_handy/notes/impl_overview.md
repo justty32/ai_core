@@ -74,7 +74,9 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 | 軸 2 serve（AF_UNIX daemon） | ✅ | `impl/serve.hpp`（2026-06-28；`serve_socket(path, handler)` 單執行緒循序、跨請求狀態） |
 | 軸 1 shell-out（subprocess wrapper） | ✅ | `impl/shell.hpp`（2026-06-28；`run(cmd,input)`→{out,err,code}；fork/exec+poll 多工防死結） |
 | **軸 2 tcp serve / fan-out** | ⏸ 延後 | stream 群**重機器**（tcp scheme / 多連線 fan-out / 背壓）——待真消費者逼出 |
-| **軸 5 rate-meter** | ⏸ 延後 | 無消費者——C++ 線尚無 LLM 呼叫路徑可計量（真消費者是軸 9） |
+| 軸 5 rate-meter | ✅ | `impl/rate.hpp`（2026-06-28；`Meter` 累計 requests/tokens/cost + token 配額；entry manager 跨呼叫用） |
+| LLM backend / 路徑 | ✅ | `impl/http.hpp`（http raw socket + https curl）、`impl/json.hpp`、`impl/llm.hpp`（OpenAI 相容 chat→Reply{content,tokens}） |
+| 元件1 LLM Entry Manager | ✅ | `examples/llm_entry.cpp`（one-shot + serve daemon；共用 RateMeter 跨呼叫計量；env 設定） |
 | 軸 8 預覽輸出導向 | ⏸ 延後 | 小；`is_dry_run` 已足供 app 自行分流 |
 | **軸 9 馴化框架** | ⏸ 延後 | 坐頂、最大——需 LLM entry-manager + 真 API（Python 線元件 1/2，C++ 線未有） |
 
@@ -90,6 +92,11 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 > **LLM 路徑開工（2026-06-28）**：L0 地基 `impl/http.hpp`（零相依 raw-socket HTTP/1.1 client，
 > 服務本地明文模型 ollama/llama.cpp/vLLM）已落地並對 python echo server 驗證（status 200 / body / https 拒絕）。
 > 待決岔路：HTTPS 傳輸（curl shell-out?）、回應 JSON 解析（最小 parser?）；定後續建 LLM backend → entry manager → rate-meter → 馴化框架。
+>
+> **LLM 路徑 layer 0–2 + 元件1 完成（2026-06-28）**：HTTPS=curl shell-out、JSON=最小 parser（皆已定並落地）；
+> `llm.chat`（OpenAI 相容）+ `rate.Meter`（軸 5）+ `examples/llm_entry`（元件1：one-shot/serve daemon、
+> 跨呼叫 consume-rate 累計）皆對 mock OpenAI server 端到端驗通。
+> **只剩 L3 軸 9 馴化框架（retry/vote/guard + 證書）**——願景頂、設計最重，待單獨開一輪設計。
 
 **再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。
 不該在無消費者時憑空蓋——等真需求來。
