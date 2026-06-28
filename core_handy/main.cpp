@@ -13,8 +13,8 @@ int main(int argc, char** argv) {
   // ── 宣告：一個讀 stdin(text)、寫 output(binary)、stateful、冪等、可續跑、
   //          支援乾跑、峰值 256mb 的 one-shot CLI 工具。
   ac::Meta meta;
-  meta.entries["stdin"]  = {ac::Entry::in,  ac::Entry::text};
-  meta.entries["output"] = {ac::Entry::out, ac::Entry::binary};
+  meta.entries["stdin"]  = {ac::Entry::in,  ac::Entry::batch, ac::Entry::text};
+  meta.entries["output"] = {ac::Entry::out, ac::Entry::batch, ac::Entry::binary};
   meta.stateful            = true;                         // 軸 3：寫外部
   meta.guarantee           = ac::Guarantee::idempotent;   // 軸 7
   meta.interruptible.level = ac::Interruptible::resumable; // 軸 6

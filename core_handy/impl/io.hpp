@@ -1,8 +1,10 @@
-// impl/io.hpp — 軸 1 統一 I/O 設施（batch 先；D-IO Round 2）
+// impl/io.hpp — 軸 1 統一 I/O 設施（Unix「一切都是檔案」的 read/write 落地；D-IO Round 2）
 //
-// v0 範圍：位址字串 + batch 自由函式，涵蓋 std + 檔案。
-// stream 群（Channel 物件 / pipe / socket / subprocess）延後到軸 2 serve / LLM 串流逼出。
-// 位址慣例：`-` ＝ std（讀=stdin / 寫=stdout）；其餘 ＝ 檔案路徑。
+// 對應描述面 Entry::flow（axis_1 Round 14）——作者與 hub 一律用同一對 read/write：
+//   - flow=batch(0)     → 本檔 read_all/write_all（整塊讀寫，已落地）。
+//   - flow=streaming(1) → Channel 物件（逐塊），仍延後到軸 2 serve / LLM 串流逼出。
+// 「transport 種類不進描述」：種類退化成位址 scheme，於本檔 open 時認；作者不分通道種類。
+// 位址慣例：`-` ＝ std（讀=stdin / 寫=stdout）；其餘 ＝ 檔案路徑；`tcp://`/`shm:` 等 scheme 延後。
 #pragma once
 
 #include <filesystem>

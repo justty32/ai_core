@@ -23,14 +23,18 @@ namespace ac {
 using Extra = std::optional<std::map<std::string, std::string>>;
 
 // ── 軸 1 entries（I/O 出入口）─────────────────────────────────────────
-// Round 13：兩碼表。砍掉 access（冗餘於軸 3 + 傳輸身分）。
-// direction/content 為開放整數碼表，序列化直出整數。mutation/transport/
-// flow（流動模式）一律 PARKED → Meta::extra。
+// Round 14（Unix 統一 I/O）：三碼表 direction / flow / content。
+// 「一切都是檔案」：transport 種類不進描述——退化成 runtime 的位址 scheme
+// （`-`=stdio / path / `tcp://…` / `shm:…`），作者與 hub 一律用同一對 read/write。
+// 描述只保留 read/write 統一介面藏不掉的 flow（batch vs streaming）。
+// mutation → 軸 3 stateful；transport 身分/位址 → runtime（impl `read_all`/`resolve`）。
 struct Entry {
   static constexpr unsigned in = 0, out = 1, in_out = 2;  // direction 碼
+  static constexpr unsigned batch = 0, streaming = 1;     // flow 碼（≥2 擴充：interactive/duplex）
   static constexpr unsigned binary = 0, text = 1;         // content 碼（≥2 擴充：json/status-int…）
 
   unsigned direction = 0;   // 0=in / 1=out / 2=in_out
+  unsigned flow      = 0;   // 0=batch（整塊·可 seek）/ 1=streaming（逐塊·順序·可能不終止）/ ≥2 擴充
   unsigned content   = 0;   // 0=binary / 1=text / ≥2 擴充
 };
 

@@ -21,7 +21,7 @@
 
 | 軸 | 型別 | 軸 | 型別 |
 |---|---|---|---|
-| 1 entries | `Entry{direction, content}` | 6 interruptible | `unsigned level`（名目碼） |
+| 1 entries | `Entry{direction, flow, content}` | 6 interruptible | `unsigned level`（名目碼） |
 | 2 lifecycle | `bool persistent` | 7 guarantee | `enum {none,idempotent,transactional}` |
 | 3 state | `bool stateful` | 8 dry_run | `bool allow_dry_run` |
 | 4 state_dirs | 純設施（描述面外包軸 3）→ `impl/state.hpp` | 9 nondeterministic | `unsigned uncertainty` |

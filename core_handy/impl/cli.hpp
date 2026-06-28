@@ -2,7 +2,8 @@
 //
 // 兩個無狀態小函式，串起「entry 宣告 → 真實 I/O / 行為」：
 //   1. resolve()    — 軸 1 B 接線解析：通道名(flag) + CLI args → 位址字串（terminal_binding 新家）。
-//                     回傳的位址字串可直接餵 ac::io::read_all/write_all。
+//                     ＝ Round 14「kind/address 切分」的 address 半（runtime）：transport 種類不進描述，
+//                     由位址 scheme 在 ac::io open 時認。回傳的位址字串可直接餵 ac::io::read_all/write_all。
 //   2. is_dry_run() — 軸 8 設施：掃 argv 有無 lib 約定的 `--dry-run` flag，回 bool。
 //
 // 風格比照 impl/intercept.hpp：直接掃 argv、無相依、注意邊界不越界。

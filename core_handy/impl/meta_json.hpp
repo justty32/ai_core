@@ -72,7 +72,7 @@ inline std::string to_metadata_json(const Meta& m) {
   using detail::json_str;
   std::vector<std::string> fields;
 
-  // 軸 1 entries（固定恆出；每個 entry 的 direction/content 恆出）。
+  // 軸 1 entries（固定恆出；每個 entry 的 direction/flow/content 恆出）。
   {
     std::string e = "\"entries\":{";
     bool first = true;
@@ -80,6 +80,7 @@ inline std::string to_metadata_json(const Meta& m) {
       if (!first) e += ",";
       first = false;
       e += json_str(name) + ":{\"direction\":" + std::to_string(en.direction) +
+           ",\"flow\":" + std::to_string(en.flow) +
            ",\"content\":" + std::to_string(en.content) + "}";
     }
     e += "}";

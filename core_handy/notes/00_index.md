@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
 
 | # | 軸 | 筆記檔 | 狀態 |
 |---|---|---|---|
-| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 13，砍 access，supersede R12）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充)；**extra 上收 `Meta::extra`（2026-06-28）**；mutation/傳輸身分/流動模式全 PARKED→Meta::extra |
+| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（**Round 14，Unix 統一 I/O，supersede R13**）：`unsigned direction`(in/out/in_out) + `unsigned flow`(0=batch/1=streaming) + `unsigned content`(binary/text/≥2)；transport 種類退出描述→runtime 位址 scheme、統一 read/write；mutation→軸3、extra→Meta::extra |
 | 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R4 複查）：`bool persistent`(預設false=one_shot)；**已內聯成 Meta 裸 bool、extra 上收 Meta（2026-06-28）**；流動模式正式判給軸 1、軸 2 不收（止住跨軸流浪） |
 | 3 | `state`（跨呼叫狀態） | [axis_3_state.md](axis_3_state.md) | ✅ 定案：單一 `bool stateful = false`（false=stateless 預設、true=stateful_external），無 detail |
 | 4 | `state_dirs`（狀態目錄） | [axis_4_state_dirs.md](axis_4_state_dirs.md) | 討論中（Round 1 提案） |
