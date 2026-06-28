@@ -85,13 +85,28 @@ struct Meta {
    ├─ 軸 2 serve helper（用 socket/tcp 接入 → 長駐託管）
    └─ 軸 4 狀態託管（用檔案/dir → 限定 4 標準目錄 + 語意）
 ```
-軸 2 設施建在軸 1 之上，與軸 4 同構。API 形狀（serve 進入點長相、與軸 1 傳輸如何共用）**留待回頭重做**。
+軸 2 設施建在軸 1 之上，與軸 4 同構。
+
+### ✅ 落地（2026-06-28）— `impl/serve.hpp`
+
+```cpp
+namespace ac::serve {
+  using Handler = std::function<std::string(std::string)>;   // input → output（同函式模型/llm_call）
+  void serve_socket(const std::string& path, const Handler& handler);  // AF_UNIX，阻塞，signal 終止
+}
+```
+
+- **形狀**：handler＝`string→string`；狀態跨請求存活於 process（handler 以閉包持有，如 warm model / 共用 RateMeter）。
+- **協定**：一連線一請求——client 送完 half-close(SHUT_WR) → server 讀到 EOF → handler → 寫回 → 關閉。
+- **模型**：單執行緒、循序 accept（正合 LLM 單資源→佇列；singleton → 軸 5）。
+- **範圍**：AF_UNIX 本機 IPC。tcp/FIFO scheme、fan-out 多工延後（同 io.hpp stream 重機器邏輯）。
+- 驗證：`main.cpp --serve <sock>` + Python AF_UNIX client 連多次，計數跨請求遞增（warm process 確認）。
 
 ---
 
 ## 開放問題 / 後續輪次
 
-- 軸 2 設施 API 形狀（serve 進入點、與軸 1 傳輸/軸 5 singleton 的分層）——待 impl 集中重做設計。
+- ~~軸 2 設施 API 形狀（serve 進入點、與軸 1 傳輸/軸 5 singleton 的分層）~~——✅ 已落地（`impl/serve.hpp`，AF_UNIX 基本版；tcp/fan-out 延後）。
 
 ---
 

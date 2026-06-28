@@ -12,6 +12,7 @@
 #include "impl/cli.hpp"        // 設施：argv 接線解析（軸 1 B）＋ is_dry_run（軸 8）
 #include "impl/meta_json.hpp"  // 膠水：Meta → --metadata JSON
 #include "impl/intercept.hpp"  // 膠水：intercept(argc,argv,meta)
+#include "impl/serve.hpp"      // 軸 2 serve：把 handler 託管成 Unix socket daemon
 
 namespace ac {
 

@@ -71,7 +71,8 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 | 軸 4 StateStore（已原子化） | ✅ | `impl/state.hpp`（D-API Round 2） |
 | 軸 1 B 接線解析 + 軸 8 `is_dry_run` | ✅ | `impl/cli.hpp` |
 | 軸 6+7 transaction（`write_atomic`） | ✅ | `impl/io.hpp` + `impl/state.hpp`（`impl_transaction.md`） |
-| **軸 2 serve、shell-out helper** | ⏸ 延後 | stream 群**重機器**（socket/serve/fan-out/SIGPIPE 背壓）——待 serve / LLM 串流逼出；基本 Reader/Writer 已先落地（上一列） |
+| 軸 2 serve（AF_UNIX daemon） | ✅ | `impl/serve.hpp`（2026-06-28；`serve_socket(path, handler)` 單執行緒循序、跨請求狀態） |
+| **軸 2 tcp serve / fan-out、shell-out helper** | ⏸ 延後 | stream 群**重機器**（tcp scheme/多連線 fan-out/SIGPIPE 背壓/subprocess）——待真消費者逼出 |
 | **軸 5 rate-meter** | ⏸ 延後 | 無消費者——C++ 線尚無 LLM 呼叫路徑可計量（真消費者是軸 9） |
 | 軸 8 預覽輸出導向 | ⏸ 延後 | 小；`is_dry_run` 已足供 app 自行分流 |
 | **軸 9 馴化框架** | ⏸ 延後 | 坐頂、最大——需 LLM entry-manager + 真 API（Python 線元件 1/2，C++ 線未有） |

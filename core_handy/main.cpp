@@ -24,6 +24,18 @@ int main(int argc, char** argv) {
   // ── 膠水：命中 `--metadata` → 序列化 JSON 到 stdout + exit(0)；否則交還控制。
   ac::intercept(argc, argv, meta);
 
+  // ── 軸 2 serve 示範：`--serve <sock>` → 把「處理一段輸入」託管成長駐 server。
+  //    循序一次一請求；狀態跨請求存活（這裡是個跨請求遞增的計數，示範 warm process）。
+  if (const std::string sock = ac::cli::resolve(argc, argv, "--serve", ""); !sock.empty()) {
+    long served = 0;
+    std::cerr << "core_handy serving on " << sock << "（一連線一請求；SIGINT/SIGTERM 結束）\n";
+    ac::serve::serve_socket(sock, [&served](std::string req) {
+      ++served;  // 跨請求存活的 process 狀態
+      return "req#" + std::to_string(served) + " len=" + std::to_string(req.size()) + "\n";
+    });
+    return 0;  // 不可達：serve_socket 阻塞，以 signal 終止
+  }
+
   // ── 程式本體（沒帶 --metadata 才會到這）。
   std::cout << "core_handy demo — ac_helper version " << ac::helper_version << '\n';
   std::cout << "(帶 --metadata 跑可看九軸 JSON)\n";
