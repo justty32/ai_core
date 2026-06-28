@@ -16,6 +16,7 @@
 #include "impl/shell.hpp"      // 軸 1 #11 / brownfield-wrap：spawn 子程序、收 stdout/stderr+exit
 #include "impl/json.hpp"       // 最小 JSON parser（抽 LLM 回應欄位；標準庫無 parser）
 #include "impl/http.hpp"       // LLM 路徑地基：HTTP client（http=raw socket / https=curl shell-out）
+#include "impl/llm.hpp"        // LLM backend：OpenAI 相容 chat（prompt→completion）
 
 namespace ac {
 
