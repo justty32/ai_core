@@ -112,5 +112,16 @@ int main(int argc, char** argv) {
     fs::remove(saddr);
   }
 
+  // ── 軸 1 #11 / brownfield-wrap 示範：spawn 既有 CLI、餵 stdin、收 stdout + exit code。
+  //    這正是「wrapper 把既有程式包進系統」的本職：argv 直傳、不經 shell。
+  {
+    const auto up = ac::shell::run({"tr", "a-z", "A-Z"}, "shell-out\n");
+    std::cout << "[shell] tr a-z A-Z <- \"shell-out\" => " << up.out
+              << "[shell] exit code: " << up.code << '\n';
+    const auto bad = ac::shell::run({"sh", "-c", "echo oops 1>&2; exit 3"});
+    std::cout << "[shell] stderr 擷取: " << bad.err
+              << "[shell] exit code(exit 3): " << bad.code << '\n';
+  }
+
   return 0;
 }

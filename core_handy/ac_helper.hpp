@@ -13,6 +13,7 @@
 #include "impl/meta_json.hpp"  // 膠水：Meta → --metadata JSON
 #include "impl/intercept.hpp"  // 膠水：intercept(argc,argv,meta)
 #include "impl/serve.hpp"      // 軸 2 serve：把 handler 託管成 Unix socket daemon
+#include "impl/shell.hpp"      // 軸 1 #11 / brownfield-wrap：spawn 子程序、收 stdout/stderr+exit
 
 namespace ac {
 

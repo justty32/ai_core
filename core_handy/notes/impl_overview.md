@@ -72,13 +72,18 @@ L0 地基  ──────────────  軸 1 統一 I/O（檔案
 | 軸 1 B 接線解析 + 軸 8 `is_dry_run` | ✅ | `impl/cli.hpp` |
 | 軸 6+7 transaction（`write_atomic`） | ✅ | `impl/io.hpp` + `impl/state.hpp`（`impl_transaction.md`） |
 | 軸 2 serve（AF_UNIX daemon） | ✅ | `impl/serve.hpp`（2026-06-28；`serve_socket(path, handler)` 單執行緒循序、跨請求狀態） |
-| **軸 2 tcp serve / fan-out、shell-out helper** | ⏸ 延後 | stream 群**重機器**（tcp scheme/多連線 fan-out/SIGPIPE 背壓/subprocess）——待真消費者逼出 |
+| 軸 1 shell-out（subprocess wrapper） | ✅ | `impl/shell.hpp`（2026-06-28；`run(cmd,input)`→{out,err,code}；fork/exec+poll 多工防死結） |
+| **軸 2 tcp serve / fan-out** | ⏸ 延後 | stream 群**重機器**（tcp scheme / 多連線 fan-out / 背壓）——待真消費者逼出 |
 | **軸 5 rate-meter** | ⏸ 延後 | 無消費者——C++ 線尚無 LLM 呼叫路徑可計量（真消費者是軸 9） |
 | 軸 8 預覽輸出導向 | ⏸ 延後 | 小；`is_dry_run` 已足供 app 自行分流 |
 | **軸 9 馴化框架** | ⏸ 延後 | 坐頂、最大——需 LLM entry-manager + 真 API（Python 線元件 1/2，C++ 線未有） |
 
 **已成形的契約**：一支依託 ac_helper 寫的程式現在能——宣告九軸 metadata、回應 `--metadata`（吐合法 JSON）、
-原子託管狀態（StateStore）、接線解析 I/O、乾跑判斷。g++ 與 CMake 兩條 build 鏈皆綠、零警告。
+原子託管狀態（StateStore）、接線解析 I/O（batch `read_all/write_all` + 串流 `Reader/Writer`）、乾跑判斷、
+**長駐成 server（`serve_socket`）**、**以 wrapper 身分 spawn 既有 CLI（`shell::run`）**。g++ 與 CMake 兩鏈皆綠、零警告。
+
+> **更新（2026-06-28）**：地基 + L1 非 LLM 設施基本補齊（串流 I/O、AF_UNIX serve、shell-out）。
+> 餘下卡在「需 C++ 側 LLM 呼叫路徑」：軸 5 rate-meter、軸 9 馴化框架；及無消費者的 tcp serve / fan-out。
 
 **再往下的前提**：餘下三塊各需一個**新的目標問題**逼出形狀（serve 的常駐需求 / C++ 側 LLM 呼叫路徑）。
 不該在無消費者時憑空蓋——等真需求來。
