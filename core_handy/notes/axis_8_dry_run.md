@@ -1,5 +1,7 @@
 # 軸 8：`dry_run`（乾跑）
 
+> ⚠️ 歷史討論記錄（2026-06-28 收斂）。**事實基準在 `../defs/axes.hpp`**（本軸已驗證對齊：描述層 `bool allow_dry_run`）。flag/輸出接線等細節屬 `impl/`。本檔保留設計脈絡。
+
 > 狀態：✅ 定案（Round 2 複查確認，bool 不動）。描述層只留 `bool allow_dry_run = false`；
 > object 細節（flag/state_entry/error_entry）全降級到實作層。
 > R2 釘死前提：**ac_helper = greenfield 創作 lib，brownfield 一律經 wrapper 進來** → bool 夠（見下 Round 2）。

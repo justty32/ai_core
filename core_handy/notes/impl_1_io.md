@@ -1,5 +1,7 @@
 # 軸 1 impl：統一 I/O 設施（地基）
 
+> ⚠️ 歷史／設計討論記錄（2026-06-28 收斂）。**事實基準（設施碼）在 `../impl/io.hpp`**；本檔是設施面的設計脈絡，非現況查詢處。描述面見 `../defs/axes.hpp`。
+
 > 狀態：✅ D-IO 拍板（Round 2）：位址字串 + batch 先（`read_all/write_all`），stream 群延後。impl 金字塔的地基（見 `impl_overview.md`）。
 > 描述面已定案（`axis_1_entries.md` **Round 13**：`Entry{direction, content, extra}`，已砍 writable）；本檔設計**設施面**。
 > **筆記層、不寫碼。**

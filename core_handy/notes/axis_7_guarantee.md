@@ -1,6 +1,10 @@
 # 軸 7：`guarantee`（執行保證）
 
-> 狀態：✅ 定案（Round 1）。封閉 `enum class : unsigned`（none=0 預設）+ 統一 `extra`。
+> ⚠️ 歷史討論記錄（2026-06-28 收斂）。**事實基準在 `../defs/axes.hpp`**（本軸已驗證對齊）。本軸 Round 1 即定案，無被取代輪次；本檔保留設計脈絡。
+
+> **2026-06-28 再收斂：軸 7 內聯進 `../defs/axes.hpp` 的 `Meta`（裸 `Guarantee guarantee`，移除 `GuaranteeField` 包裝）；extra 上收為單一 `Meta::extra`。**
+
+> 狀態：✅ 定案（Round 1）。封閉 `enum class : unsigned`（none=0 預設）；enum Guarantee 內聯進 Meta（裸欄位），extra 收斂至 `Meta::extra`。
 
 ---
 
@@ -64,13 +68,12 @@ enum class Guarantee : unsigned {
   transactional = 2,   // 全成功或全不發生（ACID）；中途失敗自動回滾
 };
 
-struct GuaranteeField {
-  Guarantee guarantee = Guarantee::none;                     // 固定欄位；zero-init=none
-  std::optional<std::map<std::string, std::string>> extra;   // 額外逃生艙（回滾機制 hint…）
-};
+// 2026-06-28 再收斂：移除 GuaranteeField 包裝，guarantee 直接內聯成 Meta 的裸欄位：
+//   Guarantee guarantee = Guarantee::none;   // zero-init=none
+// 額外逃生艙（回滾機制 hint / 冪等鍵帶法）PARKED 至單一 Meta::extra（全軸共用）。
 ```
 
-三層對位：固定＝`guarantee`；opt＝無；額外＝`extra`。
+三層對位：固定＝Meta 裸欄位 `guarantee`；opt＝無；額外＝統一 `Meta::extra`。
 
 > 與軸 6 的形狀對照：軸 6 用 `unsigned level`（開放碼表，因值集開放）；軸 7 用 `enum class`
 > （封閉，因值集封閉）。兩軸都「有序＋extra」，但表示法分歧——這是**權威值集開閉不同**的直接結果。

@@ -1,5 +1,9 @@
 # 軸 9：`nondeterministic`（確定性 / 隨機性・治理證書）
 
+> ⚠️ 歷史討論記錄（2026-06-28 收斂）。**事實基準在 `../defs/axes.hpp`**（本軸已驗證對齊）。本軸 Round 1 即定案，無被取代輪次；本檔保留設計脈絡。
+>
+> **2026-06-28 再收斂：軸 9 內聯進 `../defs/axes.hpp` 的 `Meta`（裸 `unsigned uncertainty`，不再包 struct）；治理證書改走單一 `Meta::extra`。**
+
 > 狀態：✅ 定案（Round 1）。單一 `unsigned uncertainty = 0`（0＝完全確定；愈高愈不確定；馴化使其下降）+ `extra`。
 > 九軸的靈魂軸：治理原則「拒絕為預設＋憑證准入」的資料載體。**九軸描述面到此收尾。**
 
@@ -36,12 +40,17 @@
 
 **不採**我原提案的 `optional<Certificate>` 三態 presence。改用**單一 `unsigned` 不確定性量級**：
 
+> **2026-06-28 再收斂**：以下不再包 `struct Nondeterministic`。軸 9 **內聯為 `Meta` 的裸欄位**，
+> 證書細節改走 `Meta` 唯一的 `extra` 袋（全軸共用）。
+
 ```cpp
-struct Nondeterministic {
-  unsigned uncertainty = 0;   // 0=完全確定(預設,zero-init)；數值愈高=不確定性愈高
+struct Meta {
+  // …前八軸欄位…
+  unsigned uncertainty = 0;   // 軸 9（債務儀表）：0=完全確定(預設,zero-init)；數值愈高=不確定性愈高
                               // 對含 LLM 的程式：隨測試環節通過，數值往下降（馴化＝把它推向 0）
-  std::optional<std::map<std::string, std::string>> extra;  // 證書細節：model/test_set/stability + 自訂
+  Extra    extra;            // ★ 全軸共用的單一逃生艙；軸 9 證書細節（model/test_set/stability + 自訂）落於此
 };
+// 序列化：軸 9 扁平化為 "uncertainty":N（不再是 "nondeterministic":{"uncertainty":N}）
 ```
 
 | 決策 | 選擇 | 說明 |
@@ -77,7 +86,7 @@ struct Nondeterministic {
 
 ## def/impl 定位（2026-06-24）
 
-- **描述面（→ defs）✅**：`unsigned uncertainty` + `extra`——治理的資料載體，hub 必讀（不像軸 8 可推給 impl）。
+- **描述面（→ defs）✅**：內聯 `unsigned uncertainty`（裸欄位，不再包 struct）；治理證書走 `Meta::extra`——治理的資料載體，hub 必讀（不像軸 8 可推給 impl）。
 - **設施面（→ impl）＝全九軸最大的一塊**：
   - **馴化框架**（retry / vote / guard …，見 `try_implement/docs/`）：把高 uncertainty 收斂到低，是 roadmap 核心願景的機器。
   - **證書簽發 / 撤照**：跑 `test_set × model` 算穩定度 → 更新 uncertainty（往下推）/ 撤照（往上彈）。

@@ -1,5 +1,7 @@
 # 軸 6+7 impl：transaction helper（合併設施）
 
+> ⚠️ 歷史／設計討論記錄（2026-06-28 收斂）。**事實基準（設施碼）在 `../impl/io.hpp`（`write_atomic`）與 `../impl/state.hpp`**；本檔是設施面的設計脈絡，非現況查詢處。描述面見 `../defs/axes.hpp`。
+
 > 狀態：✅ 設計拍板（Round 1+2，2026-06-27）。實作待落地（`impl/io.hpp` 的 `write_atomic` + StateStore 改用）。
 > impl 金字塔 L2（見 `impl_overview.md`）。建在 L0 軸 1 I/O 上。
 

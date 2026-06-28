@@ -1,5 +1,17 @@
 # core_handy 設計筆記 — 索引
 
+> # ⚠️ 收斂公告（2026-06-28）：本目錄已降為**歷史討論記錄**
+>
+> **事實基準（現況、唯一可信來源）已遷出 notes：**
+> - **描述面九軸** → [`../defs/axes.hpp`](../defs/axes.hpp)（已逐軸驗證：notes 最終拍板 100% 對齊）
+> - **設施面設施碼** → [`../impl/*.hpp`](../impl/)
+>
+> `notes/` 自此**只保留設計如何走到定案的 WHY/脈絡**，不是查「現在長怎樣」的地方。各軸 note 已抽段：
+> 只留**最終拍板 + 現況脈絡**，被 supersede 的舊輪次移入 [`archived/`](archived/)（見 [`archived/README.md`](archived/README.md)）。
+> 已結案的 defs 審查 `defs_review/` 亦整批封存於 `archived/defs_review/`。
+>
+> 下方「九軸進度表」等內容**已凍結**，反映截至 2026-06-27 定案時的討論狀態；與 `defs/axes.hpp` 衝突時，**一律以 `defs/` 為準**。
+
 ## 這是什麼
 
 `core_handy/` 是 ai_core 現有設計的一次**嚴謹濃縮 demo**：用 C++（最嚴謹、使用者最熟）把現有設計
@@ -46,7 +58,12 @@ int main(int argc, char** argv) {
 - **升級壓力**：`extra →（常見且重要）→ opt 欄位 →（普遍且必須）→ 固定欄位`。
   這條路**一次回答所有「某欄位該放哪」的懸案**（mode/streaming/terminal_binding…）：先進 extra，夠格再升。
 - **三槽選用**：不是每軸都填滿。可只有固定（軸 3 `bool stateful`），或跳過 opt 直接到 extra（軸 1）。
-- **三層直接塑形 `--metadata` JSON**：固定＝必出鍵、opt＝有才出、extra＝原樣攤平。
+- **三層直接塑形 `--metadata` JSON**：固定＝必出鍵、opt＝有才出。
+
+> **★ 2026-06-28 再收斂（此節部分作廢，權威以 [`../defs/axes.hpp`](../defs/axes.hpp) 為準）**：
+> - **extra 不再 per-axis** → 全軸收斂成**單一 `Meta::extra`**。上表「額外/extra 欄位」整個 Meta 只剩一個；各軸只填固定/opt 兩槽。
+> - 原為**單欄位**的軸（2 lifecycle / 7 guarantee / 9 nondeterministic）已**內聯成 Meta 裸欄位**（同軸 3 stateful / 軸 8 allow_dry_run），不再包 struct。
+> - 序列化據此變：內聯軸出扁平鍵（`"persistent"` / `"guarantee"` / `"uncertainty"`）；extra 出頂層 `"extra":{…}`（有值才出）。
 
 ## ★ 兩層區分：標準定義 vs 標準實作庫（2026-06-24 確立）
 
@@ -85,15 +102,15 @@ int main(int argc, char** argv) {
 
 | # | 軸 | 筆記檔 | 狀態 |
 |---|---|---|---|
-| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 13，砍 access，supersede R12）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充) + `optional<map<string,string>> extra`；mutation/傳輸身分/流動模式全 PARKED-HUB |
-| 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R4 複查）：`bool persistent`(預設false=one_shot)＋統一 `extra`；流動模式正式判給軸 1、軸 2 不收（止住跨軸流浪） |
+| 1 | `entries`（I/O 出入口） | [axis_1_entries.md](axis_1_entries.md) | ✅ 定案（Round 13，砍 access，supersede R12）：`unsigned direction`(0=in/1=out/2=in_out) + `unsigned content`(0=binary/1=text/≥2擴充)；**extra 上收 `Meta::extra`（2026-06-28）**；mutation/傳輸身分/流動模式全 PARKED→Meta::extra |
+| 2 | `lifecycle`（生命週期） | [axis_2_lifecycle.md](axis_2_lifecycle.md) | ✅ 定案（R4 複查）：`bool persistent`(預設false=one_shot)；**已內聯成 Meta 裸 bool、extra 上收 Meta（2026-06-28）**；流動模式正式判給軸 1、軸 2 不收（止住跨軸流浪） |
 | 3 | `state`（跨呼叫狀態） | [axis_3_state.md](axis_3_state.md) | ✅ 定案：單一 `bool stateful = false`（false=stateless 預設、true=stateful_external），無 detail |
 | 4 | `state_dirs`（狀態目錄） | [axis_4_state_dirs.md](axis_4_state_dirs.md) | 討論中（Round 1 提案） |
-| 5 | `resources`（資源特性） | [axis_5_resources.md](axis_5_resources.md) | ✅ 定案（R3，砍 cpu）：無固定欄位、opt 預定義(memory/gpu/time/disk/network)+extra；network 帶 traffic（consume-rate）；cpu 移除（唯一消費者是 hub）回歸權威 |
-| 6 | `interruptible`（可中斷性） | [axis_6_interruptible.md](axis_6_interruptible.md) | ✅ 定案（R3，序→名目）：`unsigned level`(**名目分類碼·禁大小比較**，0=unsafe/1=safe/…/5=graceful,≥6 自定義；zero-init=unsafe)＋extra |
-| 7 | `guarantee`（執行保證） | [axis_7_guarantee.md](axis_7_guarantee.md) | ✅ 定案（R1）：封閉 `enum class Guarantee : unsigned`（none=0 預設/idempotent/transactional）＋統一 `extra`；與軸 6 開放碼表相反（值集封閉故用 enum） |
+| 5 | `resources`（資源特性） | [axis_5_resources.md](axis_5_resources.md) | ✅ 定案（R3，砍 cpu）：無固定欄位、opt 預定義(memory/gpu/time/disk/network)；**extra 上收 `Meta::extra`（2026-06-28，自定義依賴/cpu 改走 Meta::extra）**；network 帶 traffic（consume-rate）；cpu 移除（唯一消費者是 hub）回歸權威 |
+| 6 | `interruptible`（可中斷性） | [axis_6_interruptible.md](axis_6_interruptible.md) | ✅ 定案（R3，序→名目）：`unsigned level`(**名目分類碼·禁大小比較**，0=unsafe/1=safe/…/5=graceful,≥6 自定義；zero-init=unsafe)；**extra 上收 `Meta::extra`（2026-06-28，保留 struct 與具名常數）** |
+| 7 | `guarantee`（執行保證） | [axis_7_guarantee.md](axis_7_guarantee.md) | ✅ 定案（R1）：封閉 `enum class Guarantee : unsigned`（none=0 預設/idempotent/transactional）；**已內聯成 Meta 裸欄位、移除 GuaranteeField、extra 上收 Meta（2026-06-28）**；與軸 6 開放碼表相反（值集封閉故用 enum） |
 | 8 | `dry_run`（乾跑） | [axis_8_dry_run.md](axis_8_dry_run.md) | ✅ 定案：描述層只留 `bool allow_dry_run = false`（同軸 3 純 bool）；object 細節 flag/state_entry/error_entry 全降級到實作層待設計 |
-| 9 | `nondeterministic`（確定性/治理證書） | [axis_9_nondeterministic.md](axis_9_nondeterministic.md) | ✅ 定案（R1）：單一 `unsigned uncertainty = 0`（0=完全確定；愈高愈不確定；馴化使其下降）＋`extra`（承載 model/test_set/stability 證書）。權威三態摺成單調量尺 |
+| 9 | `nondeterministic`（確定性/治理證書） | [axis_9_nondeterministic.md](axis_9_nondeterministic.md) | ✅ 定案（R1）：單一 `unsigned uncertainty = 0`（0=完全確定；愈高愈不確定；馴化使其下降）；**已內聯成 Meta 裸欄位、證書（model/test_set/stability）改走單一 `Meta::extra`（2026-06-28）**。權威三態摺成單調量尺 |
 
 ## 跨軸的全域立場 / 待決議題（隨討論累積）
 
