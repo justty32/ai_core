@@ -1,26 +1,31 @@
 # Resume 指標
 
-claude --resume 90fb6134-14cb-454b-895c-b52da24e02fd
+claude --resume 0fa7693b-d161-4a2c-9d48-625292ae50f2
 
-## 最近里程碑（2026-06-27）：core_handy defs 重新思考 + impl batch 切片
+> 注意：使用者跨電腦工作，Claude 的本地 memory 不跟隨；**repo 內的檔案（本檔 + ideas/notes + CLAUDE.md）才是唯一可靠的持久層**。重要脈絡一律落 repo。
 
-**defs 層（九軸描述面）**：對著 `core_handy/defs_review/` 逐軸重新思考、收斂（4 改 5 守），
-落地成 `core_handy/defs/axes.hpp`（型別齊備、`ac::Meta` 組合八個描述軸；軸 4 純設施不入）。
-三條全域立場入 `core_handy/notes/00_index.md`：**別管 hub**、**跨軸只用文件約束**、**brownfield=greenfield-wrap**。
+## 最近里程碑（2026-07-02）：回到初心——方向定調 + 範式論述 + prior-art 查證 + 逐點決斷
 
-**impl 層（設施金字塔）**：完成 batch-greenfield 垂直切片——
-- 軸 1 I/O `read_all`/`write_all`/`write_atomic`（`impl/io.hpp`）
-- 膠水 intercept + `--metadata` JSON 序列化（`impl/intercept.hpp`、`meta_json.hpp`）
-- 軸 4 StateStore，已原子化（`impl/state.hpp`）
-- 軸 1 B 接線解析 + 軸 8 `is_dry_run`（`impl/cli.hpp`）
-- 軸 6+7 transaction = `write_atomic`（POSIX rename，一機制供兩軸）
+全文：`ideas/notes/20260702-2003-回到初心-llm-as-function.md`（§一～§十二，單一 commit `2592d33`）。
 
-**成果**：`core_handy/main.cpp` 是第一支會回應 `--metadata` 的真 ac_helper 程式；
-g++ 與 CMake 兩條 build 鏈皆綠、零警告、JSON 經 `python3 -m json.tool` 驗證合法。
+**定調**：回頭做最初需求——LLM as function + shell 處理 IO；規範層語言中立（Lisp 理想載體、Python 參考實作）；把 AI 當工具去馴化。
 
-**停在哪 / 為何停**：餘下 serve、shell-out（stream 群）、rate-meter、馴化框架（軸 9）
-**全部缺消費者** → 依「停止鍵」收。再往下需新的目標問題（serve 常駐需求 / C++ 側 LLM 呼叫路徑）逼出形狀。
-詳見 `core_handy/notes/impl_overview.md`「落地進度」。
+**範式**（§七～§十）：統一接口貫穿 function/shell/API 三種呼叫，差異外掛到 `--meta` 自我描述（類 Lisp list element）；LLM 降格為眾工具之一；範式兩缺點（抽象耗效能 + metadata 稅）只在 LLM 語境被中和 → 非通用範式、鎖死 scope。
 
-**接續閱讀順序**：`roadmap.md` → `core_handy/notes/00_index.md`（九軸定案 + 全域立場）
-→ `core_handy/notes/impl_overview.md`（impl 進度與延後清單）。
+**Prior-art 掃描**（§9.1，deep-research 查證）：四合一＝既有零件的新組合，無單一命名範式提出過；前三支柱已被 MCP / ToolRegistry / Lisp metaprogramming 論文做掉；**唯一逆主流＝第四支柱「LLM 降格」＝固化飛輪的結構性前提**。白地＝「LLM-as-peer → 熵減系統」。
+
+**使用者逐點決斷**（§十二，下次動工依此）：
+- **近期焦點**：①meta 補「輸出 JSON schema + 非文字內容格式」（解接縫問題）②可靠度先做成 meta 一個可變數值欄位 ③前期以「更好地使用 LLM」為主
+- **已定案**：meta＝JSON、低限制、LLM 與確定性程式都讀；固化三機制（memoize/distill/codegen）全包
+- **核心宗旨**：`ai_forge` 鑄刀——從 LLM 提取短邏輯鏈（＝Futamura 部分求值），固化是核心但很後面
+- **既定方向**：成本×穩定度排程拍賣、雙向棘輪 de-固化、拓撲即資產、憑證 SBOM、可靠度預算、負空間認證、呼叫鏈歷史
+- **押後**：憑證腐壞機制、測試組來源（心裡底稿＝Sutton 式 RL/探索）、燃料窗口
+
+**下一步候選**：把「近期焦點 ①②」落進規範——meta 的 I/O 格式欄位設計（`core_nature/axis_spec.md` 或 data_format.md）+ 可靠度數值欄位。
+
+## 前一里程碑（2026-06-27）：core_handy defs 重新思考 + impl batch 切片
+
+defs 層九軸收斂落地 `core_handy/defs/axes.hpp`；impl 層 batch-greenfield 垂直切片（io/intercept/state/cli/transaction）；`core_handy/main.cpp` 第一支回應 `--metadata` 的真 ac_helper；兩條 build 鏈皆綠。餘下 serve/stream/rate-meter/馴化框架缺消費者，依「停止鍵」收。
+詳見 `core_handy/notes/impl_overview.md`。
+
+**接續閱讀順序**：`roadmap.md` → `ideas/notes/20260702-2003-回到初心-llm-as-function.md`（最新方向）→ `core_handy/notes/00_index.md`（九軸定案）→ `try_implement/DECISIONS.md`（懸案清單）。
