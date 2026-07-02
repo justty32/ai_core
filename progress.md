@@ -21,7 +21,7 @@ claude --resume 0fa7693b-d161-4a2c-9d48-625292ae50f2
 - **既定方向**：成本×穩定度排程拍賣、雙向棘輪 de-固化、拓撲即資產、憑證 SBOM、可靠度預算、負空間認證、呼叫鏈歷史
 - **押後**：憑證腐壞機制、測試組來源（心裡底稿＝Sutton 式 RL/探索）、燃料窗口
 
-**下一步候選**：把「近期焦點 ①②」落進規範——meta 的 I/O 格式欄位設計（`core_nature/axis_spec.md` 或 data_format.md）+ 可靠度數值欄位。
+**下一步候選**：把「近期焦點 ①②」落進規範——meta 的 I/O 格式欄位設計（`core_nature/axis_spec.md` 或 data_format.md）+ 可靠度數值欄位；第三塊＝entry manager 的**呼叫 trace log**（見 §十三：整套系統＝語意的 tracing JIT——LLM=語意基準、固化三機制=tier 階梯、guard+deopt=de-固化、trace=測試組原料；輸出 schema 與可靠度數值正是 JIT 開工的頭兩塊地基）。
 
 ## 前一里程碑（2026-06-27）：core_handy defs 重新思考 + impl batch 切片
 
