@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## 專案狀態（2026-05-29 更新）
 
@@ -70,11 +70,11 @@ ai_core/
 ├── progress.md             # 接續上次工作的 resume 指標
 ├── ideas/                  # 點子捕捉／頭腦風暴軌（intake/critique/expand 產物，借自 TTemp）
 ├── archive/                # 歷史留存（已被取代、僅供追溯）：thinking/*.md ×10 + 舊版 overview.html
-├── .claude/commands/       # 循環工作的專屬 slash command（見下「工作流 slash command」）
+├── .Codex/commands/       # 循環工作的專屬 slash command（見下「工作流 slash command」）
 └── pyproject.toml          # hatchling 打包；無 runtime 相依
 ```
 
-## 工作流 Slash Command（`.claude/commands/`）
+## 工作流 Slash Command（`.Codex/commands/`）
 
 把本 repo 的循環工作拆成專屬 slash command，打一句即「變身」該模式。指令只是模式切換與重點摘要，**權威來源仍是本檔與對應文件**。
 
@@ -90,7 +90,7 @@ ai_core/
 
 `/intake`、`/critique`、`/expand` 是從 TTemp 借來的**點子捕捉／頭腦風暴軌**，產物統一落在 `ideas/`（`raw/cleaned/notes/brainstorm`），與本 repo 的程式碼／規範工作並行、互不干擾。
 
-**ai_core 特化（2026-06-08）**：這三個指令的 LLM 加工**不派 Claude Code agent，改 shell out 給 `try_implement/tools/idea.py` 打真 API**（dogfood ai_core 自己的 LLM 基礎設施）。其中只有 `/intake`（語音輸入）保留「**主 agent 即時回應**」模式，但動作丟的是**背景 Bash 呼叫 `idea ingest`**（非背景 subagent）；`/critique`、`/expand` 則同步 shell out 給 `idea critique`／`idea expand`。要接真 LLM 需設 `AI_CORE_LLM_PROVIDER/BASE_URL/MODEL` 環境變數，未設則 EchoBackend 回顯（測試用）。
+**ai_core 特化（2026-06-08）**：這三個指令的 LLM 加工**不派 Codex agent，改 shell out 給 `try_implement/tools/idea.py` 打真 API**（dogfood ai_core 自己的 LLM 基礎設施）。其中只有 `/intake`（語音輸入）保留「**主 agent 即時回應**」模式，但動作丟的是**背景 Bash 呼叫 `idea ingest`**（非背景 subagent）；`/critique`、`/expand` 則同步 shell out 給 `idea critique`／`idea expand`。要接真 LLM 需設 `AI_CORE_LLM_PROVIDER/BASE_URL/MODEL` 環境變數，未設則 EchoBackend 回顯（測試用）。
 
 ## 建置 / 測試指令
 
@@ -134,7 +134,7 @@ ai_core/
 1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm / OpenRouter）。LLM 是**單例資源**（一次一請求）→ 佇列模式；集中管理 **consume rate**（token / 金錢 / 本地 GPU）。原型：`try_implement/tools/llm_entry_manager.py`。**backend 已改由 `backend_from_env()` 依環境變數挑真 LLM**（CLI `--provider/--model/--base-url` 可覆寫）。**`--socket <path>` 可長駐成 Unix socket daemon**：多個 one-shot caller 連同一個、共用 RateMeter → consume rate 跨呼叫累計（已修 Gap G；底層為 `lib/server.serve_socket`）。
 2. **LLM Calling Packing** — 把 `llm_call(string)->string` 疊 context binding 與 post-processing 成具語意函式。原型：`try_implement/lib/llm_call.py`。**真 backend 已實作**：`OpenAIBackend`（OpenAI 相容 `/chat/completions`，吃本地 ollama/llama.cpp/vLLM/OpenRouter）、`AnthropicBackend`（`/v1/messages`），都走 `lib/call.Http`（urllib，零相依）。
 
-> **點子捕捉軌的 dogfood（2026-06-08）**：`try_implement/tools/idea.py` 把 `/intake /critique /expand` 的「派 Claude Code agent」換成「打真 API」——子命令 `clean/notes/critique/expand`（純 filter）＋ `ingest`（口述一條龍），預設經元件 1 entry manager 路由，串起 `bind`（元件2）→ entry manager（元件1）→ 真 backend → API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。這是 roadmap「廉價小模型消費者」的第一個真實串接。
+> **點子捕捉軌的 dogfood（2026-06-08）**：`try_implement/tools/idea.py` 把 `/intake /critique /expand` 的「派 Codex agent」換成「打真 API」——子命令 `clean/notes/critique/expand`（純 filter）＋ `ingest`（口述一條龍），預設經元件 1 entry manager 路由，串起 `bind`（元件2）→ entry manager（元件1）→ 真 backend → API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。這是 roadmap「廉價小模型消費者」的第一個真實串接。
 3. **Shell / App 作為函式** — 文字進文字出，shell 是最自然封裝；每個函式都實作 `--metadata`。契約已落地（見上節）。
 4. **Function Hub** — 掃描函式集、呼叫各 `--metadata`、彙整成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。原型：`try_implement/tools/hub.py`（規範未定，原型自定義）。
 5. **Small Function Center (SFC)** — 把大量 tiny function 集中到一個 git-style subcommand dispatcher，避免檔案爆炸。原型：`try_implement/tools/sfc.py`（已改接真 `ai_core`）。
@@ -151,7 +151,7 @@ ai_core/
 
 ## 與上層 `pas/` 專案的關係
 
-本資料夾位於 `pas/others/ai_core/`。上層 `pas/CLAUDE.md` 定義了 pas 工作空間的規範（繁體中文輸出、自動留檔到 `analysis/<project_name>/` 等）。**這些規範對本資料夾下的工作同樣適用**，除非本檔案另有指定。
+本資料夾位於 `pas/others/ai_core/`。上層 `pas/AGENTS.md` 定義了 pas 工作空間的規範（繁體中文輸出、自動留檔到 `analysis/<project_name>/` 等）。**這些規範對本資料夾下的工作同樣適用**，除非本檔案另有指定。
 
 ## 文件語言
 
