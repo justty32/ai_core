@@ -8,6 +8,8 @@ _KNOWN_FIELDS = frozenset({
     "entries", "lifecycle", "state", "state_dirs",
     "resources", "interruptible", "guarantee", "dry_run",
     "nondeterministic",
+    # 非軸欄位：reliability 是隨觀測更新的量測值，不是執行特性的靜態自述。
+    "reliability",
 })
 
 _LIFECYCLE_VALUES = frozenset({"one_shot", "persistent"})
@@ -162,6 +164,9 @@ def _validate(kwargs: dict[str, Any]) -> dict[str, Any]:
     if "nondeterministic" in kwargs:
         result["nondeterministic"] = _validate_nondeterministic(kwargs["nondeterministic"])
 
+    if "reliability" in kwargs:
+        result["reliability"] = _validate_reliability(kwargs["reliability"])
+
     return result
 
 
@@ -180,6 +185,14 @@ def _validate_entries(entries: dict) -> dict:
             _validate_entry_mode(name, entry["mode"])
         if "type" in entry:
             _validate_entry_type(name, entry["type"])
+        if "format" in entry:
+            _validate_entry_format(name, entry["format"])
+        if "schema" in entry:
+            if not isinstance(entry["schema"], dict):
+                raise TypeError(
+                    f"entries[{name!r}].schema must be a dict (JSON Schema), "
+                    f"got {type(entry['schema']).__name__}"
+                )
         if "channel_constraint" in entry:
             v = entry["channel_constraint"]
             if v != "stable":
@@ -205,6 +218,26 @@ def _validate_entry_mode(name: str, mode: Any) -> None:
             raise ValueError(f"entries[{name!r}].mode dict must have 'type' key")
     else:
         raise TypeError(f"entries[{name!r}].mode must be str or dict, got {type(mode).__name__}")
+
+
+def _validate_entry_format(name: str, fmt: Any) -> None:
+    # format 是疊在 type 之上的「結構層」：type 說內容是 text/binary，
+    # format 說這段 text 其實是結構化資料（json＝整段一筆 / ndjson＝一行一筆）。
+    # schema（JSON Schema dict）描述單筆資料的結構；ndjson 時逐行適用。
+    _ENTRY_FORMAT_VALUES = frozenset({"json", "ndjson"})
+    if isinstance(fmt, str):
+        if fmt not in _ENTRY_FORMAT_VALUES:
+            raise ValueError(
+                f"entries[{name!r}].format string must be one of "
+                f"{sorted(_ENTRY_FORMAT_VALUES)}, got {fmt!r}"
+            )
+    elif isinstance(fmt, dict):
+        if "type" not in fmt:
+            raise ValueError(f"entries[{name!r}].format dict must have 'type' key")
+    else:
+        raise TypeError(
+            f"entries[{name!r}].format must be str or dict, got {type(fmt).__name__}"
+        )
 
 
 def _validate_entry_type(name: str, t: Any) -> None:
@@ -253,3 +286,30 @@ def _validate_nondeterministic(v: Any) -> Any:
     if isinstance(v, dict):
         return v
     raise TypeError(f"nondeterministic must be bool or dict, got {type(v).__name__}")
+
+
+def _validate_reliability(v: Any) -> Any:
+    # 數值形式：0.0–1.0 的可靠度估計。與九軸不同，這是「隨觀測更新的量測值」
+    #   而非靜態自述——同一函式的 reliability 會隨時間變動。
+    # dict 形式：帶 provenance 的數值——必含 "value"（0.0–1.0），其餘 key 自由
+    #   （建議：measured_on 測試組/流量來源、n 觀測數、window 時窗），供排程器
+    #   判斷「這個數字是在什麼上量出來的」。與第九軸證書的 stability 分工：
+    #   stability 是認證當下的凍結值，reliability 是當前的活值。
+    if isinstance(v, bool):
+        raise TypeError("reliability must be a number in [0, 1] or dict, got bool")
+    if isinstance(v, (int, float)):
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"reliability must be within [0, 1], got {v!r}")
+        return v
+    if isinstance(v, dict):
+        if "value" not in v:
+            raise ValueError("reliability dict must have 'value' key")
+        val = v["value"]
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            raise TypeError(
+                f"reliability['value'] must be a number, got {type(val).__name__}"
+            )
+        if not 0.0 <= val <= 1.0:
+            raise ValueError(f"reliability['value'] must be within [0, 1], got {val!r}")
+        return v
+    raise TypeError(f"reliability must be number or dict, got {type(v).__name__}")

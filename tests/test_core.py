@@ -302,6 +302,61 @@ def test_entries_type_dict_missing_base():
         ai_core.register(entries={"x": {"able_in": True, "able_out": False, "type": {"encoding": "utf-8"}}})
 
 
+def test_entries_format_json():
+    ai_core.register(entries={
+        "stdout": {"able_in": False, "able_out": True, "type": "text", "format": "json"}
+    })
+    assert _core._top_metadata["entries"]["stdout"]["format"] == "json"
+
+
+def test_entries_format_ndjson():
+    ai_core.register(entries={
+        "stdout": {"able_in": False, "able_out": True, "format": "ndjson"}
+    })
+    assert _core._top_metadata["entries"]["stdout"]["format"] == "ndjson"
+
+
+def test_entries_format_invalid_string():
+    with pytest.raises(ValueError, match="format"):
+        ai_core.register(entries={"x": {"able_in": True, "able_out": False, "format": "xml"}})
+
+
+def test_entries_format_dict_escape():
+    # dict 逃生口：非預定義格式用 {"type": ...} 自述。
+    ai_core.register(entries={
+        "out": {"able_in": False, "able_out": True, "format": {"type": "csv", "delimiter": ","}}
+    })
+    assert _core._top_metadata["entries"]["out"]["format"]["type"] == "csv"
+
+
+def test_entries_format_dict_missing_type():
+    with pytest.raises(ValueError, match="format"):
+        ai_core.register(entries={"x": {"able_in": True, "able_out": False, "format": {"delimiter": ","}}})
+
+
+def test_entries_format_wrong_type():
+    with pytest.raises(TypeError, match="format"):
+        ai_core.register(entries={"x": {"able_in": True, "able_out": False, "format": 42}})
+
+
+def test_entries_schema_json_schema():
+    # 近期焦點①：輸出結構用 JSON Schema 描述——接縫 typing 的地基，也是日後 deopt guard 的原料。
+    schema = {
+        "type": "object",
+        "properties": {"answer": {"type": "string"}, "confidence": {"type": "number"}},
+        "required": ["answer"],
+    }
+    ai_core.register(entries={
+        "stdout": {"able_in": False, "able_out": True, "format": "json", "schema": schema}
+    })
+    assert _core._top_metadata["entries"]["stdout"]["schema"]["required"] == ["answer"]
+
+
+def test_entries_schema_not_dict():
+    with pytest.raises(TypeError, match="schema"):
+        ai_core.register(entries={"x": {"able_in": True, "able_out": False, "schema": "object"}})
+
+
 def test_entries_channel_constraint_invalid():
     with pytest.raises(ValueError, match="channel_constraint"):
         ai_core.register(entries={"x": {"able_in": True, "able_out": False, "channel_constraint": "fast"}})
@@ -437,6 +492,61 @@ def test_nondeterministic_certificate_dict():
 def test_nondeterministic_wrong_type():
     with pytest.raises(TypeError, match="nondeterministic"):
         ai_core.register(nondeterministic="yes")
+
+
+# --- reliability（非軸欄位：隨觀測更新的可靠度數值；roadmap 近期焦點②） ---
+
+def test_reliability_float():
+    ai_core.register(reliability=0.92)
+    assert _core._top_metadata["reliability"] == 0.92
+
+
+def test_reliability_bounds():
+    ai_core.register(reliability=0)
+    assert _core._top_metadata["reliability"] == 0
+    ai_core.register(reliability=1)
+    assert _core._top_metadata["reliability"] == 1
+
+
+def test_reliability_out_of_range():
+    with pytest.raises(ValueError, match="reliability"):
+        ai_core.register(reliability=1.5)
+    with pytest.raises(ValueError, match="reliability"):
+        ai_core.register(reliability=-0.1)
+
+
+def test_reliability_bool_rejected():
+    # bool 是 int 子型別，但語意上不是可靠度數值，明確拒收。
+    with pytest.raises(TypeError, match="reliability"):
+        ai_core.register(reliability=True)
+
+
+def test_reliability_dict_with_provenance():
+    # dict 形式：帶 provenance——排程器要知道這個數字「在什麼上量的」。
+    ai_core.register(reliability={"value": 0.92, "measured_on": "code_qa_v1", "n": 130})
+    r = _core._top_metadata["reliability"]
+    assert r["value"] == 0.92
+    assert r["n"] == 130
+
+
+def test_reliability_dict_missing_value():
+    with pytest.raises(ValueError, match="value"):
+        ai_core.register(reliability={"measured_on": "code_qa_v1"})
+
+
+def test_reliability_dict_value_out_of_range():
+    with pytest.raises(ValueError, match="value"):
+        ai_core.register(reliability={"value": 2.0})
+
+
+def test_reliability_dict_value_not_number():
+    with pytest.raises(TypeError, match="value"):
+        ai_core.register(reliability={"value": "92%"})
+
+
+def test_reliability_wrong_type():
+    with pytest.raises(TypeError, match="reliability"):
+        ai_core.register(reliability="0.92")
 
 
 # --- 複合範例（對應 lib_spec.md 完整範例） ---

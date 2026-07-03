@@ -99,7 +99,7 @@ ai_core/
 .venv/bin/pip install -e ".[dev]"
 
 # 跑正式核心測試（src/ai_core + tests/）
-.venv/bin/python -m pytest -q                 # 目前 84 passed
+.venv/bin/python -m pytest -q                 # 目前 101 passed
 
 # 跑原型煙霧測試（不需 pytest，純標準庫）
 .venv/bin/python try_implement/smoke_test.py      # 83 項斷言
@@ -124,6 +124,8 @@ ai_core/
 **重要慣例**：`register*` 系列因為無副作用，import 即安全；但仍應在 `__main__`/`main()` 呼叫。`--metadata` 的生效靠顯式 `intercept()`，不靠 import 副作用。
 
 **九個軸**（`_KNOWN_FIELDS`）：`entries`、`lifecycle`（one_shot/persistent）、`state`（stateless/stateful_external）、`state_dirs`、`resources`、`interruptible`、`guarantee`（none<idempotent<transactional）、`dry_run`、`nondeterministic`（第九軸：`true`＝未認證隨機 / `{model,test_set,stability}`＝證書）。
+
+**九軸之外（2026-07-03，「回到初心」近期焦點①②落地）**：頂層另有**非軸欄位 `reliability`**（0.0–1.0 數值或 `{value,...}` 帶 provenance；隨觀測更新的活值，與證書 `stability` 凍結值分工）；entry 屬性新增 **`format`**（`json`/`ndjson` 或 dict 逃生口）與 **`schema`**（JSON Schema dict，描述單筆輸出結構＝接縫 typing ＋日後 deopt guard 的原料）。非文字內容由既有 `type: {"base":"binary","mime":...}` 涵蓋。詳見 `lib_spec.md`。
 
 函式型態原則仍成立：**多數函式 one-shot、stateless**；需多輪互動者**自行管理外部狀態**；**重量級函式變 server**（與 LLM Entry Manager 同單例模式）。**shell 為一等公民**——不要為了 Python API 好用而犧牲 CLI 清晰度。
 

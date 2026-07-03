@@ -78,6 +78,47 @@ ai_core Python library 的 API 設計細節。
 "type": {"base": "binary", "mime": "image/png"}
 ```
 
+#### `format`（選填）
+
+描述資料的**結構化格式**，疊在 `type` 之上：`type` 說內容是 text/binary，`format` 說這段 text
+其實是結構化資料。可為字串或物件。
+
+**字串形式：**
+
+| 值 | 語意 |
+|---|---|
+| `"json"` | 整段內容是一筆 JSON 值 |
+| `"ndjson"` | 一行一筆 JSON（streaming / 行協議常用） |
+
+**物件形式（非預定義格式的逃生口）：**
+
+```json
+"format": {"type": "csv", "delimiter": ","}
+```
+
+物件形式中 `type` 為必填，其餘欄位自由。
+
+> 與 `type` 的分工：非文字內容（圖片等）由 `type: {"base": "binary", "mime": "image/png"}`
+> 描述；`format` 只負責「文字內容的結構層」。兩者正交。
+
+#### `schema`（選填）
+
+JSON Schema 物件，描述**單筆資料的結構**（`format: "ndjson"` 時逐行適用）。
+
+```json
+"schema": {
+  "type": "object",
+  "properties": {"answer": {"type": "string"}},
+  "required": ["answer"]
+}
+```
+
+- validation 只確保它是 dict，內容不驗證（低限制：LLM 與確定性程式都讀得懂即可）。
+- 慣例上搭配 `format: "json"` / `"ndjson"` 使用，但不強制。
+- **這個欄位承重兩件事**：(1) 解「接縫 typing」——組合調用鏈時，下游能靜態知道上游輸出長什麼樣；
+  (2) 它是日後 **deopt guard 的原料**——固化物的輸出過不過 schema，就是最便宜的執行期守衛
+  （見 `ideas/notes/20260702-2003-回到初心-llm-as-function.md` §13.2）。
+
 #### `channel_constraint`（選填）
 
 宣告此 entry 對可接受 channel 的品質下限。mapping 層依此過濾。
@@ -784,6 +825,50 @@ ai_core.register(nondeterministic={
 ```json
 {"nondeterministic": {"model": "local-8b", "test_set": "code_qa_v1", "stability": "92%"}}
 ```
+
+---
+
+## 非軸欄位：`reliability`（可靠度數值）
+
+> 2026-07-03 新增，落實「回到初心」逐點決斷的近期焦點②（`ideas/notes/20260702-2003-回到初心-llm-as-function.md`
+> §12.1）：完整憑證機制押後，**目前的最低要求＝meta 輸出一個「可靠度」數值、可變動**。
+
+### metadata field
+
+| key | 型別 | 說明 |
+|---|---|---|
+| `reliability` | number 或 object | 此函式當前的可靠度估計，`0.0`–`1.0` |
+
+**數值形式**：
+
+```python
+ai_core.register(nondeterministic=True, reliability=0.92)
+```
+
+**物件形式（帶 provenance）**——必含 `value`（0.0–1.0），其餘 key 自由；建議：
+`measured_on`（在哪個測試組 / 流量上量的）、`n`（觀測數）、`window`（時窗）：
+
+```json
+"reliability": {"value": 0.92, "measured_on": "code_qa_v1", "n": 130}
+```
+
+### 為何是「非軸」
+
+九軸是執行特性的**靜態自述**——函式怎麼跑、有無副作用、能否中斷，寫定即不變。
+`reliability` 性質不同：它是**隨觀測更新的量測值**（每次呼叫的成敗都可能改變它），
+同一函式的 reliability 會隨時間、隨所用模型變動。它放進 meta 是為了讓排程器 / 呼叫方
+讀得到，但語意上是「當前狀態的快照」而非「本性宣告」，故不列入軸。
+
+### 與第九軸證書的分工
+
+- 第九軸證書的 `stability` ＝ **認證當下的凍結值**（審批紀錄的一部分，改它＝重新認證）。
+- `reliability` ＝ **當前的活值**（隨每次觀測更新的後驗估計）。
+- 飛輪視角：`reliability` 的持續量測正是日後簽發 / 撤銷證書的數據來源；排程器做
+  「成本 × 可靠度」拍賣時吃的是這個活值。deterministic 函式也可以有 reliability
+  （確定性 ≠ 不會失敗——網路呼叫、外部相依都會敗）。
+
+> provenance 為何重要：沒有「在什麼上量的」的可靠度是無條件機率，排程器吃了等於垃圾進
+> 垃圾出（§13.2 推論一）。數值形式仍允許，作為最低門檻；但建議盡早升級為物件形式。
 
 ---
 

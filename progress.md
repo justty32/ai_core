@@ -4,7 +4,18 @@ claude --resume 0fa7693b-d161-4a2c-9d48-625292ae50f2
 
 > 注意：使用者跨電腦工作，Claude 的本地 memory 不跟隨；**repo 內的檔案（本檔 + ideas/notes + CLAUDE.md）才是唯一可靠的持久層**。重要脈絡一律落 repo。
 
-## 最近里程碑（2026-07-02）：回到初心——方向定調 + 範式論述 + prior-art 查證 + 逐點決斷
+## 最近里程碑（2026-07-03）：近期焦點①②落地——entry `format`/`schema` + 非軸欄位 `reliability`
+
+§12.1 的兩個近期焦點已進正式核心與規範（tests 84 → **101 passed** 全綠）：
+
+- **①輸出格式**：entry 新增 `format`（`"json"`/`"ndjson"` 或 `{"type":...}` 逃生口）與 `schema`（JSON Schema dict，ndjson 逐行適用）；非文字內容判定為**既有 `type: {"base":"binary","mime":...}` 已涵蓋**，不新增欄位。schema 同時定位為日後 deopt guard 的原料（§13.2）。
+- **②可靠度**：頂層新增 **`reliability`（非軸欄位）**——number 0.0–1.0 或 `{value, measured_on, n, ...}` 帶 provenance；與第九軸分工＝證書 `stability` 凍結值 vs `reliability` 活值。
+- 落地處：`src/ai_core/_core.py`、`tests/test_core.py`、`lib_spec.md`（新增 format/schema 小節 + 「非軸欄位：reliability」節）、`axis_spec.md §9` 交叉引用、`CLAUDE.md` 同步。
+- 設計細節（format 值域、schema 掛 entry、reliability 形狀）＝Claude 拍板**待追認**，見 `try_implement/DECISIONS.md`「✅ 已收斂（2026-07-03）」。
+
+**下一步**：近期焦點③＝entry manager 的**呼叫 trace log**（§13.2.4 已升格為承重件：每次 LLM 呼叫的 input/output/model 落 NDJSON——同時是 memoize 的表、測試組的原料、reliability 的計算來源）。原型落點：`try_implement/tools/llm_entry_manager.py` ＋ `lib/`。可參考 ATP v0 已凍結的 trace 慣例（`AI_CORE_TRACE_ID` + NDJSON，見 DECISIONS 2026-06-21 節）。
+
+## 前一里程碑（2026-07-02）：回到初心——方向定調 + 範式論述 + prior-art 查證 + 逐點決斷
 
 全文：`ideas/notes/20260702-2003-回到初心-llm-as-function.md`（§一～§十二，單一 commit `2592d33`）。
 

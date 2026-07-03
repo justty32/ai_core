@@ -47,6 +47,24 @@
 
 ---
 
+## ✅ 已收斂（2026-07-03）：近期焦點①②——entry `format`/`schema` + 非軸欄位 `reliability`
+
+方向出自使用者「回到初心」逐點決斷（`ideas/notes/20260702-2003-回到初心-llm-as-function.md` §12.1）：
+①meta 補「輸出 JSON schema + 非文字內容格式」、②可靠度先做成一個可變數值欄位。本輪把兩者落進
+`_core.py` + `lib_spec.md` + `axis_spec.md`（tests 84 → 101 全綠）。
+
+| 項目 | 決策 | 性質 |
+|---|---|---|
+| 非文字內容格式 | **既有 `entries[*].type` 物件形式已涵蓋**（`{"base":"binary","mime":...}`），不新增欄位，補文件說明與 `format` 的正交分工。 | 使用者方向 + Claude 判定「已有解」 |
+| 輸出結構格式 | entry 新增 **`format`**：字串 `"json"`/`"ndjson"`，或 `{"type":...}` 逃生口（沿 mode/type 的既有模式）。 | 設計細節＝Claude 拍板，**待追認** |
+| 輸出 schema | entry 新增 **`schema`**：JSON Schema dict，描述單筆資料（ndjson 逐行適用）；validation 只驗 dict、內容低限制。同時定位為日後 deopt guard 的原料（§13.2）。 | 設計細節＝Claude 拍板，**待追認** |
+| 可靠度欄位 | 頂層新增 **`reliability`**（**非軸**）：number 0.0–1.0，或 `{value, ...}` 帶 provenance（建議 `measured_on`/`n`/`window`）；bool 明確拒收。與第九軸分工：證書 `stability`＝凍結值、`reliability`＝活值。 | 使用者方向 + 形狀＝Claude 拍板，**待追認** |
+| schema 掛在 entry 而非頂層 | 輸出結構是「某個出入口的資料長什麼樣」，天然屬於 entry；頂層另立 `output_schema` 會與 entries 重複。 | 設計細節＝Claude 拍板，**待追認** |
+
+> 近期焦點③（entry manager 呼叫 trace log，§13.2.4 升格為承重件）**尚未動工**，是下一步。
+
+---
+
 ## A. 已做原型，待你決定是否扶正進規範
 
 ### A1. `--metadata` 攔截 vs subcommand CLI（原 Gap A，阻塞級）— ✅ 已扶正
