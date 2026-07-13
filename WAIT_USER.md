@@ -6,6 +6,8 @@
 
 ## 待使用者項
 
+- **確認後 push 三個文檔重組 commit** — `193ba68`（分層工作流模板）/ `132f500`（sub_projs 歸層）/ `8ea498a`（idea/spec/plan 歸類），均已 commit 在 main、未 push（鐵律：push 先確認）。
+- **回 POSIX 機補跑一次完整 `/test`** — 本輪重組零程式碼改動，Windows 機上 `smoke_test.py` 83 項斷言全過；但 pytest（需該機 `.venv`）與 `lib_smoke_test.py`（需 `AF_UNIX`）在 Windows 跑不了，回 POSIX 機順手驗一次即可安心。
 - **追認 DECISIONS.md D 區（agent 自行拍板的 7 項）** — 記憶化 cache key 組成／失效策略、Hub 定義、forge NDJSON 介面、Switch 條件表達、Layer 4 錯誤封套、交互 `max_rounds` 安全閥；均為 try_implement 原型的低風險拍板，待使用者追認或推翻。見 [try_implement/DECISIONS.md](try_implement/DECISIONS.md) D 區。
 - **追認 DECISIONS.md「近期焦點①②」設計細節** — entry `format`/`schema` 值域與掛法、`reliability` 欄位形狀均為 Claude 拍板待追認。見 [try_implement/DECISIONS.md](try_implement/DECISIONS.md)「✅ 已收斂（2026-07-03）」。
 - **決定 core_handy 是否升主線、Python 降參考；新 repo 是否 port 既有 daemon** — 2026-07-13 長談後的下一步待使用者主導。見 [SESSION-LOG.md](SESSION-LOG.md) 與 [ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
