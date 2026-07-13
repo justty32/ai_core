@@ -266,8 +266,8 @@ Tracing JIT（PyPy / LuaJIT / V8 那套）的運作：解釋器慢慢跑 → 觀
 ---
 
 ### 備註 / 收斂後的判斷
-- **張力已收斂**：不是「Python vs Lisp 二選一」，而是「語言中立規範層 + 可抽換實作層」。下一步該做的是把 **LLM 呼叫的跨語言/跨 API 標準規範**明確寫出來（目前散在 `docs/spec/` 與 Python 原型的隱含契約裡）。
+- **張力已收斂**：不是「Python vs Lisp 二選一」，而是「語言中立規範層 + 可抽換實作層」。下一步該做的是把 **LLM 呼叫的跨語言/跨 API 標準規範**明確寫出來（目前散在 `workflows/spec/` 與 Python 原型的隱含契約裡）。
 - `CLAUDE.md` 措辭建議微調：把「只用 Python 標準庫」限定在**參考實作**範圍，並補一句「規範層語言中立、以 API 為介面」。（待使用者點頭再改。）
-- 既有 Python 原型（`try_implement/lib/llm_call.py`、`llm_entry_manager.py`）＝**參考實作 / 概念示範**，其「`llm_call(str)->str` + context binding + post-processing」可跨語言移植。
+- 既有 Python 原型（`sub_projs/ver_1/try_implement/lib/llm_call.py`、`llm_entry_manager.py`）＝**參考實作 / 概念示範**，其「`llm_call(str)->str` + context binding + post-processing」可跨語言移植。
 - 九軸、`register/intercept` 契約＝語言中立規範，是可選用的工具而非前提。
 - 與 roadmap「第一目標問題＝程式碼輔助助手」是否對齊，待定。

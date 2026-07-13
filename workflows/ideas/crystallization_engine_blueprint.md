@@ -1,9 +1,9 @@
 ---
 title: 固化引擎 v0 工程藍圖——wake-sleep 庫學習 × 經濟淘汰 × 接地憲法
-stage: spec-candidate  # 待與 docs/spec/composite_spec.md 及 try_implement/DECISIONS.md A4 合併審議，決定是否經 /spec 扶正
+stage: spec-candidate  # 待與 workflows/spec/composite_spec.md 及 sub_projs/ver_1/try_implement/DECISIONS.md A4 合併審議，決定是否經 /spec 扶正
 type: engineering-blueprint
 date: 2026-06-27
-status: 可實作藍圖（落成今夜的旗艦碰撞；非定案規範，規範權威仍在 docs/spec/ 與 try_implement/DECISIONS.md）
+status: 可實作藍圖（落成今夜的旗艦碰撞；非定案規範，規範權威仍在 workflows/spec/ 與 sub_projs/ver_1/try_implement/DECISIONS.md）
 source_of_truth: |
   ai_core 北極星＝roadmap.md（§2 工廠/消費者、§3.4 治理、§3.5 飛輪、§3.6 固化引擎、§6.1 ATP v0、§7/§8 待決）；
   已凍結資料結構＝docs/kb/kb-ext/discussion_logs/round_2_synthesis.md（ATP v0 asset schema）；

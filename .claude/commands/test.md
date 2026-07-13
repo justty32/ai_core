@@ -11,12 +11,12 @@ $ARGUMENTS
 
 ## 指令（環境內已有 `.venv`）
 ```bash
-# 正式核心測試（src/ai_core + tests/）
-.venv/bin/python -m pytest -q
+# 正式核心測試（sub_projs/ver_1/src/ai_core + sub_projs/ver_1/tests/）
+cd sub_projs/ver_1 && .venv/bin/python -m pytest -q
 
 # 原型煙霧測試（純標準庫，不需 pytest）
-.venv/bin/python try_implement/smoke_test.py
-.venv/bin/python try_implement/lib_smoke_test.py
+.venv/bin/python sub_projs/ver_1/try_implement/smoke_test.py
+.venv/bin/python sub_projs/ver_1/try_implement/lib_smoke_test.py
 ```
 
 ## 預期基準（出自 `workflows/testing.md`，若已演進以實跑為準）
@@ -25,6 +25,6 @@ $ARGUMENTS
 - `lib_smoke_test.py` → 68 項斷言
 
 ## 約束
-- 若 `.venv` 缺開發相依：`.venv/bin/pip install -e ".[dev]"`。
+- 若 `.venv` 缺開發相依：`cd sub_projs/ver_1 && .venv/bin/pip install -e ".[dev]"`。
 - **若實際數字與上面基準不符**：依「維護本檔的義務」，提醒使用者（或順手）同步更新 `workflows/testing.md` 的測試數量。
 - 全程繁體中文回報：通過數、失敗項與原因摘要。

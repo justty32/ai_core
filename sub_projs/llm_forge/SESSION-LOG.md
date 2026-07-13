@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **子專案骨架已建，實質規劃待展開**：`sub_projs/llm_forge/` 模板 12 檔已填成正式文檔（路由/派發/地圖/活狀態就位），但 spec/plan 尚未動工，內容細節見 idea 礦脈 [../../ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
+- **子專案骨架已建，實質規劃待展開**：`sub_projs/llm_forge/` 模板 12 檔已填成正式文檔（路由/派發/地圖/活狀態就位），但 spec/plan 尚未動工，內容細節見 idea 礦脈 [../../workflows/ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../workflows/ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
 - **等使用者討論收斂**：idea 筆記標〔待續〕，使用者明說「還有別的想法會繼續說」，規劃在討論線收斂前暫緩展開。
 
 ## 各工作流 session-log

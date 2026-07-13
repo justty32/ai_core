@@ -2,7 +2,7 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-從 TTemp 借來的**點子捕捉／頭腦風暴軌**，與本 repo 的程式碼／規範工作並行、互不干擾。三個 slash command 對應三個階段，產物統一落在 [ideas/](../ideas/)。
+從 TTemp 借來的**點子捕捉／頭腦風暴軌**，與本 repo 的程式碼／規範工作並行、互不干擾。三個 slash command 對應三個階段，產物統一落在 [ideas/](ideas/)（同在 `workflows/` 下）。
 
 ## 三個指令
 
@@ -14,7 +14,7 @@
 
 ## ai_core 特化（2026-06-08）：dogfood 自己的 LLM 基礎設施
 
-這三個指令的 LLM 加工**不派 Claude Code agent，改 shell out 給 [`try_implement/tools/idea.py`](../try_implement/tools/idea.py) 打真 API**（dogfood ai_core 自己的 LLM 基礎設施）。
+這三個指令的 LLM 加工**不派 Claude Code agent，改 shell out 給 [`try_implement/tools/idea.py`](../sub_projs/ver_1/try_implement/tools/idea.py) 打真 API**（dogfood ai_core 自己的 LLM 基礎設施）。
 
 - **只有 `/intake`（語音輸入）保留「主 agent 即時回應」模式**，但動作丟的是**背景 Bash 呼叫 `idea ingest`**（非背景 subagent）。
 - **`/critique`、`/expand` 同步 shell out** 給 `idea critique` / `idea expand`。
@@ -26,4 +26,4 @@
 
 ## 權威來源
 
-各 slash command 的細則自含於 `.claude/commands/{intake,critique,expand}.md`；idea 工具本身見 [try_implement/README.md](../try_implement/README.md)。
+各 slash command 的細則自含於 `.claude/commands/{intake,critique,expand}.md`；idea 工具本身見 [try_implement/README.md](../sub_projs/ver_1/try_implement/README.md)。

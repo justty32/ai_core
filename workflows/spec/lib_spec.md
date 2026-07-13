@@ -803,7 +803,7 @@ validation 只確保它是 dict，不強制特定 key（規範「從粗糙到嚴
 
 > **與 §6 `guarantee` 的對照**：`guarantee` 講的是「對外部狀態的承諾」；`nondeterministic`
 > 講的是「輸出本身可不可預測」。一個 LLM 包裝函式常是 `guarantee: "none"` + `nondeterministic: true`——
-> 既不保證副作用冪等，輸出也不可預測。馴化框架（retry / vote / guard …，見 `try_implement/docs/`）
+> 既不保證副作用冪等，輸出也不可預測。馴化框架（retry / vote / guard …，見 `sub_projs/ver_1/try_implement/docs/`）
 > 正是把後者收斂成「夠穩到能發證書」的機器。
 
 ### register() 範例
@@ -875,7 +875,7 @@ ai_core.register(nondeterministic=True, reliability=0.92)
 ## 未入軸的決策：`memoized`（純 runtime）
 
 `memoized`（記憶化 / 輸入→輸出快取）曾與 `nondeterministic` 並列為候選新軸。**決策：不入
-metadata 軸，維持純 runtime 行為**（由 `try_implement/lib/memoize.py` 這類 library 在執行期處理）。
+metadata 軸，維持純 runtime 行為**（由 `sub_projs/ver_1/try_implement/lib/memoize.py` 這類 library 在執行期處理）。
 
 理由：快取是**呼叫方 / library 的優化決策**，不是函式對外的語意承諾。一個函式「可不可以被快取」
 其實由既有軸隱含——`nondeterministic` 缺席（確定性）＋ `state: "stateless"` 的函式天然可安全

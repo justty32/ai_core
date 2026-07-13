@@ -15,7 +15,7 @@ sources:
   - 2602.00929  # TheoryCoder-2 抽象學習
   - 2501.17848  # eggp 等式圖 GP
   - 2604.18907  # NLI 神經詮釋語言
-provenance: 由外部 agent 讀 paper_reading/summarize + deep/self_improving_program_synthesis.md 與 ai_core/{roadmap,CLAUDE,thinking_*}.md、try_implement/DECISIONS.md 後產出。真相層仍是各論文摘要與 roadmap.md；本檔為碰撞火花，非定案。
+provenance: 由外部 agent 讀 paper_reading/summarize + deep/self_improving_program_synthesis.md 與 ai_core/{roadmap,CLAUDE,thinking_*}.md、sub_projs/ver_1/try_implement/DECISIONS.md 後產出。真相層仍是各論文摘要與 roadmap.md；本檔為碰撞火花，非定案。
 ---
 
 # 論文碰撞・第二輪：程式合成 × ai_core
@@ -128,7 +128,7 @@ provenance: 由外部 agent 讀 paper_reading/summarize + deep/self_improving_pr
 
 - **效益/風險**：效益＝給 Gap B1 一個有來歷的 schema 骨架（高層語意＋低層 grounding 兩段），且與第九軸證書、固化引擎（火花3 抽出的就是這種兩層 asset）天然吻合。風險＝PDDL 式前提/效果對「程式碼編輯」未必是最自然的抽象語言，可能需要換成更貼近 AST 的描述；「極簡示例控粒度」是工程訣竅、非保證，粒度仍可能漂。
 
-- **roadmap 落點**：`§7 Gap B1`、ATP `asset.py` 的 `origin/payload/target` 擴充、`docs/spec/` 未來的語意欄位規範。
+- **roadmap 落點**：`§7 Gap B1`、ATP `asset.py` 的 `origin/payload/target` 擴充、`workflows/spec/` 未來的語意欄位規範。
 
 ---
 

@@ -200,7 +200,7 @@ SQLite 給快查＋可變狀態。git 版本化的人寫真值 ＋ 快查 ＋ ru
 ### 9.1 方法論轉向〔決定〕
 「一開始就定死規範是好理想，但執行很麻煩。**正確做法＝先執行再說，邊執行邊生規範、調規範。**」
 ＝llm_forge 套在開發流程本身：**規範之於程式碼，如固化規則之於 LLM 輸出——從執行裡挖出，不開工前立法。**
-這也是對 core_handy 自身 [00_index.md](../../try_implement/core_handy/notes/00_index.md)「工作節奏」的自我修正（那套是 spec-first：
+這也是對 core_handy 自身 [00_index.md](../../../sub_projs/ver_1/try_implement/core_handy/notes/00_index.md)「工作節奏」的自我修正（那套是 spec-first：
 一軸一軸攤定義→N 輪討論→全拍板才寫碼）。往後**別再複製九軸 N 輪會議才寫碼的儀式**。
 
 ### 9.2 技術棧〔決定/方向〕
@@ -210,7 +210,7 @@ SQLite 給快查＋可變狀態。git 版本化的人寫真值 ＋ 快查 ＋ ru
 
 ### 9.3 LLM 接口地基**已存在**〔事實〕
 使用者想「先弄 C++、Lua 的 LLM 接口，底層 server-form」——C++ 那半 core_handy 已有能跑原型：
-[examples/llm_entry.cpp](../../try_implement/core_handy/examples/llm_entry.cpp)（＝roadmap 元件1），拼 `impl/{http,json,llm,rate,serve}.hpp`：
+[examples/llm_entry.cpp](../../../sub_projs/ver_1/try_implement/core_handy/examples/llm_entry.cpp)（＝roadmap 元件1），拼 `impl/{http,json,llm,rate,serve}.hpp`：
 - **one-shot**：prompt(stdin)→completion(stdout)；**`--serve <sock>`：長駐 daemon，LLM 單資源循序佇列、共用 `RateMeter` 跨呼叫累計 consume-rate**；env config（OpenAI 相容 `/v1`，預設 ollama）；自述 `--metadata`（entries/network/uncertainty=50）。
 
 **server-form 對 polyglot 棧是唯一合理解**〔提案〕：(1) LLM＝單例資源 → 一個 daemon 獨佔；(2) 一 daemon ＋ N 瘦客戶端，每語言只要「開 socket、寫 prompt、讀回覆」約 20 行 → **永不用每語言寫 LLM SDK**；(3) 所有呼叫穿過此 daemon → 是寫 NDJSON **trace log（近期焦點③）＝galgame forge 礦堆**的天生落點。
@@ -224,9 +224,9 @@ SQLite 給快查＋可變狀態。git 版本化的人寫真值 ＋ 快查 ＋ ru
 **護欄**：新開沒問題，但**能跑的用「搬（port）」、別憑記憶重建**（否則落回 roadmap §1「一直重來」）。
 - **帶過去（port）**：core_handy `llm_entry.cpp` ＋ `impl/{llm,serve,rate,http}` —— 能跑的地基。
 - **帶過去（語言中立參考）**：九軸/`--metadata` 契約、固化階梯、世界模型↔context、評分級聯、本 note。
-- **留下**：spec-first 儀式；`src/ai_core/_core.py`（Python）、`try_implement/` 工具（降歷史參考）。
+- **留下**：spec-first 儀式；`sub_projs/ver_1/src/ai_core/_core.py`（Python）、`sub_projs/ver_1/try_implement/` 工具（降歷史參考）。
 
 ### 9.6 兩個結構決定〔待使用者確認〕
-1. `core_handy`（C++）升主線、`src/ai_core/_core.py`（Python）降凍結參考？
+1. `core_handy`（C++）升主線、`sub_projs/ver_1/src/ai_core/_core.py`（Python）降凍結參考？
 2. galgame forge 建在哪：core_handy 原地 vs 新 repo？——使用者已表態**傾向新 repo（port core_handy）**。
 ＋ 使用者將**自行審 core_handy 是否合意的地基**（審查清單見本則對話：`llm_entry.cpp`/`impl/serve.hpp`/`impl/llm.hpp`/`impl/rate.hpp`/`impl/http.hpp`/`defs/axes.hpp`/`CMakeLists.txt`；四問：socket 字串協定是否要的縫、header-only C++20 相依姿態、llm.hpp backend 撐不撐本地模型、Lua 從零）。

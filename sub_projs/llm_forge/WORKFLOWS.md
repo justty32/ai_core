@@ -22,7 +22,7 @@
 
 保持這條管線：**idea（要不要做？）→ spec（討論後方案）→ plan（動工前詳規）→ build（feature-dev）**。
 
-- **idea 階段的礦脈在主專案** `ai_core/ideas/notes/`——尤其 [20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)（本子專案的唯一內容來源，標〔待續〕，還會被後續討論擴充）。
+- **idea 階段的礦脈在主專案** `ai_core/workflows/ideas/notes/`——尤其 [20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../workflows/ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)（本子專案的唯一內容來源，標〔待續〕，還會被後續討論擴充）。
 - **spec / plan 入口檔第一次用到才建**（從單檔開始長，見 [DEV-GUIDE](DEV-GUIDE.md) 四級成長軌跡）——**不預先建空資料夾**。
 
 ## 工作流的統一形式（規範）
