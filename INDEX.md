@@ -1,6 +1,6 @@
 # INDEX — ai_core 專案地圖
 
-整個專案的頂層導航。ai_core = **假設未來只剩便宜的本地小模型，做一套 CLI 框架把小笨模型包裝成可靠函式**（詳見 [roadmap.md](workflows/roadmap.md)）。AGENTS.md 只放路由 + 指向本檔；細節從這裡分流出去。本檔只描述「頂層」——某目錄內部複雜就進它自己的 README / INDEX。
+整個專案的頂層導航。ai_core = **假設未來只剩便宜的本地小模型，做一套 CLI 框架把小笨模型包裝成可靠函式**（詳見 [roadmap.md](workflows/roadmap/README.md)）。AGENTS.md 只放路由 + 指向本檔；細節從這裡分流出去。本檔只描述「頂層」——某目錄內部複雜就進它自己的 README / INDEX。
 
 ## 專案狀態：可信度分層
 
@@ -8,7 +8,7 @@
 
 | 層 | 位置 | 性質 | 可信度 |
 |---|---|---|---|
-| **北極星 / 戰略** | [roadmap.md](workflows/roadmap.md) | 為什麼做、終點長什麼樣、第一目標問題、v0 切片 | 主文件，判斷「該不該做、先做哪個」的尺 |
+| **北極星 / 戰略** | [roadmap.md](workflows/roadmap/README.md) | 為什麼做、終點長什麼樣、第一目標問題、v0 切片 | 主文件，判斷「該不該做、先做哪個」的尺 |
 | **規範 (spec)** | [workflows/spec/](workflows/spec/) | 設計模式的精確定義（九軸、複合、CLI、library 契約） | **已扶正的內容是定案**；標「待填／待議」者未定 |
 | **提案 / 規劃** | [ideas/](workflows/ideas/README.md)、[plans/](workflows/plans/README.md) | 點子、研究、spec 候選厚檔、施工規劃 | **多為提案／彙整層**，非定案；沿管線成熟後才往 spec 走 |
 
@@ -18,7 +18,7 @@
 
 | 路徑 | 內容 |
 |------|------|
-| [workflows/](WORKFLOWS.md) | ★ 當前主線：開發工作流＋活的規劃內容。[roadmap.md](workflows/roadmap.md)（★ 北極星／戰略主文件，回來先讀這個）、[spec/](workflows/spec/)（權威設計規範 8 檔＝原 core_nature，扶正者為定案）、[plans/](workflows/plans/README.md)（spec 的實作規劃）、[intake/](workflows/intake/README.md)（口述線一條龍，產 raw/cleaned）、[notes/](workflows/notes/)（匯總筆記）、[ideas/](workflows/ideas/README.md)（腦暴 brainstorm＋研究 research＋spec 候選）、idea-capture.md（腦暴 critique/expand）、common/。派發入口 [WORKFLOWS.md](WORKFLOWS.md) |
+| [workflows/](WORKFLOWS.md) | ★ 當前主線：開發工作流＋活的規劃內容。[roadmap.md](workflows/roadmap/README.md)（★ 北極星／戰略主文件，回來先讀這個）、[spec/](workflows/spec/)（權威設計規範 8 項＝原 core_nature，扶正者為定案；其中 lib_spec／axis_spec／execution_forms／composite_spec 已超標拆成資料夾＋index）、[plans/](workflows/plans/README.md)（spec 的實作規劃）、[intake/](workflows/intake/README.md)（口述線一條龍，產 raw/cleaned）、[notes/](workflows/notes/)（匯總筆記）、[ideas/](workflows/ideas/README.md)（腦暴 brainstorm＋研究 research＋spec 候選）、idea-capture.md（腦暴 critique/expand）、common/。派發入口 [WORKFLOWS.md](WORKFLOWS.md) |
 | [docs/](docs/README.md) | 快照家族入口（spec 已移出）：`kb/`（知識庫快照三夾 knowledge_base・kb-ext・kb-ss，凍結快照）、`html/`（手工多頁總覽站，vibe check）。入口 [docs/README.md](docs/README.md) |
 | [sub_projs/](sub_projs/README.md) | 次級物：`llm_forge/`（galgame 台詞生成器規劃，第一目標問題）＋ `ver_1/`（早期 Python 實作封存，半封存、不在現役維護鏈）。入口 [sub_projs/README.md](sub_projs/README.md) |
 

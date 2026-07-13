@@ -13,7 +13,7 @@
 | 「口述記點子／整理成筆記」 | **intake** | [workflows/intake/README.md](workflows/intake/README.md)（產物：raw→cleaned→[notes/](workflows/notes/)）|
 | 「頭腦風暴：找漏洞／擴展」 | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家見 [workflows/ideas/README.md](workflows/ideas/README.md) |
 | 「排實作規劃 / 施工單」 | **plans** | [workflows/plans/README.md](workflows/plans/README.md) |
-| 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap.md) |
+| 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap/README.md) |
 | 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
@@ -39,7 +39,7 @@
 
 ## 規劃管線（點子怎麼變成核心）
 
-點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[workflows/intake/](workflows/intake/README.md)（口述 raw→cleaned→[notes/](workflows/notes/)）＋[workflows/ideas/](workflows/ideas/README.md)（brainstorm 腦暴）→ research＝[workflows/ideas/research/](workflows/ideas/research/) → spec 候選＝workflows/ideas/ 頂層厚檔 → spec 定案＝[workflows/spec/](workflows/spec/)（經 spec 工作流扶正）→ plan＝[workflows/plans/](workflows/plans/README.md)（施工規劃）＋[roadmap.md](workflows/roadmap.md) §6（戰略 v0 切片）→ build＝實作。詳見 [workflows/ideas/README.md](workflows/ideas/README.md)。**注意**：早期實作已封存（半封存狀態），當前**無**在寫的實作——主線集中在前段規劃層（roadmap＋spec＋ideas＋plans）。
+點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[workflows/intake/](workflows/intake/README.md)（口述 raw→cleaned→[notes/](workflows/notes/)）＋[workflows/ideas/](workflows/ideas/README.md)（brainstorm 腦暴）→ research＝[workflows/ideas/research/](workflows/ideas/research/) → spec 候選＝workflows/ideas/ 頂層厚檔 → spec 定案＝[workflows/spec/](workflows/spec/)（經 spec 工作流扶正）→ plan＝[workflows/plans/](workflows/plans/README.md)（施工規劃）＋[roadmap.md](workflows/roadmap/README.md) §6（戰略 v0 切片）→ build＝實作。詳見 [workflows/ideas/README.md](workflows/ideas/README.md)。**注意**：早期實作已封存（半封存狀態），當前**無**在寫的實作——主線集中在前段規劃層（roadmap＋spec＋ideas＋plans）。
 
 ## 跨工作流的活狀態（repo 根）
 
