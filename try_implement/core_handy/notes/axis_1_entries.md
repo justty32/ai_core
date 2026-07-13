@@ -16,7 +16,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py` 的 `_validate_entries` / `_validate_entry_mode` / `_validate_entry_type`、
-`core_nature/lib_spec.md §1`、`core_nature/axis_spec.md §1`。
+`docs/spec/lib_spec.md §1`、`docs/spec/axis_spec.md §1`。
 
 `entries` 是 §1「I/O 型態」軸的具體化：一個「**語意名稱 → 出入口描述**」的 map，
 每個出入口（entry）描述函式的一個 I/O 埠。

@@ -13,7 +13,7 @@
 | **idea** | 剛捕捉的點子、概念拓展草稿 | `ideas/raw/`→`cleaned/`→`notes/`、`ideas/brainstorm/`、[try_implement/docs/](../try_implement/docs/)（概念拓展）|
 | **research** | 外部論文與北極星對撞的火花表 | [`ideas/research/`](research/) |
 | **spec 候選** | 已具體到有函式簽章／流程、但尚未定案的厚檔 | `ideas/` 頂層厚檔（如本夾 crystallization_engine_blueprint.md）＋ [try_implement/DECISIONS.md](../try_implement/DECISIONS.md) A 區懸案 |
-| **spec 定案** | 經 `/spec` 扶正後的權威規範 | [core_nature/](../core_nature/) |
+| **spec 定案** | 經 `/spec` 扶正後的權威規範 | [docs/spec/](../docs/spec/) |
 | **plan** | 已排出開工次序與驗收標準的施工計畫 | 目前唯一：[roadmap.md](../roadmap.md) §6（v0 最小垂直切片）|
 | **build** | 真的寫出來 | [try_implement/](../try_implement/) 原型 → `src/ai_core/` 正式核心 |
 

@@ -9,7 +9,7 @@
 | 層 | 位置 | 性質 | 可信度 |
 |---|---|---|---|
 | **北極星 / 戰略** | [roadmap.md](roadmap.md) | 為什麼做、終點長什麼樣、第一目標問題、v0 切片 | 主文件，判斷「該不該做、先做哪個」的尺 |
-| **規範 (spec)** | [core_nature/](core_nature/) | 設計模式的精確定義（九軸、複合、CLI、library 契約） | **已扶正的內容是定案**；標「待填／待議」者未定 |
+| **規範 (spec)** | [docs/spec/](docs/spec/) | 設計模式的精確定義（九軸、複合、CLI、library 契約） | **已扶正的內容是定案**；標「待填／待議」者未定 |
 | **原型 (探索)** | [try_implement/](try_implement/) | 「先寫出來跑跑看」的遊樂場，暴露設計缺口 | **多數是提案**，非定案；扶正狀態見其 [DECISIONS.md](try_implement/DECISIONS.md) |
 
 正式核心程式碼只有一處：`src/ai_core/_core.py`（＋ `tests/test_core.py`）。`try_implement/` 下的東西即使能跑，也**尚未**等於規範定案。
@@ -21,12 +21,13 @@
 | [roadmap.md](roadmap.md) | ★ 北極星／戰略主文件（回來先讀這個）：初心、終點形狀、憑證准入治理、第一目標問題、v0 切片 |
 | `src/ai_core/_core.py` | ★ 唯一的正式核心：`register()` / `intercept()` + 九軸驗證。契約摘要見 [common/conventions](workflows/common/conventions.md) |
 | `tests/test_core.py` | 正式核心的測試 |
-| [core_nature/](core_nature/) | 規範家族（spec）8 檔：overview / terminal_model / execution_forms / axis_spec / composite_spec / cli_spec / lib_spec / data_format |
-| [try_implement/](try_implement/) | 原型遊樂場（多為提案）。入口 [README.md](try_implement/README.md)、懸案清單 [DECISIONS.md](try_implement/DECISIONS.md)；tools/ lib/ demos/ + 兩個 smoke_test |
+| [docs/](docs/README.md) | 筆記家族入口：`spec/`（權威設計規範 8 檔＝原 core_nature，扶正者為定案）、`kb/`（知識庫快照三夾 knowledge_base・kb-ext・kb-ss，凍結快照）、`html/`（手工多頁總覽站，vibe check）。入口 [docs/README.md](docs/README.md) |
+| [try_implement/](try_implement/README.md) | 原型遊樂場（多為提案）：Python 原型（tools/ lib/ demos/ + 兩個 smoke_test）＋ [core_handy/](try_implement/core_handy/)（C++ 原型地基，同屬提案層）。入口 [README.md](try_implement/README.md)、懸案清單 [DECISIONS.md](try_implement/DECISIONS.md) |
 | [ideas/](ideas/README.md) | 點子與研究的家（入口 [README.md](ideas/README.md)，含規劃管線落點）：`raw/`（逐字）`cleaned/`（整理）`notes/`（匯總筆記）`brainstorm/`（critique/expand）`research/`（論文碰撞火花）＋頂層 spec 候選厚檔 |
-| [sub_projs/](sub_projs/README.md) | 半獨立子專案／知識庫快照／展示產物：llm_forge（galgame 台詞生成器規劃，第一目標問題）、core_handy（C++ 原型地基）、knowledge_base・kb-ext・kb-ss（知識庫三夾）、html（多頁總覽站）、docs（架構文檔）、funcs（範例函式）。入口 [sub_projs/README.md](sub_projs/README.md) |
+| [examples/](examples/echo.sh) | 範例函式：`echo.sh`（最簡 `--metadata` 協議 + pipeline 傳檔範例）|
+| [sub_projs/](sub_projs/README.md) | 真・半獨立子專案（各有自己生命週期）：目前僅 llm_forge（galgame 台詞生成器規劃，第一目標問題）。入口 [sub_projs/README.md](sub_projs/README.md) |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
-| [archive/](archive/) | 歷史留存（已被取代、僅供追溯）：thinking/*.md、舊 overview.html、progress.md、other.md |
+| [archive/](archive/README.md) | 歷史留存（已被取代、僅供追溯）：thinking/*.md、舊 overview.html、progress.md、other.md、architecture_docs/（舊架構文檔）。入口 [archive/README.md](archive/README.md) |
 
 ## 開發工作流
 

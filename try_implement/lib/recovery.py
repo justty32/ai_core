@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """recovery — 「中斷恢復慣例」的參考實作。
 
-對應 core_nature/composite_spec.md §「中斷恢復慣例（Interruption Recovery
+對應 docs/spec/composite_spec.md §「中斷恢復慣例（Interruption Recovery
 Convention）」。當程式宣告 §5 ``interruptible ∈ {resumable, rollback, resettable}``
 或 §6 ``guarantee: "transactional"``，恢復能力的落地形式統一為：
 

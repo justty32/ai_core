@@ -12,5 +12,6 @@
 | `overview.html` | repo 根目錄 | `html/`（多頁版：index/architecture/status/…） |
 | `progress.md` | repo 根目錄 | `SESSION-LOG.md`（open-only 進度 hub）取代；此檔保留里程碑史脈絡。歸檔於 2026-07-13。 |
 | `other.md` | repo 根目錄 | 2026-05-21 舊散記，內容已被 `roadmap.md` / `core_nature/` 的演化取代。歸檔於 2026-07-13。 |
+| `architecture_docs/`（`ARCHITECTURE.md` + `architectures/` 01~08） | `sub_projs/docs/` | 舊架構文檔，多為舊版、部分已被 `roadmap.md` 取代，故封存僅供追溯演化脈絡。歸檔於 2026-07-13。 |
 
 首批歸檔於 2026-07-02（thinking/、overview.html）。

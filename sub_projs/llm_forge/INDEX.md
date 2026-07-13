@@ -31,7 +31,7 @@
 本子專案的內容源頭在主專案，不在本目錄複製：
 
 - **idea 礦脈**：[../../ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)——唯一內容來源（標〔待續〕，會被後續討論擴充）。
-- **未來 port 的地基**：[../core_handy/notes/00_index.md](../core_handy/notes/00_index.md)——C++ 的 LLM 接口地基（`llm_entry.cpp` + `impl/{http,json,llm,rate,serve}.hpp`），畢業獨立 repo 時搬過去（〔§9.5 決定〕）。
+- **未來 port 的地基**：[../../try_implement/core_handy/notes/00_index.md](../../try_implement/core_handy/notes/00_index.md)——C++ 的 LLM 接口地基（`llm_entry.cpp` + `impl/{http,json,llm,rate,serve}.hpp`），畢業獨立 repo 時搬過去（〔§9.5 決定〕）。
 
 ## 活狀態（只列還沒完成的）
 

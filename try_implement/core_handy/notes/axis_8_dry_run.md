@@ -20,8 +20,8 @@
 
 ## 1. 權威定義（濃縮對象）
 
-來源：`src/ai_core/_core.py`（`_validate_dry_run`：`bool | dict`）、`core_nature/lib_spec.md §6`、
-`core_nature/axis_spec.md §6`（規範上與 guarantee 同列 §6，但 `_KNOWN_FIELDS` 為獨立欄位）。
+來源：`src/ai_core/_core.py`（`_validate_dry_run`：`bool | dict`）、`docs/spec/lib_spec.md §6`、
+`docs/spec/axis_spec.md §6`（規範上與 guarantee 同列 §6，但 `_KNOWN_FIELDS` 為獨立欄位）。
 
 - 型別 `bool | object`：bool `true`＝支援；object＝`{flag, state_entry, error_entry}` 三子欄位皆選填。
 - **預設**：缺席／`false` → 不支援。

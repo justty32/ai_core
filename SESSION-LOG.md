@@ -10,7 +10,7 @@
 
 1. [roadmap.md](roadmap.md)（北極星）
 2. [ideas/notes/20260702-2003-回到初心-llm-as-function.md](ideas/notes/20260702-2003-回到初心-llm-as-function.md)（方向定調）
-3. [sub_projs/core_handy/notes/00_index.md](sub_projs/core_handy/notes/00_index.md)（九軸定案、C++ 地基）
+3. [try_implement/core_handy/notes/00_index.md](try_implement/core_handy/notes/00_index.md)（九軸定案、C++ 地基）
 4. [try_implement/DECISIONS.md](try_implement/DECISIONS.md)（懸案清單）
 
 > 最新一輪長談（第一目標問題換 galgame）見 [ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
@@ -21,7 +21,7 @@
 - **v0 最小垂直切片尚未動工** — 一個真實框架 → 一次聰明模型生資產 → 笨模型 + 行數助手 + retry/guard，見 [roadmap.md](roadmap.md) §6。
 - **第一目標問題構想上已換成 galgame 台詞生成（llm_forge），但 roadmap.md §5 尚未動手術** — 北極星不動、入門切口換材料不換架構；正式改稿暫緩到討論收斂。詳見最新長談 [ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
 - **刻意暫緩至 v0：A4（組合軸推導）＋ B 系列（B1 語意欄位 / B2 共用模組 / B3 沙箱）** — 留給 v0 切片逼出優先序，見 [try_implement/DECISIONS.md](try_implement/DECISIONS.md) A4 / B 區與 [roadmap.md](roadmap.md) §7。
-- **core_nature/overview.md 仍是「待填」stub** — 規範家族缺總覽定位（這套設計模式是工具集？設計模式？執行組織框架？），見 [core_nature/overview.md](core_nature/overview.md)「待填：本質是什麼」節。
+- **docs/spec/overview.md 仍是「待填」stub** — 規範家族缺總覽定位（這套設計模式是工具集？設計模式？執行組織框架？），見 [docs/spec/overview.md](docs/spec/overview.md)「待填：本質是什麼」節。
 - **llm_forge 子專案骨架已建**（`sub_projs/llm_forge/`，套 workflows 模板），實質規劃待使用者討論收斂後展開。
 
 ## 各工作流 session-log

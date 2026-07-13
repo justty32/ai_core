@@ -10,6 +10,15 @@
 > 與 `core_nature/` 規範——見 [`DECISIONS.md`](DECISIONS.md) 頂部「✅ 已收斂」。其餘待扶正項仍由
 > 使用者定奪。
 
+## 兩條原型線：Python 與 core_handy（C++）
+
+本遊樂場有兩條平行的原型線，**同屬「提案、未扶正」層**（能跑 ≠ 規範定案，扶正狀態一律見 [`DECISIONS.md`](DECISIONS.md)）：
+
+- **Python 原型**（本 README 以下全部）：ai_core 概念的主力探索線。
+- **[core_handy/](core_handy/) — C++ 原型地基**：ac_helper（`src/ai_core/_core.py` 的 C++ 對應線），含 server-form LLM daemon（one-shot＋`--serve` socket＋跨呼叫 RateMeter）、九軸 `defs/axes.hpp`、設施碼 `impl/*.hpp`。事實基準＝`defs/`＋`impl/`，`notes/` 為歷史 WHY。入口 [core_handy/notes/00_index.md](core_handy/notes/00_index.md)。
+
+以下為 **Python 原型線** 的內容。
+
 涵蓋三大塊：
 
 1. **路由 / 函式管理工具**（`tools/`）：Indexer、Router、Switch、SFC、Hub、LLM Entry Manager。

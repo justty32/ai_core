@@ -26,8 +26,8 @@
 
 ## 1. 權威定義（濃縮對象）
 
-來源：`src/ai_core/_core.py`（`_validate_nondeterministic`：`bool | dict`）、`core_nature/lib_spec.md §9`、
-`core_nature/axis_spec.md §9`。權威是**三態**：
+來源：`src/ai_core/_core.py`（`_validate_nondeterministic`：`bool | dict`）、`docs/spec/lib_spec.md §9`、
+`docs/spec/axis_spec.md §9`。權威是**三態**：
 
 | 權威形式 | 語意 | 治理階段 |
 |---|---|---|

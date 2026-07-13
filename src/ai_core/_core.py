@@ -24,7 +24,7 @@ _INTERRUPTIBLE_STRING_VALUES = frozenset({
 # 設計（拒絕 import-time 副作用）：register* 系列只「宣告」，純粹寫入下面三個全域，
 # 不讀 sys.argv、不攔截、不 sys.exit。攔截 --metadata 由 intercept() 顯式負責。
 # 因此工具可被當 library import 而無副作用；register 應在 __main__ 區塊呼叫
-# （見 core_nature/lib_spec.md「register 的 import-time 副作用」一節）。
+# （見 docs/spec/lib_spec.md「register 的 import-time 副作用」一節）。
 _top_metadata: dict[str, Any] = {}
 _subcommands: dict[str, dict[str, Any]] = {}
 _resolver: Callable[[str, str | None], dict[str, Any] | None] | None = None

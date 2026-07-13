@@ -11,7 +11,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py`（`_GUARANTEE_VALUES = {none, idempotent, transactional}`，
-`v not in _GUARANTEE_VALUES` 即報錯）、`core_nature/lib_spec.md §6`、`core_nature/axis_spec.md §6`。
+`v not in _GUARANTEE_VALUES` 即報錯）、`docs/spec/lib_spec.md §6`、`docs/spec/axis_spec.md §6`。
 
 描述程式對其執行**副作用的承諾**，尤其失敗或中斷後的**狀態一致性**。
 

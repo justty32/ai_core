@@ -13,7 +13,7 @@
 源自 idea 筆記 §9.6〔待使用者確認〕的兩個結構決定：
 
 - **結構決定①（升/降主線）**：確認 `core_handy`（C++）**升主線**、`src/ai_core/_core.py`（Python）**降凍結參考**？此決定牽動哪套當地基往下做。
-- **結構決定②（使用者自審地基）**：使用者將**自行審查 core_handy 是否合意的地基**。審查清單（都在 `../core_handy/` 底下）：`examples/llm_entry.cpp`、`impl/serve.hpp`、`impl/llm.hpp`、`impl/rate.hpp`、`impl/http.hpp`、`defs/axes.hpp`、`CMakeLists.txt`。四個要回答的問題（詳見筆記 §9.6）：
+- **結構決定②（使用者自審地基）**：使用者將**自行審查 core_handy 是否合意的地基**。審查清單（都在 `../../try_implement/core_handy/` 底下）：`examples/llm_entry.cpp`、`impl/serve.hpp`、`impl/llm.hpp`、`impl/rate.hpp`、`impl/http.hpp`、`defs/axes.hpp`、`CMakeLists.txt`。四個要回答的問題（詳見筆記 §9.6）：
   1. socket 字串協定是不是想要的那道「縫」？
   2. header-only C++20 的相依姿態可接受嗎？
   3. `llm.hpp` 的 backend 撐不撐本地模型？

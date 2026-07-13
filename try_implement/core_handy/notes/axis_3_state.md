@@ -9,7 +9,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py`（`_STATE_VALUES = {stateless, stateful_external}`）、
-`core_nature/lib_spec.md §3`、`core_nature/axis_spec.md §3`。
+`docs/spec/lib_spec.md §3`、`docs/spec/axis_spec.md §3`。
 
 `state` ＝ **單次執行以外，是否保有／影響／累積跨呼叫的狀態**。既有設計**只有兩個值**：
 

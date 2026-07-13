@@ -19,7 +19,7 @@
 
 - **產物目標**：`ac_helper.hpp`（header-only）＋ `main.cpp`（示範）。
 - **與 `src/ai_core` 的關係**：那條線是「純 Python 標準庫」；`core_handy` 是另一條刻意分開的 C++ 濃縮線。
-- **權威來源**：濃縮的對象是 `src/ai_core/_core.py`（九軸驗證）、`core_nature/`（規範）、`roadmap.md`（北極星）。
+- **權威來源**：濃縮的對象是 `src/ai_core/_core.py`（九軸驗證）、`docs/spec/`（規範）、`roadmap.md`（北極星）。
   濃縮時若與權威來源分歧，會在筆記裡標明「為何分歧、在哪邊還原」。
 
 ## ★ lib 是什麼：輔助寫「符合標準的 shell 程式」（2026-06-24 定錨）

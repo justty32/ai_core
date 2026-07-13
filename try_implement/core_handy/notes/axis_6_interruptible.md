@@ -12,7 +12,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py`（`_validate_interruptible`：str 須屬標準值集，或 dict 須含 `type`）、
-`core_nature/lib_spec.md §5`、`core_nature/axis_spec.md §5`。
+`docs/spec/lib_spec.md §5`、`docs/spec/axis_spec.md §5`。
 
 描述程式對**中斷（強制退出、kill、環境切換）的承受能力**及中斷後對外部狀態的影響。跨環境抽象，不綁 OS 信號。
 

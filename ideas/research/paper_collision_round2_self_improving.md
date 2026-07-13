@@ -170,4 +170,4 @@ graph TD
 
 **一句話總結**：這批論文給 ai_core 補的不是新功能，而是**飛輪的三根承重柱**——火花 1 證明「為什麼非確定性接地不可」（地基）、火花 2 給出「固化引擎怎麼自動跑」（引擎）、火花 3 給出「證書怎麼不腐化」（剎車）。三者合起來，正好把 roadmap §3.5–3.6 那段「飛輪 = 從寬鬆遷往嚴格的力」從願景變成可開工的機制。
 
-> 接續：若要開工，先把**火花 1 的 `grounding_class` 欄位**寫進 `core_nature/axis_spec.md` 的 nondeterministic 軸 / ATP certificate；再用**火花 2** 草擬 v1 的固化引擎切片（離線批次、島嶼、−1000 守衛、trace 回放當保留集）。
+> 接續：若要開工，先把**火花 1 的 `grounding_class` 欄位**寫進 `docs/spec/axis_spec.md` 的 nondeterministic 軸 / ATP certificate；再用**火花 2** 草擬 v1 的固化引擎切片（離線批次、島嶼、−1000 守衛、trace 回放當保留集）。

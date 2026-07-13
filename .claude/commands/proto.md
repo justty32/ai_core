@@ -9,7 +9,7 @@ $ARGUMENTS
 
 ## 定位（務必先內化）
 - `try_implement/` 是「**先寫出來跑跑看**」的遊樂場，用來**暴露設計缺口**。
-- 這裡的產物**是提案、不是定案**；**不要動** `src/ai_core/_core.py` 與 `core_nature/`（那是正式核心，要動走 `/spec` 扶正流程）。
+- 這裡的產物**是提案、不是定案**；**不要動** `src/ai_core/_core.py` 與 `docs/spec/`（那是正式核心，要動走 `/spec` 扶正流程）。
 - 設計哲學照舊是硬約束：**KISS／輕量／不重造輪子／相依最少**；**只用 Python 3.11+ 標準庫**，無外部相依；POSIX、shell 為一等公民。
 
 ## 落點（`try_implement/` 既有結構）

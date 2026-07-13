@@ -23,7 +23,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py`（`_STATE_DIR_VALUES = {config, cache, state, data}`，驗證為 list 且須為子集）、
-`core_nature/lib_spec.md §3`、`core_nature/composite_spec.md`「標準狀態目錄慣例」。
+`docs/spec/lib_spec.md §3`、`docs/spec/composite_spec.md`「標準狀態目錄慣例」。
 
 `state_dirs` ＝ 當程式遵守 terminal「標準狀態目錄慣例」時，**宣告它實際用到哪些標準目錄**。
 允許值是 `{config, cache, state, data}` 的**子集**（array of string）。

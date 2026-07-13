@@ -1,7 +1,7 @@
 # DECISIONS — 待你定奪的規範決策（try_implement 回饋彙整）
 
 > 這頁把散在 README / docs / 各 lib 檔頭的「回饋規範」內容，收斂成一份**決策清單**。
-> try_implement 的實驗都只是提案 / 原型；**真正的 `src/ai_core/_core.py` 與 `core_nature/`
+> try_implement 的實驗都只是提案 / 原型；**真正的 `src/ai_core/_core.py` 與 `docs/spec/`
 > 一行都沒動**。下面每項都標明「現況 / 我的建議 / 你要決定什麼」，讓你回來能快速行動。
 >
 > 分四區：A 已原型待扶正 ／ B 開放方向題 ／ C 候選新軸 ／ D 我已自行拍板待你追認。
@@ -10,11 +10,11 @@
 
 ## ✅ 已收斂（2026-05-26）
 
-這一輪把下列項目**扶正進真正的 `src/ai_core/_core.py` 與 `core_nature/` 規範**（不再只是 try_implement 原型）：
+這一輪把下列項目**扶正進真正的 `src/ai_core/_core.py` 與 `docs/spec/` 規範**（不再只是 try_implement 原型）：
 
 | 項目 | 決策 | 落地處 |
 |---|---|---|
-| **A1 + A2 + A3** | 採「**宣告／攔截拆分**」模型：`register` / `register_subcommand` / `register_subcommand_resolver` 純宣告、無副作用；`intercept(argv)` 顯式攔截（放寬版，支援 `<sub> --metadata` 與 `--store` 前綴）。一次解掉 A1（subcommand metadata）、A2（單檔多 lifecycle）、A3/F（import 副作用）。 | `src/ai_core/_core.py`、`core_nature/lib_spec.md`「register() 與 intercept()」節、`tests/test_core.py`（65 測試）。`meta_core.py` 原型已刪，sfc 改接真 library。 |
+| **A1 + A2 + A3** | 採「**宣告／攔截拆分**」模型：`register` / `register_subcommand` / `register_subcommand_resolver` 純宣告、無副作用；`intercept(argv)` 顯式攔截（放寬版，支援 `<sub> --metadata` 與 `--store` 前綴）。一次解掉 A1（subcommand metadata）、A2（單檔多 lifecycle）、A3/F（import 副作用）。 | `src/ai_core/_core.py`、`docs/spec/lib_spec.md`「register() 與 intercept()」節、`tests/test_core.py`（65 測試）。`meta_core.py` 原型已刪，sfc 改接真 library。 |
 | **C：`nondeterministic` 軸** | **新增第九軸**。`true`＝未認證的隨機環節（開機期）；`{model, test_set, stability}`＝證書（成熟期，可稽核可撤照）。承載 `roadmap.md §3.4` 治理原則。 | `src/ai_core/_core.py`、`lib_spec.md §9`、`axis_spec.md §9`、`execution_forms.md §0` 表、`tests/test_core.py`。 |
 | **C：`memoized`** | **不入軸**，維持純 runtime（`lib/memoize.py`）。理由：快取是呼叫方/library 的優化決策，且可由「`nondeterministic` 缺席 + `stateless`」隱含可快取性——不像 `nondeterministic` 那樣無既有軸值可隱含。 | `lib_spec.md`「未入軸的決策：memoized」節。 |
 
@@ -27,7 +27,7 @@
 
 ## ✅ 已收斂（2026-06-21）：ATP v0 — V0 垂直切片的資料結構定案
 
-`sub_projs/kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE）三輪收斂出 V0 的具體規格 **ATP v0（Asset Transfer Protocol）**。**注意：這是 `sub_projs/kb-ext/` 的設計收斂，尚未寫成 code，`_core.py` / `core_nature/` 一行未動。** 開工後才落地成 `try_implement/` 並回填狀態。
+`docs/kb/kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE）三輪收斂出 V0 的具體規格 **ATP v0（Asset Transfer Protocol）**。**注意：這是 `docs/kb/kb-ext/` 的設計收斂，尚未寫成 code，`_core.py` / `docs/spec/` 一行未動。** 開工後才落地成 `try_implement/` 並回填狀態。
 
 | 凍結項 | 決策 | 出處 |
 |---|---|---|

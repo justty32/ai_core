@@ -11,7 +11,7 @@
 ## 0. 權威定義（濃縮對象）
 
 來源：`src/ai_core/_core.py`（`resources` 僅驗證為 dict，自由 key-value）、
-`core_nature/lib_spec.md §4`、`core_nature/axis_spec.md §4`。
+`docs/spec/lib_spec.md §4`、`docs/spec/axis_spec.md §4`。
 
 `resources` ＝ 對**計算資源的消耗／佔用（含時間）**的宣告，供 Function Hub 排程決策。
 自由 key-value：**預定義 key 有規範 value 格式**（hub 可解析）；**自定義 key** value 不限（hub 讀得到、未必懂）。

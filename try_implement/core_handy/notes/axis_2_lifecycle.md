@@ -11,8 +11,8 @@
 
 ## 0. 權威定義（濃縮對象）
 
-來源：`src/ai_core/_core.py`（`_LIFECYCLE_VALUES = {one_shot, persistent}`）、`core_nature/lib_spec.md §2`、
-`core_nature/axis_spec.md §2`、`core_nature/execution_forms.md §4`。
+來源：`src/ai_core/_core.py`（`_LIFECYCLE_VALUES = {one_shot, persistent}`）、`docs/spec/lib_spec.md §2`、
+`docs/spec/axis_spec.md §2`、`docs/spec/execution_forms.md §4`。
 
 `lifecycle` ＝ **process 從啟動到結束的持續模式**。既有設計**只有兩個值**：
 

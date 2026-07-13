@@ -23,7 +23,7 @@
 
 ## 核心契約：`--metadata` 與 register/intercept（已定案）
 
-> **權威來源＝ [core_nature/lib_spec.md](../../core_nature/lib_spec.md)**（＋ `axis_spec.md`）。本節是給碰碼工作流的速查摘要，細節與最新狀態以 lib_spec.md 為準。
+> **權威來源＝ [docs/spec/lib_spec.md](../../docs/spec/lib_spec.md)**（＋ `axis_spec.md`）。本節是給碰碼工作流的速查摘要，細節與最新狀態以 lib_spec.md 為準。
 
 這是**跨元件的硬契約**，Function Hub / Indexer 的可行性完全建立在它之上。實作任何新函式時，metadata 不是可選項。`src/ai_core/_core.py` 提供的 API（純宣告 / 顯式攔截拆分模型）：
 
@@ -61,4 +61,4 @@
 - **零外部相依**：新程式碼只用 Python 3.11+ 標準庫（見鐵律 1）。引入任何第三方套件前必須有明確理由並先確認。
 - **shell 一等公民**：函式以 CLI 為主介面，每個函式實作 `--metadata`；不為了 Python API 好用而犧牲 CLI 清晰度。
 - **單檔行數門檻** 300 行（與 [DEV-GUIDE](../../DEV-GUIDE.md) 觸發 A 一致）；本質不可分的單體核心／規範（如 `_core.py`、`lib_spec.md`）可超標保留。
-- **改動軸定義／核心 API／測試數量時**：同步更新 `core_nature/` 對應規範、[workflows/testing.md](../testing.md) 的測試數字，與相關導航 index（鐵律 5）。
+- **改動軸定義／核心 API／測試數量時**：同步更新 `docs/spec/` 對應規範、[workflows/testing.md](../testing.md) 的測試數字，與相關導航 index（鐵律 5）。

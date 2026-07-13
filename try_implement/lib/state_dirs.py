@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """state_dirs — 「標準狀態目錄慣例」的參考實作。
 
-對應 core_nature/composite_spec.md §「標準狀態目錄慣例（Standard State Directory
+對應 docs/spec/composite_spec.md §「標準狀態目錄慣例（Standard State Directory
 Convention）」。當程式宣告 ``state: "stateful_external"`` 且在 terminal 環境執行時，
 其外部狀態存放在工作目錄下這四個位置之一：
 

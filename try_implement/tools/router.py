@@ -9,7 +9,7 @@ mapping 來源：一個 JSON 設定檔（``--routes``）。格式：
     {
       "routes": {
         "<name>": {"path": "<可執行檔路徑>", "type": "exec"},
-        "echo":   {"path": "../funcs/echo.sh", "type": "exec"}
+        "echo":   {"path": "../examples/echo.sh", "type": "exec"}
       }
     }
 

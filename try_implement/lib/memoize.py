@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """memoize — 「記憶化慣例（Memoization Convention）」原型。
 
-⚠️ 這條慣例在 core_nature/ 中【尚未定案】。session_resume.md 把它列為「狀態恢復家族
+⚠️ 這條慣例在 docs/spec/ 中【尚未定案】。session_resume.md 把它列為「狀態恢復家族
 的第二條」，並留了三個開放決策。使用者外出期間授權我自行拍板——以下是我的決定與理由，
 供使用者回來後評估。本檔是 try_implement 的提案，未動 src/ai_core。
 

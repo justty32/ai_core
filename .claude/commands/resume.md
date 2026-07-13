@@ -11,14 +11,14 @@ $ARGUMENTS
 1. **`roadmap.md`** — 北極星／戰略主文件，判斷「該不該做、先做哪個」的尺。**一定先讀**。
 2. 再依當下焦點擇一：
    - 懸案 → `try_implement/DECISIONS.md`（待定奪的規範決策清單）。
-   - 規範現況 → `core_nature/composite_spec.md`（及 `core_nature/` 其餘 spec）。
+   - 規範現況 → `docs/spec/composite_spec.md`（及 `docs/spec/` 其餘 spec）。
 3. **`SESSION-LOG.md`** — 接續上次工作的進度日誌（open 進度＋待使用者事項見 `WAIT_USER.md`）。
 
 ## 必須先內化的分層（讀懂本 repo 的關鍵）
 | 層 | 位置 | 可信度 |
 |---|---|---|
 | 北極星／戰略 | `roadmap.md` | 主文件 |
-| 規範 (spec) | `core_nature/` | 已扶正＝定案；標「待填／待議」＝未定 |
+| 規範 (spec) | `docs/spec/` | 已扶正＝定案；標「待填／待議」＝未定 |
 | 原型 (探索) | `try_implement/` | 多為提案，非定案；扶正狀態見其 `DECISIONS.md` |
 
 正式核心程式碼只有一處：`src/ai_core/_core.py`（＋ `tests/test_core.py`）。
