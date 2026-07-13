@@ -468,7 +468,7 @@ if __name__ == &quot;__main__&quot;:
 <tr>
 <td><code>state_dirs</code></td>
 <td>array</td>
-<td>遵守標準目錄慣例時使用的目錄子集；見 <a href="../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）</td>
+<td>遵守標準目錄慣例時使用的目錄子集；見 <a href="../../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）</td>
 </tr>
 </tbody>
 </table>
@@ -497,7 +497,7 @@ if __name__ == &quot;__main__&quot;:
 <p><code>&quot;stateful_internal&quot;</code>（狀態存於程序記憶體）理論上存在，但程序結束後記憶體釋放，實務上等同於每次 one-shot 都從外部重載狀態，故不列為獨立值。</p>
 </blockquote>
 <h3>標準狀態目錄慣例（Terminal 實作）</h3>
-<p><code>state: &quot;stateful_external&quot;</code> 在 terminal 環境下的標準路徑慣例（<code>.config</code>、<code>.cache</code>、<code>.state</code>、<code>.data</code>），以及其對 §1 / §5 / §6 的跨軸影響，定義於 <a href="../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）。</p>
+<p><code>state: &quot;stateful_external&quot;</code> 在 terminal 環境下的標準路徑慣例（<code>.config</code>、<code>.cache</code>、<code>.state</code>、<code>.data</code>），以及其對 §1 / §5 / §6 的跨軸影響，定義於 <a href="../../core_nature/composite_spec.md"><code>composite_spec.md</code></a>（<a href="doc_08_composite.html">doc_08_composite.md</a>）。</p>
 <h3>與 §2 的關聯</h3>
 <table>
 <thead>
@@ -972,7 +972,7 @@ def main():
 <p>這是繼 §1–§6 之後<strong>新增</strong>的軸。前八軸描述的都是「執行特性」（怎麼跑、有無狀態、能否中斷…），
 預設假設函式是<strong>確定性</strong>的（同輸入 → 同輸出）。但 ai_core 的核心對象之一是 LLM——一個天生
 <strong>隨機</strong>的函式。這個軸把「此環節是隨機的」標出來，並承載治理原則所需的<strong>證書</strong>。詳細的軸層
-討論見 <a href="../core_nature/axis_spec.md"><code>axis_spec.md</code> §9</a>（<a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>）。</p>
+討論見 <a href="../../core_nature/axis_spec.md"><code>axis_spec.md</code> §9</a>（<a href="doc_05_axes_metadata.html">doc_05_axes_metadata.md</a>）。</p>
 </blockquote>
 <h3>metadata field</h3>
 <table>

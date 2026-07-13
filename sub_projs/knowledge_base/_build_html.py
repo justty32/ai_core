@@ -2,7 +2,7 @@
 """把 knowledge_base/ 內所有 .md 渲染成共用樣式的 HTML。
 
 一次性建置腳本。需 .venv（markdown-it-py）；產出為自包含靜態頁（僅依賴同層 kb.css）。
-用法：.venv/bin/python knowledge_base/_build_html.py
+用法：.venv/bin/python sub_projs/knowledge_base/_build_html.py
 """
 from __future__ import annotations
 import re

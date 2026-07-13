@@ -27,7 +27,7 @@
 
 ## ✅ 已收斂（2026-06-21）：ATP v0 — V0 垂直切片的資料結構定案
 
-`kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE）三輪收斂出 V0 的具體規格 **ATP v0（Asset Transfer Protocol）**。**注意：這是 `kb-ext/` 的設計收斂，尚未寫成 code，`_core.py` / `core_nature/` 一行未動。** 開工後才落地成 `try_implement/` 並回填狀態。
+`sub_projs/kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE）三輪收斂出 V0 的具體規格 **ATP v0（Asset Transfer Protocol）**。**注意：這是 `sub_projs/kb-ext/` 的設計收斂，尚未寫成 code，`_core.py` / `core_nature/` 一行未動。** 開工後才落地成 `try_implement/` 並回填狀態。
 
 | 凍結項 | 決策 | 出處 |
 |---|---|---|

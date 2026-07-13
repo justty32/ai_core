@@ -321,7 +321,7 @@ def main():
 | key | 型別 | 說明 |
 |---|---|---|
 | `state` | string | `"stateless"` \| `"stateful_external"` |
-| `state_dirs` | array | 遵守標準目錄慣例時使用的目錄子集；見 [`composite_spec.md`](../core_nature/composite_spec.md)（[doc_08_composite.md](doc_08_composite.md)） |
+| `state_dirs` | array | 遵守標準目錄慣例時使用的目錄子集；見 [`composite_spec.md`](../../core_nature/composite_spec.md)（[doc_08_composite.md](doc_08_composite.md)） |
 
 ### 說明
 
@@ -338,7 +338,7 @@ def main():
 
 ### 標準狀態目錄慣例（Terminal 實作）
 
-`state: "stateful_external"` 在 terminal 環境下的標準路徑慣例（`.config`、`.cache`、`.state`、`.data`），以及其對 §1 / §5 / §6 的跨軸影響，定義於 [`composite_spec.md`](../core_nature/composite_spec.md)（[doc_08_composite.md](doc_08_composite.md)）。
+`state: "stateful_external"` 在 terminal 環境下的標準路徑慣例（`.config`、`.cache`、`.state`、`.data`），以及其對 §1 / §5 / §6 的跨軸影響，定義於 [`composite_spec.md`](../../core_nature/composite_spec.md)（[doc_08_composite.md](doc_08_composite.md)）。
 
 ### 與 §2 的關聯
 
@@ -726,7 +726,7 @@ ai_core.register(
 > 這是繼 §1–§6 之後**新增**的軸。前八軸描述的都是「執行特性」（怎麼跑、有無狀態、能否中斷…），
 > 預設假設函式是**確定性**的（同輸入 → 同輸出）。但 ai_core 的核心對象之一是 LLM——一個天生
 > **隨機**的函式。這個軸把「此環節是隨機的」標出來，並承載治理原則所需的**證書**。詳細的軸層
-> 討論見 [`axis_spec.md` §9](../core_nature/axis_spec.md)（[doc_05_axes_metadata.md](doc_05_axes_metadata.md)）。
+> 討論見 [`axis_spec.md` §9](../../core_nature/axis_spec.md)（[doc_05_axes_metadata.md](doc_05_axes_metadata.md)）。
 
 ### metadata field
 

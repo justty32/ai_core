@@ -10,7 +10,7 @@
 
 1. [roadmap.md](roadmap.md)（北極星）
 2. [ideas/notes/20260702-2003-回到初心-llm-as-function.md](ideas/notes/20260702-2003-回到初心-llm-as-function.md)（方向定調）
-3. [core_handy/notes/00_index.md](core_handy/notes/00_index.md)（九軸定案、C++ 地基）
+3. [sub_projs/core_handy/notes/00_index.md](sub_projs/core_handy/notes/00_index.md)（九軸定案、C++ 地基）
 4. [try_implement/DECISIONS.md](try_implement/DECISIONS.md)（懸案清單）
 
 > 最新一輪長談（第一目標問題換 galgame）見 [ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。

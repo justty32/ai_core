@@ -189,7 +189,7 @@
 
 ### 6.1 v0 切片收斂（2026-06-21，圓桌三輪定案）
 
-`kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE 四角色）把上面的抽象切片收斂成**可開工的具體規格**，核心是一個凍結的資料結構 **ATP v0（Asset Transfer Protocol）**：
+`sub_projs/kb-ext/discussion_logs/round_1~3` 的專家圓桌（SSE/SSA/SGA/AIRE 四角色）把上面的抽象切片收斂成**可開工的具體規格**，核心是一個凍結的資料結構 **ATP v0（Asset Transfer Protocol）**：
 
 - **任務**：在錨點 `# AI_CORE:INSERT_HERE` 插入一個函式（成功用確定性驗證：插入後 `ast.parse` 過 + 目標節點存在 + 簽名符合）。
 - **單一資料結構**：一個 **append-only 的 asset JSON**，從 `idea.py`（工廠）→ `hub`（轉運站 + trace 接力）→ `sfc.py`（消費）逐站追加欄位、**不改寫上游**。四角色的訴求全掛在它身上，不另開子系統。
@@ -199,7 +199,7 @@
 - **治理**：證書是 asset 上的 `certificate` 欄位（寄生第九軸 dict），**標註不攔截**；`status ∈ {uncertified, syntax_ok, rejected}`，`rejected` 帶 `reason ∈ {guardrail_violation, retry_exhausted}`（安全否決 vs 能力不足，撤照意義不同）。AST 裁剪三層安全護欄 fail-closed。
 - **評測**：`TrimTrace` + tier×method pivot 表（raw vs ast_skeleton），把「飛輪行不行」變成可被數據反駁的命題；配對主鍵 `task_id`、每格 N≥30。
 
-> 全部純標準庫（`ast`/`json`/`subprocess`/`uuid`/`os`），不破壞 `dependencies=[]`。完整規格見 `kb-ext/discussion_logs/round_2_synthesis.md`（統一 schema）與 `round_3_ratification.md`（三條凍結補丁 P1/P2/P3）。**開工次序**：`asset.py → trace.py → skeleton.py → isolation.py → line_assistant.py → demos/v0_pipeline.py`。
+> 全部純標準庫（`ast`/`json`/`subprocess`/`uuid`/`os`），不破壞 `dependencies=[]`。完整規格見 `sub_projs/kb-ext/discussion_logs/round_2_synthesis.md`（統一 schema）與 `round_3_ratification.md`（三條凍結補丁 P1/P2/P3）。**開工次序**：`asset.py → trace.py → skeleton.py → isolation.py → line_assistant.py → demos/v0_pipeline.py`。
 
 > ⚠️ 此切片**尚未開工**——以上為設計收斂，落地時才寫成 `try_implement/` code 並更新本節狀態。
 
