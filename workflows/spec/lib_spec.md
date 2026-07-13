@@ -117,7 +117,7 @@ JSON Schema 物件，描述**單筆資料的結構**（`format: "ndjson"` 時逐
 - 慣例上搭配 `format: "json"` / `"ndjson"` 使用，但不強制。
 - **這個欄位承重兩件事**：(1) 解「接縫 typing」——組合調用鏈時，下游能靜態知道上游輸出長什麼樣；
   (2) 它是日後 **deopt guard 的原料**——固化物的輸出過不過 schema，就是最便宜的執行期守衛
-  （見 `ideas/notes/20260702-2003-回到初心-llm-as-function.md` §13.2）。
+  （見 `workflows/notes/20260702-2003-回到初心-llm-as-function.md` §13.2）。
 
 #### `channel_constraint`（選填）
 
@@ -830,7 +830,7 @@ ai_core.register(nondeterministic={
 
 ## 非軸欄位：`reliability`（可靠度數值）
 
-> 2026-07-03 新增，落實「回到初心」逐點決斷的近期焦點②（`ideas/notes/20260702-2003-回到初心-llm-as-function.md`
+> 2026-07-03 新增，落實「回到初心」逐點決斷的近期焦點②（`workflows/notes/20260702-2003-回到初心-llm-as-function.md`
 > §12.1）：完整憑證機制押後，**目前的最低要求＝meta 輸出一個「可靠度」數值、可變動**。
 
 ### metadata field

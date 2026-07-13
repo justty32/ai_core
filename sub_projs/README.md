@@ -19,5 +19,5 @@
 | html（手工多頁總覽站） | [docs/html/](../docs/html/index.html) |
 | core_handy（C++ 原型地基） | [ver_1/try_implement/core_handy/](ver_1/try_implement/core_handy/) |
 | try_implement（原型遊樂場） | [ver_1/try_implement/](ver_1/try_implement/) |
-| docs（舊架構文檔） | [archive/architecture_docs/](../archive/architecture_docs/) |
+| docs（舊架構文檔） | [archive/architecture_docs/](ver_1/archive/architecture_docs/) |
 | funcs/echo.sh（範例函式） | [ver_1/examples/echo.sh](ver_1/examples/echo.sh) |

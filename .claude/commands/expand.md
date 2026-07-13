@@ -7,7 +7,7 @@ argument-hint: "[要擴展的主題 slug 或檔名，可留空=最新 notes]"
 ## 對象
 $ARGUMENTS
 
-留空＝取 `workflows/ideas/notes/` 最新一份。先決定要擴展哪一份 `workflows/ideas/notes/<slug 檔>`。
+留空＝取 `workflows/notes/` 最新一份。先決定要擴展哪一份 `workflows/notes/<slug 檔>`。
 
 ## 前置：設定要打哪個 LLM
 `idea` 工具依環境變數挑 backend，未設定則回 EchoBackend（只回顯，測試用）。要真發想先設定：
@@ -22,7 +22,7 @@ export AI_CORE_LLM_MODEL=...
 先 `date +%Y%m%d-%H%M` 取時間戳，把選定的 notes 檔 pipe 進 `idea expand`，輸出落到 `workflows/ideas/brainstorm/`：
 
 ```bash
-python3 sub_projs/ver_1/try_implement/tools/idea.py expand < workflows/ideas/notes/<slug 檔> \
+python3 sub_projs/ver_1/try_implement/tools/idea.py expand < workflows/notes/<slug 檔> \
   > workflows/ideas/brainstorm/<時間戳>-expand-<slug>.md
 ```
 
@@ -30,5 +30,5 @@ python3 sub_projs/ver_1/try_implement/tools/idea.py expand < workflows/ideas/not
 
 ## 規矩
 - **不改原文／notes**；產物是 `workflows/ideas/brainstorm/` 下的獨立檔。
-- 跑完後在產出檔頂端補一行 `> 來源：workflows/ideas/notes/<slug 檔>`，並把重點摘要回報給使用者。
+- 跑完後在產出檔頂端補一行 `> 來源：workflows/notes/<slug 檔>`，並把重點摘要回報給使用者。
 - 寧可多給選項讓使用者挑。
