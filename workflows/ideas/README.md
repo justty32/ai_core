@@ -15,7 +15,7 @@
 | **idea** | 剛捕捉的點子、概念拓展草稿 | 口述線 [intake/](../intake/README.md)（raw→cleaned）→[notes/](../notes/) 匯總筆記；腦暴 [`brainstorm/`](brainstorm/)（本夾）；[try_implement/docs/](../../sub_projs/ver_1/try_implement/docs/)（概念拓展）|
 | **research** | 外部論文與北極星對撞的火花表 | [`research/`](research/)（本夾）|
 | **spec 候選** | 已具體到有函式簽章／流程、但尚未定案的厚檔 | 本夾頂層厚檔（如 crystallization_engine_blueprint.md）＋ [try_implement/DECISIONS.md](../../sub_projs/ver_1/try_implement/DECISIONS.md) A 區懸案 |
-| **spec 定案** | 經 `/spec` 扶正後的權威規範 | [spec/](../spec/) |
+| **spec 定案** | 經 spec 工作流扶正後的權威規範 | [spec/](../spec/) |
 | **plan** | 已排出開工次序與驗收標準的施工計畫 | [plans/](../plans/README.md)（施工規劃）＋ [roadmap.md](../roadmap.md) §6（戰略 v0 最小垂直切片）|
 | **build** | 真的寫出來 | [try_implement/](../../sub_projs/ver_1/try_implement/) 原型 → `sub_projs/ver_1/src/ai_core/` 正式核心（現已封存進 ver_1）|
 
@@ -25,7 +25,7 @@
 
 | 子項 | 內容 |
 |------|------|
-| `brainstorm/` | `/critique`（找漏洞）／`/expand`（擴展）產物 |
+| `brainstorm/` | critique（找漏洞）／expand（擴展）產物 |
 | [`research/`](research/) | 論文碰撞火花表（paper_reading 論文群 × ai_core 北極星）|
 | `crystallization_engine_blueprint.md` | spec 候選厚檔（見下表）|
 

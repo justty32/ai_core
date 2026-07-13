@@ -2,28 +2,17 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-從 TTemp 借來的**頭腦風暴軌**，與本 repo 的規劃／規範工作並行、互不干擾。兩個 slash command 各對應一種腦暴動作，產物落在 [ideas/brainstorm/](ideas/brainstorm/)。
+從 TTemp 借來的**頭腦風暴軌**，與本 repo 的規劃／規範工作並行、互不干擾。兩種腦暴動作，產物落在 [ideas/brainstorm/](ideas/brainstorm/)。
 
-> 口述線一條龍（`/intake`：原文逐字 → 初步整理 → 匯總筆記）已獨立成自己的工作流 [intake](intake/README.md)。
+> 口述線一條龍（原文逐字 → 初步整理 → 匯總筆記）已獨立成自己的工作流 [intake](intake/README.md)。
 
-## 兩個指令
+## 兩種動作
 
-| 指令 | 用途 | 產物落點 |
+| 動作 | 用途 | 產物落點 |
 |------|------|---------|
-| `/critique` | 頭腦風暴・找漏洞（指出哪裡有錯／考慮不周）| `ideas/brainstorm/` |
-| `/expand` | 頭腦風暴・擴展靈感（把點子變大、變多）| `ideas/brainstorm/` |
+| **critique** | 頭腦風暴・找漏洞（指出哪裡有錯／考慮不周）| `ideas/brainstorm/` |
+| **expand** | 頭腦風暴・擴展靈感（把點子變大、變多）| `ideas/brainstorm/` |
 
-## ai_core 特化（2026-06-08）：dogfood 自己的 LLM 基礎設施
+## 備註
 
-這兩個指令的 LLM 加工**不派 Claude Code agent，改 shell out 給 [`idea.py`](../sub_projs/ver_1/try_implement/tools/idea.py) 打真 API**（dogfood ai_core 自己的 LLM 基礎設施）。
-
-- **`/critique`、`/expand` 同步 shell out** 給 `idea critique` / `idea expand`。
-- `idea.py` 子命令：`critique` / `expand`（純 filter）等。預設經**元件 1 entry manager** 路由，串起 `bind`（元件 2）→ entry manager（元件 1）→ 真 backend → API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。這是 roadmap「廉價小模型消費者」的第一個真實串接。
-
-## 接真 LLM 的環境變數
-
-要接真 LLM 需設 `AI_CORE_LLM_PROVIDER` / `AI_CORE_LLM_BASE_URL` / `AI_CORE_LLM_MODEL` 環境變數；**未設則 EchoBackend 回顯**（測試用）。
-
-## 權威來源
-
-各 slash command 的細則自含於 `.claude/commands/{critique,expand}.md`；idea 工具本身見 [try_implement/README.md](../sub_projs/ver_1/try_implement/README.md)。
+原本這兩個動作的 LLM 加工是 shell out 給 ai_core 自己的 `idea.py`（dogfood 自家 LLM 基礎設施，經元件 1 entry manager 路由、宣告第九軸 `nondeterministic:true`）。該工具已隨 Python 實作封存進 [ver_1](../sub_projs/ver_1/try_implement/README.md)——當前無在跑的實作，要用把它當參考。

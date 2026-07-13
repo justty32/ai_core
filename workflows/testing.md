@@ -2,7 +2,7 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-跑本 repo 全部測試並回報。鐵律要求「改動後跑驗證確認行為不變」，本檔就是那套指令。對應 slash command `/test`。
+跑本 repo 全部測試並回報。鐵律要求「改動後跑驗證確認行為不變」，本檔就是那套指令。
 
 > **備註**：測試對象整套已封存進 [`sub_projs/ver_1/`](../sub_projs/ver_1/)（封存版）；testing 現在是對那份封存快照做**回歸驗證**（確認參考版行為未壞），不是主線開發驗證。下列指令均在 `sub_projs/ver_1/` 目錄下跑（`src/` `tests/` `try_implement/` `pyproject.toml` 都在該處）。
 

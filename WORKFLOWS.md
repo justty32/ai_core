@@ -2,18 +2,18 @@
 
 ← [AGENTS.md](AGENTS.md)｜專案地圖 [INDEX.md](INDEX.md)
 
-你（使用者）說要做某件事 → **從這張表選對應工作流 → 讀它的「入口檔」→ 就知道要做什麼**。每個工作流的細節都在它自己的入口檔，不在這裡。多數工作流同時掛著一個同名 slash command（`.claude/commands/`），打一句即「變身」該模式；指令只是模式切換與重點摘要，**權威來源是各入口檔**。
+你（使用者）說要做某件事 → **從這張表選對應工作流 → 讀它的「入口檔」→ 就知道要做什麼**。每個工作流的細節都在它自己的入口檔，不在這裡——**權威來源永遠是各入口檔**。
 
 ## 你想做什麼 → 用哪個工作流
 
 | 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
 |--------------|--------|-------------------|
-| 「接續上次工作」`/resume` | **resume** | [SESSION-LOG.md](SESSION-LOG.md)（含固定閱讀順序）|
-| 「跑測試 / 驗證」`/test` | **testing** | [workflows/testing.md](workflows/testing.md) |
-| 「規範扶正」`/spec` | **spec** | [sub_projs/ver_1/try_implement/DECISIONS.md](sub_projs/ver_1/try_implement/DECISIONS.md)（懸案清單）＋ [workflows/spec/](workflows/spec/) |
-| 「原型探索」`/proto` | **proto** | [sub_projs/ver_1/try_implement/README.md](sub_projs/ver_1/try_implement/README.md) |
-| 「口述記點子／整理成筆記」`/intake` | **intake** | [workflows/intake/README.md](workflows/intake/README.md)（產物：raw→cleaned→[notes/](workflows/notes/)）|
-| 「頭腦風暴：找漏洞／擴展」`/critique` `/expand` | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家見 [workflows/ideas/README.md](workflows/ideas/README.md) |
+| 「接續上次工作」 | **resume** | [SESSION-LOG.md](SESSION-LOG.md)（含固定閱讀順序）|
+| 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md) |
+| 「規範扶正」 | **spec** | [sub_projs/ver_1/try_implement/DECISIONS.md](sub_projs/ver_1/try_implement/DECISIONS.md)（懸案清單）＋ [workflows/spec/](workflows/spec/) |
+| 「原型探索」 | **proto** | [sub_projs/ver_1/try_implement/README.md](sub_projs/ver_1/try_implement/README.md) |
+| 「口述記點子／整理成筆記」 | **intake** | [workflows/intake/README.md](workflows/intake/README.md)（產物：raw→cleaned→[notes/](workflows/notes/)）|
+| 「頭腦風暴：找漏洞／擴展」 | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家見 [workflows/ideas/README.md](workflows/ideas/README.md) |
 | 「排實作規劃 / 施工單」 | **plans** | [workflows/plans/README.md](workflows/plans/README.md) |
 | 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap.md) |
 | 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
@@ -41,7 +41,7 @@
 
 ## 規劃管線（點子怎麼變成核心）
 
-點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[workflows/intake/](workflows/intake/README.md)（口述 raw→cleaned→[notes/](workflows/notes/)）＋[workflows/ideas/](workflows/ideas/README.md)（brainstorm 腦暴＋[sub_projs/ver_1/try_implement/docs/](sub_projs/ver_1/try_implement/docs/) 概念拓展）→ research＝[workflows/ideas/research/](workflows/ideas/research/) → spec 候選＝workflows/ideas/ 頂層厚檔＋[DECISIONS.md](sub_projs/ver_1/try_implement/DECISIONS.md) A 區 → spec 定案＝[workflows/spec/](workflows/spec/)（經 `/spec` 扶正）→ plan＝[workflows/plans/](workflows/plans/README.md)（施工規劃）＋[roadmap.md](workflows/roadmap.md) §6（戰略 v0 切片）→ build＝[sub_projs/ver_1/try_implement/](sub_projs/ver_1/try_implement/) 原型 → `sub_projs/ver_1/src/ai_core/`。詳見 [workflows/ideas/README.md](workflows/ideas/README.md)。**注意**：build 層（try_implement→src）現已整套封存進 `sub_projs/ver_1/`，當前**無**在寫的實作——主線集中在前段規劃層（roadmap＋ideas＋spec＋plans）。
+點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[workflows/intake/](workflows/intake/README.md)（口述 raw→cleaned→[notes/](workflows/notes/)）＋[workflows/ideas/](workflows/ideas/README.md)（brainstorm 腦暴＋[sub_projs/ver_1/try_implement/docs/](sub_projs/ver_1/try_implement/docs/) 概念拓展）→ research＝[workflows/ideas/research/](workflows/ideas/research/) → spec 候選＝workflows/ideas/ 頂層厚檔＋[DECISIONS.md](sub_projs/ver_1/try_implement/DECISIONS.md) A 區 → spec 定案＝[workflows/spec/](workflows/spec/)（經 spec 工作流扶正）→ plan＝[workflows/plans/](workflows/plans/README.md)（施工規劃）＋[roadmap.md](workflows/roadmap.md) §6（戰略 v0 切片）→ build＝[sub_projs/ver_1/try_implement/](sub_projs/ver_1/try_implement/) 原型 → `sub_projs/ver_1/src/ai_core/`。詳見 [workflows/ideas/README.md](workflows/ideas/README.md)。**注意**：build 層（try_implement→src）現已整套封存進 `sub_projs/ver_1/`，當前**無**在寫的實作——主線集中在前段規劃層（roadmap＋ideas＋spec＋plans）。
 
 ## 跨工作流的活狀態（repo 根）
 
