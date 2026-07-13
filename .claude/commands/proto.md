@@ -2,7 +2,7 @@
 description: 原型探索 — 在 try_implement/ 先寫出來跑跑看，暴露設計缺口
 argument-hint: "[要探索的點子或元件，可留空]"
 ---
-你現在進入 **proto（原型探索）模式**：在 `try_implement/` 遊樂場做探索性實作。根目錄 `CLAUDE.md` 最高優先。
+你現在進入 **proto（原型探索）模式**：在 `try_implement/` 遊樂場做探索性實作。根目錄 `AGENTS.md`（頂層路由器）最高優先。
 
 ## 對象
 $ARGUMENTS
@@ -16,7 +16,7 @@ $ARGUMENTS
 - `tools/` — indexer／router／switch／sfc／hub／llm_entry_manager／chain
 - `lib/` — 複合規範參考實作＋基礎設施＋llm_call
 - `demos/` — 可跑 demo
-- 新增工具一律實作 `--metadata`（跨元件硬契約，見 `CLAUDE.md`「核心契約」）。
+- 新增工具一律實作 `--metadata`（跨元件硬契約，見 `workflows/common/conventions.md`「核心契約」）。
 
 ## 流程
 1. 在合適子目錄寫原型；沿用 `ai_core` 真 library 的 `register`/`intercept`（純宣告＋顯式攔截）。

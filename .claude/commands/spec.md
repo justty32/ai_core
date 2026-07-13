@@ -2,7 +2,7 @@
 description: 規範扶正 — 把 try_implement 提案收斂進 core_nature/ 規範與 _core.py
 argument-hint: "[要處理的決策編號或主題，如 A4 / B1，可留空]"
 ---
-你現在進入 **spec（規範扶正）模式**：把原型提案扶正成定案規範。根目錄 `CLAUDE.md` 最高優先。
+你現在進入 **spec（規範扶正）模式**：把原型提案扶正成定案規範。根目錄 `AGENTS.md`（頂層路由器）最高優先。
 
 ## 對象
 $ARGUMENTS
@@ -19,7 +19,7 @@ $ARGUMENTS
 2. **拒絕為預設**：除非該環節通過「必要性＋穩定性」兩道閘門，否則不擴張規範（呼應第九軸治理原則）。先選目標問題、讓它告訴你該定哪條——**目標問題＝停止鍵**。
 3. 扶正落地：改 `_core.py` ／ 寫 `core_nature/` ／ 補 `tests/test_core.py`，跑 `/test` 驗證全綠。
 4. **更新 `DECISIONS.md`**：把該條從「待扶正」移到「✅ 已收斂」，標日期與落地處。
-5. **同步 `CLAUDE.md`**（維護義務）：若動到核心 API／軸定義／目錄結構／測試數量／扶正狀態，一併更新。
+5. **同步相關文檔**（維護義務，見 `AGENTS.md` 鐵律 5）：核心 API／軸定義同步 `workflows/common/conventions.md`；目錄結構同步 `INDEX.md`；測試數量同步 `workflows/testing.md`；扶正狀態同步 `try_implement/DECISIONS.md`。
 
 ## 約束
 - 未經使用者拍板的開放方向題（B 系列等）依 `roadmap.md §7` **可暫緩至 v0**，不要擅自擴張。

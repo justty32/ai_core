@@ -2,17 +2,17 @@
 description: 接續上次工作 — 依固定閱讀順序重建上下文並給出下一步
 argument-hint: "[本次想聚焦的主題，可留空]"
 ---
-你現在進入 **resume 模式**：快速重建 ai_core 的工作上下文。根目錄 `CLAUDE.md` 最高優先（尤其「專案狀態三層」與「設計哲學」）。
+你現在進入 **resume 模式**：快速重建 ai_core 的工作上下文。根目錄 `AGENTS.md`（頂層路由器）最高優先；權威來源為 `SESSION-LOG.md` ＋ `roadmap.md`（固定閱讀順序已收在 `SESSION-LOG.md`）。
 
 ## 本次焦點
 $ARGUMENTS
 
-## 固定閱讀順序（出自 `CLAUDE.md`「接續工作的閱讀順序」）
+## 固定閱讀順序（出自 `SESSION-LOG.md`「接續工作的固定閱讀順序」）
 1. **`roadmap.md`** — 北極星／戰略主文件，判斷「該不該做、先做哪個」的尺。**一定先讀**。
 2. 再依當下焦點擇一：
    - 懸案 → `try_implement/DECISIONS.md`（待定奪的規範決策清單）。
    - 規範現況 → `core_nature/composite_spec.md`（及 `core_nature/` 其餘 spec）。
-3. **`progress.md`** — 接續上次工作的 resume 指標。
+3. **`SESSION-LOG.md`** — 接續上次工作的進度日誌（open 進度＋待使用者事項見 `WAIT_USER.md`）。
 
 ## 必須先內化的分層（讀懂本 repo 的關鍵）
 | 層 | 位置 | 可信度 |

@@ -8,7 +8,9 @@
 
 | 項目 | 原位置 | 被誰取代 |
 |---|---|---|
-| `thinking/thinking*.md` ×10 | repo 根目錄 | `roadmap.md` + `core_nature/`（見 CLAUDE.md 開頭說明）。這 10 個檔彼此以裸檔名互相引用，整組一起搬故引用仍成立。 |
+| `thinking/thinking*.md` ×10 | repo 根目錄 | `roadmap.md` + `core_nature/`（見 AGENTS.md 開頭說明）。這 10 個檔彼此以裸檔名互相引用，整組一起搬故引用仍成立。 |
 | `overview.html` | repo 根目錄 | `html/`（多頁版：index/architecture/status/…） |
+| `progress.md` | repo 根目錄 | `SESSION-LOG.md`（open-only 進度 hub）取代；此檔保留里程碑史脈絡。歸檔於 2026-07-13。 |
+| `other.md` | repo 根目錄 | 2026-05-21 舊散記，內容已被 `roadmap.md` / `core_nature/` 的演化取代。歸檔於 2026-07-13。 |
 
-歸檔於 2026-07-02。
+首批歸檔於 2026-07-02（thinking/、overview.html）。

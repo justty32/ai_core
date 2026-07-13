@@ -35,7 +35,7 @@
 | `tools/sfc.py` | **SFC（Small Function Center）**。Layer 0（store）/ 1a（intake）/ 1b（router）/ 2（forge server）/ **3（動態 add/remove/persist）/ 4（shell-kind timeout + 標準錯誤封套）**。git-style subcommand CLI。**已改接真 `ai_core`（宣告/攔截拆分，`import ai_core as meta`）解 Gap A/B/F；forge dispatch 已 trace-aware。** |
 | ~~`tools/meta_core.py`~~ | **已刪除（2026-05-26）**。其「放寬攔截 + `register_subcommand` + resolver」已扶正進 `src/ai_core/_core.py`，原型功成身退。 |
 | `tools/hub.py` | **Function Hub**（規範未定，本版自定義）。掃描函式 → 轉成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。 |
-| `tools/llm_entry_manager.py` | **LLM Entry Manager**（CLAUDE.md 元件 1）。singleton 資源 = persistent server（lib/server）+ consume rate（lib/singleton）+ backend。**backend 改由 `backend_from_env()` 依環境變數挑**（真 OpenAI/Anthropic 或 EchoBackend fallback），`--provider/--model/--base-url` 可覆寫。**`--socket <path>` 可長駐成 Unix socket daemon**（多個 one-shot caller 共用同一 RateMeter → consume rate 跨呼叫累計，解 Gap G）。 |
+| `tools/llm_entry_manager.py` | **LLM Entry Manager**（[workflows/common/conventions.md](../workflows/common/conventions.md) 五大元件之一）。singleton 資源 = persistent server（lib/server）+ consume rate（lib/singleton）+ backend。**backend 改由 `backend_from_env()` 依環境變數挑**（真 OpenAI/Anthropic 或 EchoBackend fallback），`--provider/--model/--base-url` 可覆寫。**`--socket <path>` 可長駐成 Unix socket daemon**（多個 one-shot caller 共用同一 RateMeter → consume rate 跨呼叫累計，解 Gap G）。 |
 | `tools/idea.py` | **點子捕捉軌的 LLM 工具**（把 `/intake /critique /expand` 的「派 agent」換成「打 API」）。git-style 子命令 `clean/notes/critique/expand`（純 filter）＋ `ingest`（口述一條龍寫檔）。預設經 **LLM Entry Manager** 路由（`--direct` 跳過）：給 `--socket`／`AI_CORE_LLM_SOCKET` 則連長駐 daemon（rate 累計），否則每次新開 process（fallback）。串起 bind→entry manager→真 backend→API。每個 LLM 子命令宣告第九軸 `nondeterministic:true`。 |
 | `tools/chain.py` | **chain**（組合維度的 CLI）。用 JSON 宣告 pipeline，stdin 依序流過各 stage；`--derive` 用 compose_meta 從各 stage 的 `--metadata` 推導複合 metadata。串起 call+compose+trace+compose_meta。 |
 | `tools/_common.py` | 共用小工具：把 `src/`（`import ai_core`）與 try_implement 根（`from lib import ...`）加進 `sys.path`。 |
@@ -59,7 +59,7 @@
 | `lib/singleton.py` | thinking_pending §4 | singleton 資源：RateMeter（多維 consume）+ RequestQueue（enqueue/dequeue/cancel）+ SingletonResource。 |
 | `lib/trace.py` | thinking_pending §5 | 調用鏈：結構化 stderr log + trace id 經 env 傳遞 + Collector 重建調用樹。 |
 | `lib/call.py` | thinking_pending §6 / thinking_oop | 跨邊界統一呼叫：InProcess / Subprocess / Http 同一個 `call(text)->text`。 |
-| `lib/llm_call.py` | CLAUDE.md 元件 2 | `llm_call(str)->str` 基底 + `bind()` context packing；可插拔 backend。**真 backend 已實作**：`OpenAIBackend`（`/chat/completions`，吃本地 ollama/llama.cpp/vLLM/OpenRouter）、`AnthropicBackend`（`/v1/messages`），都走 `lib/call.Http`（urllib，零相依）；`backend_from_env()` 依環境變數挑，預設 EchoBackend。 |
+| `lib/llm_call.py` | [workflows/common/conventions.md](../workflows/common/conventions.md) 五大元件之二 | `llm_call(str)->str` 基底 + `bind()` context packing；可插拔 backend。**真 backend 已實作**：`OpenAIBackend`（`/chat/completions`，吃本地 ollama/llama.cpp/vLLM/OpenRouter）、`AnthropicBackend`（`/v1/messages`），都走 `lib/call.Http`（urllib，零相依）；`backend_from_env()` 依環境變數挑，預設 EchoBackend。 |
 | `lib/compose.py` | **八軸之外的組合維度** | 多函數合作組合子：pipe / fanout / route / decompose + 馴化隨機性的 retry_until_valid / vote / best_of / guard。 |
 | `lib/interact.py` | **多函數交互**（組合維度的「來回」版） | 黑板 driver（`run`）+ actor_critic（LLM-as-judge）+ debate；`max_rounds` 強制安全閥防無限互踢。 |
 | `lib/compose_meta.py` | **組合的軸推導規則**（候選新概念） | `MetaFn` + `mpipe`/`mfanout_reduce`：從成員八軸推導複合函式 metadata（guarantee 取最弱、state/dirs 聯集、persistent 相依、fanout 寫衝突偵測）；`mretry` 強制 idempotent 前置契約。 |
