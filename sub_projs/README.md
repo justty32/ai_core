@@ -6,6 +6,7 @@
 
 | 目錄 | 內容 | 入口 |
 |------|------|------|
+| [llm_forge/](llm_forge/) | **galgame 台詞生成器規劃地**：ai_core 北極星的第一目標問題，固化階梯／雙錨驗證／評分級聯（套分層工作流模板）。目前僅規劃期文檔骨架，無程式碼。 | [AGENTS.md](llm_forge/AGENTS.md) |
 | [core_handy/](core_handy/) | **C++ 原型地基**：ac_helper（`src/ai_core/_core.py` 的 C++ 對應線），含 server-form LLM daemon（one-shot＋`--serve` socket＋跨呼叫 RateMeter）、九軸 `defs/axes.hpp`、設施碼 `impl/*.hpp`。事實基準 = `defs/`＋`impl/`，`notes/` 為歷史 WHY。 | [notes/00_index.md](core_handy/notes/00_index.md) |
 | [knowledge_base/](knowledge_base/) | **知識庫主快照**：把散在 roadmap/core_nature/try_implement/docs 的筆記無損壓縮成 `note_`／`doc_`／`code_` 三系列；含 `_build_html.py` 渲染器與整套自包含 HTML 靜態頁（`index.html`＋`kb.css`）。 | [00_INDEX.md](knowledge_base/00_INDEX.md) |
 | [kb-ext/](kb-ext/) | **知識庫擴充論述**：對 knowledge_base 的 12 篇擴充建議（`ext_01~12`，把願景操作化為規範）＋專家圓桌 `discussion_logs/`（SSE/SSA/SGA/AIRE 四角色三輪收斂 ATP v0 等）＋ `v0_blueprint/`。 | [00_INDEX.md](kb-ext/00_INDEX.md) |

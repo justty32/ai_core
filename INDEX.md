@@ -24,7 +24,7 @@
 | [core_nature/](core_nature/) | 規範家族（spec）8 檔：overview / terminal_model / execution_forms / axis_spec / composite_spec / cli_spec / lib_spec / data_format |
 | [try_implement/](try_implement/) | 原型遊樂場（多為提案）。入口 [README.md](try_implement/README.md)、懸案清單 [DECISIONS.md](try_implement/DECISIONS.md)；tools/ lib/ demos/ + 兩個 smoke_test |
 | [ideas/](ideas/README.md) | 點子與研究的家（入口 [README.md](ideas/README.md)，含規劃管線落點）：`raw/`（逐字）`cleaned/`（整理）`notes/`（匯總筆記）`brainstorm/`（critique/expand）`research/`（論文碰撞火花）＋頂層 spec 候選厚檔 |
-| [sub_projs/](sub_projs/README.md) | 半獨立子專案／知識庫快照／展示產物：core_handy（C++ 原型地基）、knowledge_base・kb-ext・kb-ss（知識庫三夾）、html（多頁總覽站）、docs（架構文檔）、funcs（範例函式）。入口 [sub_projs/README.md](sub_projs/README.md) |
+| [sub_projs/](sub_projs/README.md) | 半獨立子專案／知識庫快照／展示產物：llm_forge（galgame 台詞生成器規劃，第一目標問題）、core_handy（C++ 原型地基）、knowledge_base・kb-ext・kb-ss（知識庫三夾）、html（多頁總覽站）、docs（架構文檔）、funcs（範例函式）。入口 [sub_projs/README.md](sub_projs/README.md) |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | [archive/](archive/) | 歷史留存（已被取代、僅供追溯）：thinking/*.md、舊 overview.html、progress.md、other.md |
 
