@@ -1,5 +1,6 @@
 ---
 title: 固化引擎 v0 工程藍圖——wake-sleep 庫學習 × 經濟淘汰 × 接地憲法
+stage: spec-candidate  # 待與 core_nature/composite_spec.md 及 try_implement/DECISIONS.md A4 合併審議，決定是否經 /spec 扶正
 type: engineering-blueprint
 date: 2026-06-27
 status: 可實作藍圖（落成今夜的旗艦碰撞；非定案規範，規範權威仍在 core_nature/ 與 try_implement/DECISIONS.md）
@@ -7,7 +8,7 @@ source_of_truth: |
   ai_core 北極星＝roadmap.md（§2 工廠/消費者、§3.4 治理、§3.5 飛輪、§3.6 固化引擎、§6.1 ATP v0、§7/§8 待決）；
   已凍結資料結構＝sub_projs/kb-ext/discussion_logs/round_2_synthesis.md（ATP v0 asset schema）；
   固化圓桌前案＝sub_projs/kb-ext/discussion_logs/crystallization_round_1_synthesis.md（ready() 四閘 + 三重籠子 + 三段 chain）；
-  論文火花＝ideas/paper_collision_2026-06-27.md（彙整）＋三份 round2；論文真相層＝pas/paper_reading/summarize/*。
+  論文火花＝ideas/research/paper_collision_2026-06-27.md（彙整）＋三份 round2；論文真相層＝pas/paper_reading/summarize/*。
 collides:
   - ai_core 固化引擎（飛輪：撤照/認證）
   - AI設計討論 bucket-brigade 經濟淘汰（破產/入庫）

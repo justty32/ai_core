@@ -12,7 +12,7 @@
 | 「跑測試 / 驗證」`/test` | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「規範扶正」`/spec` | **spec** | [try_implement/DECISIONS.md](try_implement/DECISIONS.md)（懸案清單）＋ [core_nature/](core_nature/) |
 | 「原型探索」`/proto` | **proto** | [try_implement/README.md](try_implement/README.md) |
-| 「口述／點子／腦暴」`/intake` `/critique` `/expand` | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md) |
+| 「口述／點子／腦暴／研究比對／看某想法熟到哪」`/intake` `/critique` `/expand` | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家＋規劃管線落點見 [ideas/README.md](ideas/README.md) |
 | 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [roadmap.md](roadmap.md) |
 | 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 
@@ -36,6 +36,10 @@
 - 入口檔本身膨脹 → 一樣照結構整理原則拆。
 
 > **note**：`resume` / `spec` / `proto` / `roadmap` 這幾個工作流的權威入口是 repo 既有的權威文件（`SESSION-LOG.md` / `try_implement/DECISIONS.md` / `try_implement/README.md` / `roadmap.md`），不在 `workflows/` 下另立檔——只有 `testing` 與 `idea-capture` 有專屬的 `workflows/*.md`。
+
+## 規劃管線（點子怎麼變成核心）
+
+點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[ideas/](ideas/README.md)（raw→cleaned→notes、brainstorm、[try_implement/docs/](try_implement/docs/) 概念拓展）→ research＝[ideas/research/](ideas/research/) → spec 候選＝ideas/ 頂層厚檔＋[DECISIONS.md](try_implement/DECISIONS.md) A 區 → spec 定案＝[core_nature/](core_nature/)（經 `/spec` 扶正）→ plan＝[roadmap.md](roadmap.md) §6（v0 切片）→ build＝[try_implement/](try_implement/) 原型 → `src/ai_core/`。詳見 [ideas/README.md](ideas/README.md)。
 
 ## 跨工作流的活狀態（repo 根）
 

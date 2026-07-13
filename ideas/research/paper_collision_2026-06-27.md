@@ -1,5 +1,6 @@
 ---
 title: 論文碰撞・正式彙整版——paper_reading 論文群 × ai_core 北極星
+stage: research-idea
 type: collision-synthesis-canonical
 date: 2026-06-27
 status: 正式彙整（整合三份 round2 火花 + 跨融合，補上 ARC/MDL 與 FSM/自動機兩角度）
@@ -8,9 +9,9 @@ source_of_truth: |
   ai_core 北極星＝~/repo/ai_core/roadmap.md（§2 工廠/消費者、§3 治理、§5 兩層、§6 ATP v0、§7 待決、§8 開放）。
   本檔為碰撞「彙整／呈現層」，非定案規範；規範權威仍在 core_nature/ 與 try_implement/DECISIONS.md。
 integrates:
-  - ideas/paper_collision_round2_constrained_codegen.md   # (a) 受約束生成
-  - ideas/paper_collision_round2_program_synthesis.md      # (b) 程式合成/歸納
-  - ideas/paper_collision_round2_self_improving.md         # (c) 自我改進 agent
+  - ideas/research/paper_collision_round2_constrained_codegen.md   # (a) 受約束生成
+  - ideas/research/paper_collision_round2_program_synthesis.md      # (b) 程式合成/歸納
+  - ideas/research/paper_collision_round2_self_improving.md         # (c) 自我改進 agent
   - pas/paper_reading/deep/cross_fusion_aicore_aidesign.md # (d) 三方跨融合（Solomonoff/治理統一）
 adds:
   - 角度(e) ARC 當裁判 / 最短程式×Solomonoff 定位：2512.06104 2601.10904 2601.05280

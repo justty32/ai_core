@@ -1,3 +1,7 @@
+---
+stage: concept-draft
+---
+
 # LLM 隨機性馴化框架（concept draft）
 
 > try_implement 的概念框架文件。回應「如何用現有概念做個框架，規範 LLM 的隨機性，

@@ -1,5 +1,6 @@
 ---
 title: 論文碰撞・第二輪——程式合成／歸納 × ai_core 抽取+受約束生成
+stage: research-idea
 type: brainstorm-collision
 date: 2026-06-27
 sources:

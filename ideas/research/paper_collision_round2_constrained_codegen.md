@@ -1,3 +1,7 @@
+---
+stage: research-idea
+---
+
 # Paper Collision Round 2 — 神經符號／受約束生成 × ai_core 受約束程式碼生成
 
 > **任務**：把 `pas/paper_reading` 的神經符號（NeSy）／受約束解碼／程式合成論文，與 ai_core 的北極星（`roadmap.md`：貴稀有智能＝資產工廠 vs 便宜高頻智能＝資產消費者；第一目標＝程式碼助手＝上層結構化抽取＋下層受約束生成）對撞，產出可落地的火花。

@@ -1,5 +1,6 @@
 ---
 title: 論文碰撞・第二輪——自我改進 agent × ai_core 智能分層
+stage: research-idea
 type: collision-sparks
 date: 2026-06-27
 source_of_truth: ~/repo/pas/paper_reading/summarize/（各篇摘要） + deep/self_improving_program_synthesis.md

@@ -1,3 +1,7 @@
+---
+stage: concept-draft
+---
+
 # 多函數交互：組合維度（concept draft）
 
 > try_implement 的概念拓展文件。回應「在八軸與複合概念之外，往多函數的合作與交互拓展」。
