@@ -25,7 +25,7 @@
 
 > **權威來源＝ [workflows/spec/lib_spec.md](../spec/lib_spec.md)**（＋ `axis_spec.md`）。本節是給碰碼工作流的速查摘要，細節與最新狀態以 lib_spec.md 為準。
 
-這是**跨元件的硬契約**，Function Hub / Indexer 的可行性完全建立在它之上。實作任何新函式時，metadata 不是可選項。`sub_projs/ver_1/src/ai_core/_core.py` 提供的 API（純宣告 / 顯式攔截拆分模型）：
+這是**跨元件的硬契約**，Function Hub / Indexer 的可行性完全建立在它之上。實作任何新函式時，metadata 不是可選項。核心 API（純宣告 / 顯式攔截拆分模型）：
 
 - `register(**meta)` — 宣告程式頂層 metadata（dispatcher 預設行為）。**純宣告、零副作用**：不讀 argv、不攔截、不 exit。
 - `register_subcommand(name, **meta)` — 宣告靜態子命令的 scoped metadata（解「單一執行檔多種 lifecycle」）。
@@ -44,15 +44,15 @@
 
 ## 規劃中 / 原型中的五大元件（濃縮）
 
-概念定義見 [roadmap.md](../roadmap.md)，狀態與原型路徑如下：
+概念定義見 [roadmap.md](../roadmap.md)，狀態如下：
 
-1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm/OpenRouter）；LLM 是單例資源 → 佇列模式，集中管理 consume rate。`--socket` 可長駐成 Unix socket daemon 跨呼叫累計 RateMeter。原型：`sub_projs/ver_1/try_implement/tools/llm_entry_manager.py`。
-2. **LLM Calling Packing** — 把 `llm_call(string)->string` 疊 context binding 與 post-processing 成具語意函式。真 backend 已實作 `OpenAIBackend`（OpenAI 相容）與 `AnthropicBackend`，都走 `lib/call.Http`（urllib，零相依）。原型：`sub_projs/ver_1/try_implement/lib/llm_call.py`。
+1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm/OpenRouter）；LLM 是單例資源 → 佇列模式，集中管理 consume rate。`--socket` 可長駐成 Unix socket daemon 跨呼叫累計 RateMeter。（原型已封存）
+2. **LLM Calling Packing** — 把 `llm_call(string)->string` 疊 context binding 與 post-processing 成具語意函式。真 backend 已實作 `OpenAIBackend`（OpenAI 相容）與 `AnthropicBackend`，都走 `lib/call.Http`（urllib，零相依）。（原型已封存）
 3. **Shell / App 作為函式** — 文字進文字出，shell 是最自然封裝；每個函式都實作 `--metadata`（契約見上節）。
-4. **Function Hub** — 掃描函式集、呼叫各 `--metadata`、彙整成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。原型：`sub_projs/ver_1/try_implement/tools/hub.py`（規範未定）。
-5. **Small Function Center (SFC)** — 把大量 tiny function 集中到 git-style subcommand dispatcher，避免檔案爆炸。原型：`sub_projs/ver_1/try_implement/tools/sfc.py`（已接真 `ai_core`）。
+4. **Function Hub** — 掃描函式集、呼叫各 `--metadata`、彙整成「給 LLM 的 skill 清單」，含 context budget 逐級收斂。（原型已封存，規範未定）
+5. **Small Function Center (SFC)** — 把大量 tiny function 集中到 git-style subcommand dispatcher，避免檔案爆炸。（原型已封存）
 
-> **點子捕捉軌 dogfood**：`sub_projs/ver_1/try_implement/tools/idea.py` 串起 `bind`（元件2）→ entry manager（元件1）→ 真 backend → API，是「廉價小模型消費者」的第一個真實串接。詳見 [idea-capture 工作流](../idea-capture.md)。
+> **點子捕捉軌 dogfood**：早期以 `idea.py` 串起 `bind`（元件2）→ entry manager（元件1）→ 真 backend → API，是「廉價小模型消費者」的第一個真實串接，該原型已封存。詳見 [idea-capture 工作流](../idea-capture.md)。
 
 ---
 
@@ -61,4 +61,4 @@
 - **零外部相依**：新程式碼只用 Python 3.11+ 標準庫（見鐵律 1）。引入任何第三方套件前必須有明確理由並先確認。
 - **shell 一等公民**：函式以 CLI 為主介面，每個函式實作 `--metadata`；不為了 Python API 好用而犧牲 CLI 清晰度。
 - **單檔行數門檻** 300 行（與 [DEV-GUIDE](../../DEV-GUIDE.md) 觸發 A 一致）；本質不可分的單體核心／規範（如 `_core.py`、`lib_spec.md`）可超標保留。
-- **改動軸定義／核心 API／測試數量時**：同步更新 `workflows/spec/` 對應規範、[workflows/testing.md](../testing.md) 的測試數字，與相關導航 index（鐵律 5）。
+- **改動軸定義／核心 API／測試數量時**：同步更新 `workflows/spec/` 對應規範，與相關導航 index（鐵律 5）。

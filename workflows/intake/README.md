@@ -16,4 +16,4 @@
 
 ## 備註
 
-原本 WF1→3 的 LLM 加工是 shell out 給 ai_core 自己的 `idea.py`（`ingest` 子命令＝口述一條龍，dogfood 自家 LLM 基礎設施：經元件 1 entry manager 路由、宣告第九軸 `nondeterministic:true`，未設 `AI_CORE_LLM_*` 環境變數則 EchoBackend 回顯）。該工具已隨 Python 實作封存進 [ver_1](../../sub_projs/ver_1/try_implement/README.md)——當前無在跑的實作，要用把它當參考。
+原本 WF1→3 的 LLM 加工是 shell out 給 ai_core 自己的 `idea.py`（`ingest` 子命令＝口述一條龍，dogfood 自家 LLM 基礎設施：經元件 1 entry manager 路由、宣告第九軸 `nondeterministic:true`，未設 `AI_CORE_LLM_*` 環境變數則 EchoBackend 回顯）。該工具已隨早期實作封存（半封存狀態），當前無在跑的實作、要用把它當參考。

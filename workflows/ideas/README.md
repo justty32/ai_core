@@ -12,14 +12,14 @@
 
 | 階段 | 這是什麼 | repo 落點 |
 |------|---------|-----------|
-| **idea** | 剛捕捉的點子、概念拓展草稿 | 口述線 [intake/](../intake/README.md)（raw→cleaned）→[notes/](../notes/) 匯總筆記；腦暴 [`brainstorm/`](brainstorm/)（本夾）；[try_implement/docs/](../../sub_projs/ver_1/try_implement/docs/)（概念拓展）|
+| **idea** | 剛捕捉的點子、概念拓展草稿 | 口述線 [intake/](../intake/README.md)（raw→cleaned）→[notes/](../notes/) 匯總筆記；腦暴 [`brainstorm/`](brainstorm/)（本夾）|
 | **research** | 外部論文與北極星對撞的火花表 | [`research/`](research/)（本夾）|
-| **spec 候選** | 已具體到有函式簽章／流程、但尚未定案的厚檔 | 本夾頂層厚檔（如 crystallization_engine_blueprint.md）＋ [try_implement/DECISIONS.md](../../sub_projs/ver_1/try_implement/DECISIONS.md) A 區懸案 |
+| **spec 候選** | 已具體到有函式簽章／流程、但尚未定案的厚檔 | 本夾頂層厚檔（如 crystallization_engine_blueprint.md）|
 | **spec 定案** | 經 spec 工作流扶正後的權威規範 | [spec/](../spec/) |
 | **plan** | 已排出開工次序與驗收標準的施工計畫 | [plans/](../plans/README.md)（施工規劃）＋ [roadmap.md](../roadmap.md) §6（戰略 v0 最小垂直切片）|
-| **build** | 真的寫出來 | [try_implement/](../../sub_projs/ver_1/try_implement/) 原型 → `sub_projs/ver_1/src/ai_core/` 正式核心（現已封存進 ver_1）|
+| **build** | 真的寫出來 | 早期實作已封存（半封存），當前無在跑的實作 |
 
-> 管線是**成熟度階梯**，不是硬性流程：點子可以跳級、也可以退回。定案權威永遠在 [spec/](../spec/) 與 [DECISIONS.md](../../sub_projs/ver_1/try_implement/DECISIONS.md)，本夾內容多為「彙整／提案層」，非定案規範。
+> 管線是**成熟度階梯**，不是硬性流程：點子可以跳級、也可以退回。定案權威永遠在 [spec/](../spec/)，本夾內容多為「彙整／提案層」，非定案規範。
 
 ## 本夾結構
 
@@ -47,4 +47,4 @@ frontmatter 的 `stage:` 一眼標出這份東西在管線的哪個成熟度：
 
 - **`research-idea`** — 論文碰撞產出的火花，尚未收斂成任何規範主張。
 - **`spec-candidate`** — 已具體到可審議是否扶正為規範的厚檔（函式簽章／流程／里程碑俱全）。
-- **`concept-draft`** — 概念框架草稿（如 sub_projs/ver_1/try_implement/docs/），拓展設計面但非定案。
+- **`concept-draft`** — 概念框架草稿，拓展設計面但非定案。
