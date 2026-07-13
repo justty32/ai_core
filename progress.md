@@ -4,7 +4,20 @@ claude --resume 0fa7693b-d161-4a2c-9d48-625292ae50f2
 
 > 注意：使用者跨電腦工作，Claude 的本地 memory 不跟隨；**repo 內的檔案（本檔 + ideas/notes + CLAUDE.md）才是唯一可靠的持久層**。重要脈絡一律落 repo。
 
-## 最近里程碑（2026-07-03）：近期焦點①②落地——entry `format`/`schema` + 非軸欄位 `reliability`
+## 最近里程碑（2026-07-13）：第一目標問題換成 galgame 台詞生成（llm_forge）＋ 方法論轉向 ＋ 技術棧定調
+
+全文：`ideas/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md`（§〇～§九，本次多輪長談）。
+
+- **北極星不動**（roadmap §0–4 願景＝羅盤）；**入門切口／§5 第一目標問題換成 galgame 台詞生成系統**——選擇準則明確定為**「作者的熱情」**（單人專案最大風險＝棄坑，非技術），且與程式碼助手**同構**故換材料不換架構。
+- **llm_forge**：固化＝從 LLM 抽詞彙/規則，沿固化階梯（5 自由句→1 純查表）往下踹＝Futamura 部分求值。開發策略＝反著跑 §3.3、從洞最小端起手。
+- **驗證**＝人錨定（工廠期驗爐子非 runtime、礦＝打叉理由）＋ 語料錨（掏 galgame/小說文本＝§5 上層抽取材料、自動劃禁語邊界、帶答案卷 benchmark）＋ **評分級聯**（Tier0 護欄→1 語料匹配→2 校準 LLM judge→3 人工抽查；judge 受治理領證）。可本週開工物＝快速標籤 rating 工具（`http.server` 網頁 + NDJSON 標註）。
+- **世界模型（真值）≠ context（LLM 投影）**：翻譯層可省略/故意失真、只為輸出品質；＝context binding 的肥固化礦。組織形式〔懸〕＝檔案系統+symlink+git 存真值、SQLite 存衍生索引/runtime 狀態（＝7/8 靜態/動態分界）。
+- **方法論轉向**：先執行再說、邊執行邊生規範（規範＝從執行挖出的固化，非開工前立法）。**技術棧**：少 Python(慢)/bash，主力 C++ + Lua（Fennel/s7/SBCL 手寫），LLM 接口走 server-form。
+- **地基現況**：`core_handy/examples/llm_entry.cpp` + `impl/{llm,serve,rate,http}.hpp` **已是能跑的 C++ server-form LLM daemon 原型**（one-shot + `--serve` socket + 跨呼叫 RateMeter + `--metadata` 自述）。
+
+**下一步（使用者主導，之後做）**：(a) 使用者自行審 core_handy 是否合意的地基；(b) **之後新開 repo、慢慢做**，護欄＝port 既有 daemon＋帶觀念，勿重建。**待使用者確認**：core_handy 升主線/Python 降參考；新 repo 是否 port core_handy。**未動 repo 的 roadmap §5**（換入門切口的正式手術暫緩到討論收斂；北極星不動）。
+
+## 前一里程碑（2026-07-03）：近期焦點①②落地——entry `format`/`schema` + 非軸欄位 `reliability`
 
 §12.1 的兩個近期焦點已進正式核心與規範（tests 84 → **101 passed** 全綠）：
 
