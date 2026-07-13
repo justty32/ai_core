@@ -13,7 +13,7 @@
 | 「規範扶正」`/spec` | **spec** | [try_implement/DECISIONS.md](try_implement/DECISIONS.md)（懸案清單）＋ [docs/spec/](docs/spec/) |
 | 「原型探索」`/proto` | **proto** | [try_implement/README.md](try_implement/README.md) |
 | 「口述／點子／腦暴／研究比對／看某想法熟到哪」`/intake` `/critique` `/expand` | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家＋規劃管線落點見 [ideas/README.md](ideas/README.md) |
-| 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [roadmap.md](roadmap.md) |
+| 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap.md) |
 | 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
@@ -35,11 +35,11 @@
 - **單檔工作流**（還沒長成資料夾的那些）：一個 `.md` 同時是入口與內容；撐大了就照「[結構整理原則](DEV-GUIDE.md)」升級成資料夾型。到底有哪些工作流、各自入口在哪，看上面的派發表即可。
 - 入口檔本身膨脹 → 一樣照結構整理原則拆。
 
-> **note**：`resume` / `spec` / `proto` / `roadmap` 這幾個工作流的權威入口是 repo 既有的權威文件（`SESSION-LOG.md` / `try_implement/DECISIONS.md` / `try_implement/README.md` / `roadmap.md`），不在 `workflows/` 下另立檔——只有 `testing` 與 `idea-capture` 有專屬的 `workflows/*.md`。
+> **note**：`resume` / `spec` / `proto` 這幾個工作流的權威入口是 repo 既有的權威文件（`SESSION-LOG.md` / `try_implement/DECISIONS.md` / `try_implement/README.md`），不在 `workflows/` 下另立檔；`testing` / `idea-capture` / `roadmap` 則有專屬的 `workflows/*.md`（`workflows/testing.md` / `workflows/idea-capture.md` / `workflows/roadmap.md`）。
 
 ## 規劃管線（點子怎麼變成核心）
 
-點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[ideas/](ideas/README.md)（raw→cleaned→notes、brainstorm、[try_implement/docs/](try_implement/docs/) 概念拓展）→ research＝[ideas/research/](ideas/research/) → spec 候選＝ideas/ 頂層厚檔＋[DECISIONS.md](try_implement/DECISIONS.md) A 區 → spec 定案＝[docs/spec/](docs/spec/)（經 `/spec` 扶正）→ plan＝[roadmap.md](roadmap.md) §6（v0 切片）→ build＝[try_implement/](try_implement/) 原型 → `src/ai_core/`。詳見 [ideas/README.md](ideas/README.md)。
+點子不是憑空變成程式碼，中間有成熟度階梯，每階段有它的家：**idea → research → spec 候選 → spec 定案 → plan → build**。落點：idea＝[ideas/](ideas/README.md)（raw→cleaned→notes、brainstorm、[try_implement/docs/](try_implement/docs/) 概念拓展）→ research＝[ideas/research/](ideas/research/) → spec 候選＝ideas/ 頂層厚檔＋[DECISIONS.md](try_implement/DECISIONS.md) A 區 → spec 定案＝[docs/spec/](docs/spec/)（經 `/spec` 扶正）→ plan＝[roadmap.md](workflows/roadmap.md) §6（v0 切片）→ build＝[try_implement/](try_implement/) 原型 → `src/ai_core/`。詳見 [ideas/README.md](ideas/README.md)。
 
 ## 跨工作流的活狀態（repo 根）
 

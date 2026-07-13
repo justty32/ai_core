@@ -15,7 +15,7 @@
 - **No wheel-remake** — 不重造輪子
 - **Least dependency** — 相依最少化
 
-這不是美學偏好，而是**前提的邏輯必然**（見 [roadmap.md](../../roadmap.md) §1）：本專案假設未來只剩便宜的本地小模型可用，一個「窮」的專案付不起龐大基礎設施的維護成本。當你考慮要不要引入框架、抽象層、或自訂 DSL 時，預設答案應該是「不要」，除非有明確理由。
+這不是美學偏好，而是**前提的邏輯必然**（見 [roadmap.md](../roadmap.md) §1）：本專案假設未來只剩便宜的本地小模型可用，一個「窮」的專案付不起龐大基礎設施的維護成本。當你考慮要不要引入框架、抽象層、或自訂 DSL 時，預設答案應該是「不要」，除非有明確理由。
 
 實作時的硬約束：**只用 Python 3.11+ 標準庫**（argparse / json / subprocess / pathlib / urllib…），無外部相依。`pyproject.toml` 的 `dependencies = []` 是刻意維持的。目標平台為 **POSIX（含 pipeline）；Windows 不在考慮範圍**。
 
@@ -44,7 +44,7 @@
 
 ## 規劃中 / 原型中的五大元件（濃縮）
 
-概念定義見 [roadmap.md](../../roadmap.md)，狀態與原型路徑如下：
+概念定義見 [roadmap.md](../roadmap.md)，狀態與原型路徑如下：
 
 1. **LLM Entry Manager** — 統一 LLM 呼叫入口（類 litellm/OpenRouter）；LLM 是單例資源 → 佇列模式，集中管理 consume rate。`--socket` 可長駐成 Unix socket daemon 跨呼叫累計 RateMeter。原型：`try_implement/tools/llm_entry_manager.py`。
 2. **LLM Calling Packing** — 把 `llm_call(string)->string` 疊 context binding 與 post-processing 成具語意函式。真 backend 已實作 `OpenAIBackend`（OpenAI 相容）與 `AnthropicBackend`，都走 `lib/call.Http`（urllib，零相依）。原型：`try_implement/lib/llm_call.py`。

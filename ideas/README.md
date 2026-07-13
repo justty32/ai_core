@@ -14,7 +14,7 @@
 | **research** | 外部論文與北極星對撞的火花表 | [`ideas/research/`](research/) |
 | **spec 候選** | 已具體到有函式簽章／流程、但尚未定案的厚檔 | `ideas/` 頂層厚檔（如本夾 crystallization_engine_blueprint.md）＋ [try_implement/DECISIONS.md](../try_implement/DECISIONS.md) A 區懸案 |
 | **spec 定案** | 經 `/spec` 扶正後的權威規範 | [docs/spec/](../docs/spec/) |
-| **plan** | 已排出開工次序與驗收標準的施工計畫 | 目前唯一：[roadmap.md](../roadmap.md) §6（v0 最小垂直切片）|
+| **plan** | 已排出開工次序與驗收標準的施工計畫 | 目前唯一：[roadmap.md](../workflows/roadmap.md) §6（v0 最小垂直切片）|
 | **build** | 真的寫出來 | [try_implement/](../try_implement/) 原型 → `src/ai_core/` 正式核心 |
 
 > 管線是**成熟度階梯**，不是硬性流程：點子可以跳級、也可以退回。定案權威永遠在 core_nature/ 與 DECISIONS.md，本夾內容多為「彙整／提案層」，非定案規範。
