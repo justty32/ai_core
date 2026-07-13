@@ -10,4 +10,4 @@
 
 ## 待使用者項
 
-- （目前無）
+- **試跑 try_1 s7 版 `llm.scm` 打真 backend**：Claude 已用 curl `file://` 假回應驗過整條管線（中文＋取樣參數＋解析全對）；真回應需你這邊備環境——開 LM Studio 載模型＋開 local server（預設埠 1234），在 s7 REPL 裡 `(load "llm.scm")` 後 `(llm-entry :prompt "你好" :temp 0.7)`；或設 `(set! *llm-base-url* "https://api.deepseek.com/v1")`＋`(set! *llm-api-key* "sk-…")`＋`:model "deepseek-chat"` 打雲端。步驟見 [try_1/README](try_1/README.md)「s7 版」。跑通後回報，才好定下一步。

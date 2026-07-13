@@ -1,0 +1,7 @@
+# build 產物（simdjson.h/.cpp 是 vendored、要進版控）
+llm_entry.exe
+*.o
+
+# s7 執行期暫存 / 測試 fixture
+galtxt_llm_req.json
+fake/
