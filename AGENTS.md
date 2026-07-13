@@ -31,6 +31,8 @@ AGENTS.md（本檔，最頂）→ WORKFLOWS.md / INDEX.md → 各工作流入口
 
 repo 內已有 `.venv`（Python 3.14），開發相依裝法見 [workflows/testing.md](workflows/testing.md)。本資料夾位於 `pas/others/ai_core/`；上層 `pas/CLAUDE.md` 定義的工作空間規範（繁體中文輸出、留檔到 `analysis/<project_name>/` 等）**對本資料夾同樣適用**，除非本層另有指定。
 
+**跨機開發**：本專案在多台機器間使用，**repo 內檔案是唯一持久層**——任何要跨 session 記住的東西寫進對應層的文檔，不寫本機 memory。較大的任務偏好分工：主 agent 規劃統籌，具體事務派較強的 subagent、簡單雜務派輕量 subagent。
+
 ## 主工作流（進度與待測）
 
 事情告一段落、因應需求結束、或臨時中止時 → 把**還沒完成**的活狀態記到進度；需要**使用者親自做／驗證**的（實機環境、外部工具實跑、需權限）→ 記到待使用者。兩者都**只列 open**，完成即移除、不留已完成清單。
