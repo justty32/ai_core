@@ -1,6 +1,15 @@
 # llm_forge — AI agent 專案備忘
 
-llm_forge = **galgame 台詞生成器——用固化階梯把台詞產出從純 LLM 一步步鍛成「笨模型＋鷹架＋護欄」的可靠管線，ai_core 北極星的第一個目標問題**。本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
+llm_forge = **把 LLM 鍛成可靠管線的框架（爐子）——固化階梯／雙錨驗證／評分級聯／世界模型↔context 等機制的家；ai_core 北極星「把小笨模型包裝成可靠函式」在 galgame 線上的框架落點**。本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
+
+## 與 galtxt 的關係（本專案定位）
+
+```
+galtxt（實驗場，先跑通）──機制確定後──▶ llm_forge（本專案：框架/爐子，固化收納）
+                                              ▲ 依賴
+```
+
+**llm_forge＝機制之家，不是 galgame 生成器本身。** 生成器（第一個實際應用）是 [galtxt/](../galtxt/AGENTS.md)——它**依賴**本專案的機制、在其上做 galgame 台詞生成；**在 galtxt 跑通、被使用者確認的機制才畢業搬來這裡固化收納**。llm_forge 不憑空立法造框架，框架從 galtxt 的實戰結晶而來。
 
 ## 先讀哪裡
 
@@ -21,17 +30,18 @@ AGENTS.md（本檔，最頂）→ WORKFLOWS.md / INDEX.md → 各工作流入口
 
 ## 鐵律（always-on，任何工作流任何時候都遵守）
 
-1. **先執行再說，邊執行邊生規範**——規範從執行裡挖出、不開工前立法；**不搞 spec-first 儀式**（別再複製「九軸 N 輪會議才寫碼」那套）。
-2. **能跑的用「搬（port）」、別憑記憶重建**——LLM 接口地基（core_handy 的 `llm_entry` 那條線）已能跑，要用就 port，別憑記憶重造（否則落回「一直重來」）。
-3. **未經確認不 push、不開新工作**（commit 到主分支是慣例，push 先確認）。
-4. **改動使任何一層文檔失準時，同步更新該層**——尤其 [INDEX.md](INDEX.md) 的結構地圖與 [WORKFLOWS.md](WORKFLOWS.md) 的派發表。
-5. **所有回覆、註解、留檔用繁體中文**；程式碼識別子、shell 指令、技術名詞保留原文。
+1. **先執行再說，邊執行邊生規範**——框架規範從 galtxt 的執行裡挖出、不開工前立法；**不搞 spec-first 儀式**（別再複製「九軸 N 輪會議才寫碼」那套）。
+2. **只固化「在 galtxt 跑通確認」的機制**——別在 llm_forge 憑空造框架；機制先在 [galtxt/](../galtxt/AGENTS.md) 實戰，確認後才搬來這裡結晶成可重用框架。
+3. **能跑的用「搬（port）」、別憑記憶重建**——LLM 接口地基（core_handy 的 `llm_entry` 那條線）已能跑，要用就 port，別憑記憶重造（否則落回「一直重來」）。
+4. **未經確認不 push、不開新工作**（commit 到主分支是慣例，push 先確認）。
+5. **改動使任何一層文檔失準時，同步更新該層**——尤其本 [INDEX.md](INDEX.md) 與 [WORKFLOWS.md](WORKFLOWS.md)，以及上層 [sub_projs/README.md](../README.md)、[ai_core INDEX](../../INDEX.md)。
+6. **所有回覆、註解、留檔用繁體中文**；程式碼識別子、shell 指令、技術名詞保留原文。
 
 ## 開發環境
 
 技術棧方向〔§9.2 決定/方向〕：主力 **C++ 效能核心 ＋ 內嵌 Lua VM 當通用腳本層**（Fennel 編譯成 Lua ⇒ 使用者手寫用 Lisp/Fennel、同 runtime）；**少 Python（太慢）、少 bash**。語言中立的縫＝**LLM 的 socket 協定 ＋ 函式的 `--metadata` 文字契約**。
 
-**落腳與畢業**〔§9.5〕：本子專案日後可能整包**畢業成獨立 repo**（port core_handy 的能跑地基過去），現階段先在 `ai_core/sub_projs/llm_forge/` 落腳做規劃。
+**落腳與畢業**〔§9.5〕：框架日後可能整包**畢業成獨立 repo**（port core_handy 的能跑地基過去），現階段先在 `ai_core/sub_projs/llm_forge/` 落腳；動手實戰在隔壁 [galtxt/](../galtxt/AGENTS.md)。
 
 **驗證**：目前**尚無**可跑驗證指令（規劃期、無程式碼）；有第一片程式碼後再於 [workflows/testing.md](workflows/testing.md) 補上。
 

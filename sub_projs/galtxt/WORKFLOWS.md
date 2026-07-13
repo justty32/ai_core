@@ -4,26 +4,19 @@
 
 你（使用者）說要做某件事 → **從這張表選對應工作流 → 讀它的「入口檔」→ 就知道要做什麼**。每個工作流的細節都在它自己的入口檔，不在這裡。
 
-llm_forge 是**框架/爐子**：實戰在隔壁 [galtxt/](../galtxt/AGENTS.md)，本專案的活＝**把 galtxt 跑通確認的機制固化成可重用框架規範**（不憑空立法）。**現在處於規劃期**，派發表反映實況、保持薄。
+galtxt 是**執行優先**的實驗場（鐵律：先執行再說），故主戰場是 feature-dev / testing；規劃類的討論在上游 idea 礦脈，不在本子專案複製。
 
 ## 你想做什麼 → 用哪個工作流
 
 | 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
 |--------------|--------|-------------------|
-| 「把 galtxt 跑通的機制固化成框架規範」（**現階段主戰場**）| **spec** | 第一次用到才建（從單檔起）；礦脈見下方規劃管線 |
-| 「把框架規範展開成動工計畫」 | **plan** | 第一次用到才建（從單檔起）|
-| 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
-| 「開發 / 修改框架功能」「修 bug」 | **feature-dev** | **尚未開工**（無程式碼）；範例入口 [workflows/feature-dev/README.md](workflows/feature-dev/README.md) 留檔待用 |
-| 「跑測試 / 驗證」 | **testing** | **尚未開工**（無程式碼）；範例入口 [workflows/testing.md](workflows/testing.md) 留檔待用 |
+| 「開發 / 修改功能」「**修 bug**」（**主戰場**）| **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md)（尚未開工，範例骨架留檔待用）|
+| 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md)（尚無指令）|
+| 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
+
+需要新工作流（refactor / investigation / spec / plan…）**第一次用到才加一列**，入口檔從**單檔**開始長（見 [DEV-GUIDE](DEV-GUIDE.md) 四級成長軌跡），不預先建空資料夾。規劃管線的上游討論在 idea 礦脈（見 [INDEX](INDEX.md)「內容源頭」）。
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
-
-## 規劃管線（機制怎麼從實戰結晶成框架）
-
-保持這條管線：**galtxt 實戰跑通 → spec（確認的機制固化成框架規範）→ plan（動工前詳規）→ build（feature-dev）**。
-
-- **上游實戰在 [galtxt/](../galtxt/AGENTS.md)**；**idea 礦脈在主專案** `ai_core/workflows/notes/`——尤其 [20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../workflows/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)（唯一內容來源，標〔待續〕，還會被後續討論擴充）。
-- **spec / plan 入口檔第一次用到才建**（從單檔開始長，見 [DEV-GUIDE](DEV-GUIDE.md) 四級成長軌跡）——**不預先建空資料夾**。
 
 ## 工作流的統一形式（規範）
 

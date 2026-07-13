@@ -19,4 +19,4 @@
   3. `llm.hpp` 的 backend 撐不撐本地模型？
   4. Lua 那塊從零起，OK 嗎？
 
-**落腳位置備註**：galgame forge 建在哪（core_handy 原地 vs 新 repo）——使用者**已傾向新 repo**（port core_handy 過去，§9.5）；本子專案 `sub_projs/llm_forge/` 是**現階段的規劃落腳點**，非最終家。
+**落腳位置備註**：框架日後畢業成獨立 repo（port core_handy 過去，§9.5）——使用者**已傾向新 repo**；現階段 `sub_projs/llm_forge/` 是框架的**規劃落腳點**、非最終家，動手實戰在隔壁 [galtxt/](../galtxt/AGENTS.md)。

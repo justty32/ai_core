@@ -1,18 +1,19 @@
-# INDEX — llm_forge 專案地圖
+# INDEX — galtxt 專案地圖
 
-整個專案的頂層導航。llm_forge = **把 LLM 鍛成可靠管線的框架（爐子）——固化階梯／雙錨驗證／評分級聯／世界模型↔context 等機制之家；galgame 生成器本身是 [galtxt/](../galtxt/AGENTS.md)，它依賴本框架、跑通確認的機制才搬來固化**。AGENTS.md 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。galtxt = **galgame 台詞生成的動手實驗場——把台詞產出鍛成「笨模型＋鷹架＋護欄」可靠管線，ai_core 北極星第一目標問題的落地執行處；依賴 [llm_forge/](../llm_forge/AGENTS.md)，跑通的機制才搬去固化**。AGENTS.md 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 
 ## Repo 佈局
 
-現階段只有規劃期文檔骨架＋工作流目錄，**尚無程式碼**（實戰在隔壁 [galtxt/](../galtxt/AGENTS.md)；機制在那跑通確認後才搬來這裡固化、長出框架產出目錄）。
+現階段只有工作流骨架，**尚無程式碼**（第一片實作拉動時才長出產出目錄）。
 
 | 路徑 | 內容 |
 |------|------|
 | `AGENTS.md` / `CLAUDE.md` / `WORKFLOWS.md` / `INDEX.md` / `DEV-GUIDE.md` | 頂層路由 / 轉址 / 派發 / 地圖 / 結構整理參考 |
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
+| 產出目錄（長出來才建）| 第一片實作拉動時建；依技術棧 C++／Lua 落目錄，附程式碼導航 index |
 
 ## 開發工作流
 
@@ -26,13 +27,10 @@
 |------|------|
 | [common/README](workflows/common/README.md) | 跨工作流共通：[gotchas](workflows/common/gotchas.md) 踩坑 + [conventions](workflows/common/conventions.md) 程式碼慣例 |
 
-## 內容源頭與關聯
+## 內容源頭與依賴
 
-本子專案的內容源頭在主專案，不在本目錄複製：
-
-- **實戰上游**：[../galtxt/](../galtxt/AGENTS.md)——galgame 生成器（第一個應用）在此動手；機制在那跑通確認後搬來本框架固化。
-- **idea 礦脈**：[../../workflows/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../workflows/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)——唯一內容來源（標〔待續〕，會被後續討論擴充）。
-- **未來 port 的地基**：[../../sub_projs/ver_1/try_implement/core_handy/notes/00_index.md](../../sub_projs/ver_1/try_implement/core_handy/notes/00_index.md)——C++ 的 LLM 接口地基（`llm_entry.cpp` + `impl/{http,json,llm,rate,serve}.hpp`），畢業獨立 repo 時搬過去（〔§9.5 決定〕）。
+- **idea 礦脈（唯一內容來源）**：[../../workflows/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md](../../workflows/notes/20260713-0956-galgame台詞生成-第一目標問題-llm_forge.md)。
+- **依賴目標**：[llm_forge/](../llm_forge/AGENTS.md)（跑通的機制搬去固化）。**port 地基**：[../ver_1/try_implement/core_handy/](../ver_1/try_implement/core_handy/)。
 
 ## 活狀態（只列還沒完成的）
 

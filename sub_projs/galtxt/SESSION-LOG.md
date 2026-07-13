@@ -12,10 +12,11 @@
 
 ## 最新進度
 
-- **框架定位已對齊（7/13）**：llm_forge＝**框架/爐子**（機制之家），galgame 生成器本身移到隔壁 [galtxt/](../galtxt/AGENTS.md)（實戰實驗場、依賴本框架）；文檔（AGENTS/INDEX/WORKFLOWS）已改述。骨架 12 檔就位、**尚無程式碼**——待 galtxt 跑通機制後搬來固化。
-- **等使用者討論收斂**：idea 筆記標〔待續〕，使用者明說「還有別的想法會繼續說」，框架 spec 在討論線收斂＋galtxt 有實戰產出前暫緩展開。
+- **galtxt 骨架已建、實作待起手**：套 `C:/code/mine/workflows` 分層模板實例化完成（路由/派發/地圖/活狀態就位），**尚無程式碼**。第一片切口待定——候選見 AGENTS.md「開發環境」＋ idea 礦脈（port core_handy LLM 地基 vs 4.2 rating 工具）。
 
 ## 各工作流 session-log
+
+（尚無工作流長出自己的 session-log）
 
 | 工作流 | session-log | open 摘要 |
 |--------|-------------|----------|
