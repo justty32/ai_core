@@ -1,0 +1,62 @@
+{
+  // galtxt try_2 — Lua 除錯設定
+  // 需先裝擴充套件：Local Lua Debugger（發布者 tomblind，ID: tomblind.local-lua-debugger-vscode）
+  //   —— 純 Lua 除錯器、不需原生模組。可在 cli.lua / llm.lua / json.lua 下中斷點。
+  //
+  // ⚠ 直譯器要用標準 lua.exe，不能用 host.exe：
+  //    host.exe 只吃「<腳本> 參數」、不支援除錯器要注入的 -e 引導，會起不來。
+  //    lua.exe 是標準直譯器（內建 arg 表），我們腳本原封不動能跑。先 ./build.sh luaexe 產生它。
+  // 以「File > Open Folder」開 try_2 這個資料夾（讓 ${workspaceFolder}=try_2）。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // 中文走 --infile（讀檔是原始 UTF-8）；別用 --prompt 傳中文，lua.exe 的 argv 是 950 碼頁會壞。
+      "name": "Debug cli.lua（離線假回應）",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "cli.lua" },
+      "args": [
+        "--base-url", "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/fake",
+        "--infile", "sample_prompt.txt",
+        "--temp", "0.7"
+      ]
+    },
+    {
+      "name": "Debug cli.lua（真後端，需先開 LM Studio）",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "cli.lua" },
+      "args": ["--prompt", "你好", "--temp", "0.7"]
+    },
+    {
+      "name": "Debug test.lua（離線 E2E）",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "test.lua" }
+    },
+    {
+      "name": "Debug demo_lua.lua（Lua 格式輸出）",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "demo_lua.lua" }
+    },
+    {
+      "name": "Debug demo_stream.lua（串流 callback）",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "demo_stream.lua" }
+    },
+    {
+      "name": "Debug 目前開啟的 .lua 檔",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/lua.exe", "file": "${relativeFile}" }
+    }
+  ]
+}

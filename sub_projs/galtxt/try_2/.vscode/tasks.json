@@ -1,0 +1,55 @@
+{
+  // galtxt try_2 — 建置／執行任務（Ctrl+Shift+B 跑預設 build；Terminal > Run Task 選其他）
+  // build.sh 需 bash，故所有任務都透過 Git Bash 跑；cwd 固定在 try_2。
+  // 若你的 Git 裝在別處，改下面 executable 路徑即可。
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "shell": {
+      "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "args": ["-c"]
+    }
+  },
+  "tasks": [
+    {
+      "label": "build: 全部 (liblua + host + lua)",
+      "type": "shell",
+      "command": "./build.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "build: host.exe (正式 CLI)",
+      "type": "shell",
+      "command": "./build.sh host",
+      "problemMatcher": []
+    },
+    {
+      "label": "build: lua.exe (debug 直譯器)",
+      "type": "shell",
+      "command": "./build.sh luaexe",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: 離線 test.lua",
+      "type": "shell",
+      "command": "./host.exe test.lua",
+      "problemMatcher": [],
+      "presentation": { "clear": true }
+    },
+    {
+      "label": "run: demo_lua.lua (Lua 格式輸出示範)",
+      "type": "shell",
+      "command": "./host.exe demo_lua.lua",
+      "problemMatcher": [],
+      "presentation": { "clear": true }
+    },
+    {
+      "label": "run: demo_stream.lua (串流示範)",
+      "type": "shell",
+      "command": "./host.exe demo_stream.lua",
+      "problemMatcher": [],
+      "presentation": { "clear": true }
+    }
+  ]
+}
