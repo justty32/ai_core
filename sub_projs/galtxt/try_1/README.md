@@ -97,8 +97,9 @@ $env:AI_CORE_LLM_API_KEY  = "sk-你的key"
 
 ## s7 版（現行主線）
 
-檔案：[`llm.scm`](llm.scm)（工具）、[`test.scm`](test.scm)（離線測試）。s7 runtime 用
-`C:\code\mine\pas\derived\s7-playground\s7.exe`（不需 FFI；純 Scheme ＋ `(system "curl…" #t)`）。
+檔案：[`llm.scm`](llm.scm)（接口本體＋schema）、[`json.scm`](json.scm)（s7⇄JSON，llm.scm `(load)` 它）、
+[`test.scm`](test.scm)（離線測試）、[`s7host.c`](s7host.c)＋[`shim_include/`](shim_include/)（argv-aware host，見文末）。
+s7 runtime 用 `C:\code\mine\pas\derived\s7-playground\s7.exe`（不需 FFI；純 Scheme ＋ `(system "curl…" #t)`）。
 
 **開發循環**（playground 哲學，REPL 一直開）：
 
@@ -111,13 +112,44 @@ $env:AI_CORE_LLM_API_KEY  = "sk-你的key"
 
 keyword 參數 ＝ schema 的直接投影：`:prompt :in :out :sys :model :temp :top-p :top-k
 :max-tokens :n :seed :presence-penalty :frequency-penalty :base-url :api-key`。無 streaming。
+這串**不是手寫**的——`llm.scm` 裡的 `*llm-schema*` 是**唯一真相源**，`llm-entry` 的 `define*`
+簽章由它生成、取樣參數也由它 runtime 驅動塞入。要加參數（`stop`／`logit_bias`…）＝schema 加一行。
 
 **離線跑測**（curl `file://` 灌假回應，不需真後端）：`cd try_1` 後
 `…\s7.exe test.scm`（s7 只吃「剛好一個檔名」的參數）。
 
 **設計要點 / 學到的**：
 - 請求用 s7 `inlet` 表達、`s7->json` 序列化；回應 `json->s7` 成 inlet 導航——同像性，零手工 escape。
-- `json.scm` 兩個 helper 抠自 playground `lib/json.scm`，並補上 boolean/null（原版沒有，`stream:false` 會炸）；此 s7 版**不准 `(reverse let)`**，已改直接迭代。
-- **s7 拿不到 argv**（`main()` 只 `s7_load` 一個檔、不綁 argv）→ shell 的 `--flag` CLI 要靠之後的「argv-aware s7 host（讓 shebang 成真）」，那層正是由 schema 生成的薄殼。
+- **schema 驅動**：`*llm-schema*` 每列 `(scheme名 json鍵-或-ctrl)`。`make-llm-entry!` 用 `eval` 生成一個
+  薄殼 `define*`（只把 keyword 值收成 inlet），真正邏輯在 `llm-entry-impl`；取樣參數在 impl 裡
+  `for-each` 迭代 schema 塞入——參數列與塞入邏輯都不再手寫。
+- `json.scm`（抠自 playground `lib/json.scm`）補上 boolean/null（原版沒有，`stream:false` 會炸）；
+  此 s7 版**不准 `(reverse let)`**，已改直接迭代。
+- **s7 拿不到 argv**（`main()` 只 `s7_load` 一個檔、不綁 argv）→ 已做 `s7host.exe`（見下）補上
+  `*argv*`；剩下的 `--flag` CLI 薄殼還沒生成，正是由同一張 `*llm-schema*` 產出的下一步。
 
-**下一步（等細規劃）**：把 `define*` 簽章改由一張 **schema 表生成**（消滅手寫參數列）；抽出獨立 `json.scm`；argv-aware host。
+## argv-aware s7 host（`s7host.exe`）
+
+s7 內建 `main()` 只吃「剛好一個檔名」、不把 argv 傳進 Scheme。[`s7host.c`](s7host.c) 補上：把
+`argv[2..]` 綁成 Scheme 變數 `*argv*`（字串 list、順序保持），再 `s7_load` 腳本（`argv[1]`）。
+Windows 上用 `wmain`＋`-municode`＋`WideCharToMultiByte` 轉 UTF-8，中文參數不亂碼。
+
+**編**（Git Bash，先 `export PATH=/c/dev/mingw64/bin:$PATH`）：
+
+```sh
+cd try_1
+gcc s7host.c "C:/code/mine/pas/derived/s7-playground/s7.c" -o s7host.exe \
+    -I "C:/code/mine/pas/derived/s7-playground" -I "./shim_include" \
+    -O2 -lm -municode
+```
+
+- 把 `s7.c` 當庫一起編、**不定義 `WITH_MAIN`**（否則撞 s7 自己的 main）。
+- MinGW 上 `WITH_C_LOADER` 自動變 0（不需 FFI），所以只缺 `<sys/utsname.h>` 一個標頭 →
+  由 [`shim_include/sys/utsname.h`](shim_include/sys/utsname.h) 補最小版（`dlfcn`/`realpath` 那兩個
+  只在 C-loader 開時才需要，此路用不到）。
+
+**用**：`s7host.exe <script.scm> [arg1 arg2 …]`；腳本裡 `(for-each display *argv*)` 取參數。
+無參數印用法回傳 1、腳本載入失敗回傳 2。範例見 [`argv_test.scm`](argv_test.scm)。
+
+**下一步（等細規劃）**：由 `*llm-schema*` 生成 `--flag` CLI 薄殼（解析 `*argv*` → 呼叫 `llm-entry`），
+讓 `s7host.exe cli.scm --prompt "hi" --temp 0.7` 成真；接真後端實跑（見 WAIT_USER）。

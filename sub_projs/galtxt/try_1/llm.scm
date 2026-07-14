@@ -7,91 +7,13 @@
 ;;;
 ;;; HTTP 走 (system "curl …" #t) 捕捉輸出（MinGW 無 libc，但 system+curl 可用，http/https 通吃）。
 ;;; 請求用 inlet 表達、s7->json 序列化；回應 json->s7 成 inlet 導航——同像性，零手工 escape。
+;;;
+;;; ★ 參數單一真相源＝下面的 *llm-schema*：由它「生成」llm-entry 的 keyword 簽章、
+;;;   並在 runtime 驅動取樣參數的塞入。新增一個參數＝schema 加一行，別處零改動；
+;;;   日後 --flag CLI 也由同一張表生成（見「argv host」那條線）。
 
-;; ── JSON：抠自 s7 playground lib/json.scm 的 json->s7 / s7->json，
-;;    並替 s7->json 補上 boolean / null（原版沒有，stream:false 會炸）。
-
-(define json->s7
-  (let ()
-    (define (strlet . args)            ; inlet with keys as strings
-      (apply inlet (do ((p args (cddr p))
-			(fields ()))
-		       ((null? p)
-			(reverse! fields))
-		     (set! fields (cons (cadr p)
-					(cons (symbol (car p))
-					      fields))))))
-    (let ((jlet (curlet)))
-      (lambda (str)
-	(do ((p (open-output-string))
-	     (len (length str))
-	     (i 0 (+ i 1)))
-	    ((= i len)
-	     (let ((result (eval-string (get-output-string p) jlet)))
-	       (close-output-port p)
-	       result))
-	  (case (str i)
-	    ((#\{) (display "(strlet " p))
-	    ((#\[) (display "(vector " p))
-	    ((#\} #\]) (write-char #\) p))
-	    ((#\: #\,) (write-char #\space p))
-	    ((#\")
-	     (let ((qpos (char-position #\" str (+ i 1))))
-	       (if (not qpos)
-		   (format *stderr* "no close quote: ~S ~S~%" (substring str 0 i) (substring str i)))
-	       (if (char=? (str (- qpos 1)) #\\)
-		   (set! qpos (char-position #\" str (+ qpos 1))))
-	       (display (substring str i (+ qpos 1)) p)
-	       (set! i qpos)))
-	    ((#\t)
-	     (if (and (< i (- len 3)) (string=? (substring str i (+ i 4)) "true"))
-		 (begin (display "#t" p) (set! i (+ i 3)))
-		 (format *stderr* "bad entry: ~S~%" (substring str i))))
-	    ((#\n)
-	     (if (and (< i (- len 3)) (string=? (substring str i (+ i 4)) "null"))
-		 (begin (display "()" p) (set! i (+ i 3)))
-		 (format *stderr* "bad entry: ~S~%" (substring str i))))
-	    ((#\f)
-	     (if (and (< i (- len 4)) (string=? (substring str i (+ i 5)) "false"))
-		 (begin (display "#f" p) (set! i (+ i 4)))
-		 (format *stderr* "bad entry: ~S~%" (substring str i))))
-	    (else (write-char (str i) p))))))))
-
-(define* (s7->json obj (port (current-output-port)))
-  (case (type-of obj)
-    ((integer? float?) (display obj port))
-    ((boolean?)        (display (if obj "true" "false") port))   ; ← 補：JSON boolean
-    ((null?)           (display "null" port))                    ; ← 補：JSON null
-    ((string?)         (write obj port))
-    ((vector? float-vector? int-vector? byte-vector?)
-     (let ((len (length obj)))
-       (if (zero? len)
-	   (display "[]" port)
-	   (begin
-	     (write-char #\[ port)
-	     (do ((i 0 (+ i 1)))
-		 ((= i (- len 1)) (s7->json (obj i) port) (write-char #\] port))
-	       (s7->json (obj i) port)
-	       (display ", " port))))))
-    ((let?)
-     (let ((len (length obj)))
-       (if (zero? len)
-	   (display "{}" port)
-	   (let ((slot-ctr 1))
-	     (write-char #\{ port)
-	     (for-each (lambda (slot)
-			 (write (symbol->string (car slot)) port)
-			 (display " : " port)
-			 (s7->json (cdr slot) port)
-			 (if (< slot-ctr len) (display ", " port) (write-char #\} port))
-			 (set! slot-ctr (+ slot-ctr 1)))
-		       obj)))))          ; 不 reverse（此 s7 版不准 reverse let；欄位順序對 API 無所謂）
-    (else (format *stderr* "s7->json: bad entry: ~S~%" obj))))
-
-(define (json-string obj)              ; s7 物件 → JSON 字串
-  (let ((p (open-output-string)))
-    (s7->json obj p)
-    (get-output-string p)))
+;; ── JSON：json->s7 / s7->json / json-string 已抽到 json.scm（純機械搬移，邏輯不變），這裡只 load。
+(load "json.scm")   ; json->s7 / s7->json / json-string
 
 ;; ── 後端設定（沒 getenv → 用全域變數，REPL 裡 set! 即可切）
 (define *llm-base-url* "http://localhost:1234/v1")   ; 到 /v1 為止
@@ -111,14 +33,42 @@
 
 (define *req-file* "galtxt_llm_req.json")   ; 暫存請求 body（避開命令列引號地獄）
 
-;; ── 核心：keyword 參數 ＝ schema 的直接投影（之後這份簽章要改由 schema 生成）
-(define* (llm-entry (prompt #f) (in #f) (out #f) (sys #f)
-		    (model #f) (temp #f) (top-p #f) (top-k #f)
-		    (max-tokens #f) (n #f) (seed #f)
-		    (presence-penalty #f) (frequency-penalty #f)
-		    (base-url #f) (api-key #f))
-  ;; 1. 組 prompt：--prompt 本體 ＋（--in 檔接在後面，中間補換行）
-  (let* ((body (cond ((and prompt in) (string-append prompt "\n" (slurp in)))
+;; ── ★ 參數 schema：唯一真相源
+;;    每列＝(scheme名  json鍵-或-ctrl)
+;;      ctrl        ＝控制參數（prompt/in/out/sys/model/base-url/api-key），本體流程手動處理
+;;      其它(符號)  ＝直接塞進 OpenAI 請求的 JSON 欄位鍵；「有給才塞」，沒給讓後端用自己預設
+;;    要加參數（例如 stop、logit_bias）：這裡加一行即可，llm-entry 簽章與塞入邏輯自動跟上。
+(define *llm-schema*
+  '((prompt            ctrl)
+    (in                ctrl)
+    (out               ctrl)
+    (sys               ctrl)
+    (model             ctrl)
+    (base-url          ctrl)
+    (api-key           ctrl)
+    (temp              temperature)
+    (top-p             top_p)
+    (top-k             top_k)
+    (max-tokens        max_tokens)
+    (n                 n)
+    (seed              seed)
+    (presence-penalty  presence_penalty)
+    (frequency-penalty frequency_penalty)))
+
+(define (schema-ctrl? entry) (eq? (cadr entry) 'ctrl))
+
+;; ── 實作本體：吃一個「已收齊所有 keyword 值的 inlet」a，(a '參數名) 取值（沒給＝#f）。
+;;    取樣參數不再手寫——直接 for-each 迭代 *llm-schema*。
+(define (llm-entry-impl a)
+  (let* ((prompt   (a 'prompt))
+	 (in       (a 'in))
+	 (out      (a 'out))
+	 (sys      (a 'sys))
+	 (model    (a 'model))
+	 (base-url (a 'base-url))
+	 (api-key  (a 'api-key))
+	 ;; 1. 組 prompt：--prompt 本體 ＋（--in 檔接在後面，中間補換行）
+	 (body (cond ((and prompt in) (string-append prompt "\n" (slurp in)))
 		     (prompt prompt)
 		     (in (slurp in))
 		     (else (error 'llm-entry "需要 :prompt 或 :in"))))
@@ -128,16 +78,14 @@
 	 ;; 2. messages（有 :sys 就前置 system role）
 	 (user (inlet 'role "user" 'content body))
 	 (msgs (if sys (vector (inlet 'role "system" 'content sys) user) (vector user)))
-	 ;; 3. 請求 inlet：固定欄位 ＋ 有給才加的取樣參數
+	 ;; 3. 請求 inlet：固定欄位 ＋（下方）schema 驅動的取樣參數
 	 (req  (inlet 'model mdl 'messages msgs 'stream #f)))
-    (when temp              (varlet req 'temperature temp))
-    (when top-p             (varlet req 'top_p top-p))
-    (when top-k             (varlet req 'top_k top-k))
-    (when max-tokens        (varlet req 'max_tokens max-tokens))
-    (when n                 (varlet req 'n n))
-    (when seed              (varlet req 'seed seed))
-    (when presence-penalty  (varlet req 'presence_penalty presence-penalty))
-    (when frequency-penalty (varlet req 'frequency_penalty frequency-penalty))
+    ;; ★ 取樣參數：迭代 schema，非 ctrl 且有給才塞進 req（json 鍵＝schema 第二欄）
+    (for-each (lambda (entry)
+		(unless (schema-ctrl? entry)
+		  (let ((v (a (car entry))))
+		    (when v (varlet req (cadr entry) v)))))
+	      *llm-schema*)
     ;; 4. 寫請求檔 → curl → 捕捉回應
     (spit *req-file* (json-string req))
     (let* ((auth (if (> (length key) 0)
@@ -163,6 +111,22 @@
 			    (when (let? toks) (format *stderr* "[meter] total_tokens=~A~%" (toks 'total_tokens)))))
 		     (lambda args #f))
 	      (if out (begin (spit out content) out) content)))))))
+
+;; ── ★ 由 schema「生成」llm-entry 的 define* 簽章（消滅手寫參數列）。
+;;    生成物等價於：
+;;      (define* (llm-entry (prompt #f) (in #f) … (frequency-penalty #f))
+;;        (llm-entry-impl (inlet 'prompt prompt 'in in … 'frequency-penalty frequency-penalty)))
+;;    ——薄殼只負責「收齊 keyword 值打包成 inlet」，真正邏輯全在 llm-entry-impl。
+(define (make-llm-entry! schema)
+  (let ((sig   (map (lambda (e) (list (car e) #f)) schema))                 ; ((prompt #f) …)
+	(pairs (apply append
+		      (map (lambda (e) (list (list 'quote (car e)) (car e)))   ; ('prompt prompt …)
+			   schema))))
+    (eval `(define* (llm-entry ,@sig)
+	     (llm-entry-impl (inlet ,@pairs)))
+	  (rootlet))))
+
+(make-llm-entry! *llm-schema*)
 
 (display "llm.scm 已載入。試： (llm-entry :prompt \"hi\" :temp 0.1)")
 (newline)

@@ -1,0 +1,90 @@
+;;; json.scm — galtxt try_1：s7 物件 ⇄ JSON 字串（抽自 llm.scm，供其 (load) 用）
+;;;
+;;; 源頭：s7 playground lib/json.scm 的 json->s7 / s7->json，並替 s7->json 補上
+;;;   boolean / null（原版沒有，stream:false 會炸），且 let? 分支不 (reverse obj)
+;;;   （此 s7 版不准 reverse let；欄位順序對 API 無所謂）。
+;;;
+;;; 導出：json->s7（字串→s7 inlet/vector 導航）、s7->json（s7→JSON 寫到 port）、
+;;;      json-string（s7→JSON 字串）。
+
+(define json->s7
+  (let ()
+    (define (strlet . args)            ; inlet with keys as strings
+      (apply inlet (do ((p args (cddr p))
+			(fields ()))
+		       ((null? p)
+			(reverse! fields))
+		     (set! fields (cons (cadr p)
+					(cons (symbol (car p))
+					      fields))))))
+    (let ((jlet (curlet)))
+      (lambda (str)
+	(do ((p (open-output-string))
+	     (len (length str))
+	     (i 0 (+ i 1)))
+	    ((= i len)
+	     (let ((result (eval-string (get-output-string p) jlet)))
+	       (close-output-port p)
+	       result))
+	  (case (str i)
+	    ((#\{) (display "(strlet " p))
+	    ((#\[) (display "(vector " p))
+	    ((#\} #\]) (write-char #\) p))
+	    ((#\: #\,) (write-char #\space p))
+	    ((#\")
+	     (let ((qpos (char-position #\" str (+ i 1))))
+	       (if (not qpos)
+		   (format *stderr* "no close quote: ~S ~S~%" (substring str 0 i) (substring str i)))
+	       (if (char=? (str (- qpos 1)) #\\)
+		   (set! qpos (char-position #\" str (+ qpos 1))))
+	       (display (substring str i (+ qpos 1)) p)
+	       (set! i qpos)))
+	    ((#\t)
+	     (if (and (< i (- len 3)) (string=? (substring str i (+ i 4)) "true"))
+		 (begin (display "#t" p) (set! i (+ i 3)))
+		 (format *stderr* "bad entry: ~S~%" (substring str i))))
+	    ((#\n)
+	     (if (and (< i (- len 3)) (string=? (substring str i (+ i 4)) "null"))
+		 (begin (display "()" p) (set! i (+ i 3)))
+		 (format *stderr* "bad entry: ~S~%" (substring str i))))
+	    ((#\f)
+	     (if (and (< i (- len 4)) (string=? (substring str i (+ i 5)) "false"))
+		 (begin (display "#f" p) (set! i (+ i 4)))
+		 (format *stderr* "bad entry: ~S~%" (substring str i))))
+	    (else (write-char (str i) p))))))))
+
+(define* (s7->json obj (port (current-output-port)))
+  (case (type-of obj)
+    ((integer? float?) (display obj port))
+    ((boolean?)        (display (if obj "true" "false") port))   ; ← 補：JSON boolean
+    ((null?)           (display "null" port))                    ; ← 補：JSON null
+    ((string?)         (write obj port))
+    ((vector? float-vector? int-vector? byte-vector?)
+     (let ((len (length obj)))
+       (if (zero? len)
+	   (display "[]" port)
+	   (begin
+	     (write-char #\[ port)
+	     (do ((i 0 (+ i 1)))
+		 ((= i (- len 1)) (s7->json (obj i) port) (write-char #\] port))
+	       (s7->json (obj i) port)
+	       (display ", " port))))))
+    ((let?)
+     (let ((len (length obj)))
+       (if (zero? len)
+	   (display "{}" port)
+	   (let ((slot-ctr 1))
+	     (write-char #\{ port)
+	     (for-each (lambda (slot)
+			 (write (symbol->string (car slot)) port)
+			 (display " : " port)
+			 (s7->json (cdr slot) port)
+			 (if (< slot-ctr len) (display ", " port) (write-char #\} port))
+			 (set! slot-ctr (+ slot-ctr 1)))
+		       obj)))))          ; 不 reverse（此 s7 版不准 reverse let；欄位順序對 API 無所謂）
+    (else (format *stderr* "s7->json: bad entry: ~S~%" obj))))
+
+(define (json-string obj)              ; s7 物件 → JSON 字串
+  (let ((p (open-output-string)))
+    (s7->json obj p)
+    (get-output-string p)))

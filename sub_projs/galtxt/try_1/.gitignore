@@ -1,5 +1,6 @@
-# build 產物（simdjson.h/.cpp 是 vendored、要進版控）
+# build 產物（simdjson.h/.cpp 是 vendored、要進版控；s7host.c / shim_include / argv_test.scm 是源碼，留版控）
 llm_entry.exe
+s7host.exe
 *.o
 
 # s7 執行期暫存 / 測試 fixture
