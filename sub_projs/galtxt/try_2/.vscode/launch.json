@@ -10,6 +10,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // 擺第一個：picker（nvim-dap）與 VSCode 的下拉選單都預設選第一項，而「跑當前檔案」是最常按的。
+      // ⚠ 只適合**可獨立執行**的檔案（test/*.lua、examples/*.lua、src/cli.lua）。拿它跑**模組**
+      //    （src/llm.lua、src/json.lua…）會白等：執行模組只是定義函式然後 return M，函式體一行都不跑，
+      //    你下在 M.llm_entry 裡的中斷點雖回報 verified=true，卻永遠等不到。要停在模組內部，
+      //    改選下面那些有主程式的設定（Debug cli／Debug test／demo_*），它們會真的呼叫進去。
+      "name": "Debug 目前開啟的 .lua 檔",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": { "lua": "${workspaceFolder}/build/lua.exe", "file": "${relativeFile}" }
+    },
+    {
       // ⚠ 僅 Windows：別用 --prompt 傳中文（cmd 的 argv 是 950 碼頁會壞），走 --infile（讀檔是原始 UTF-8）。
       //    Linux/macOS 的 argv 本來就是 UTF-8，--prompt 直接傳中文沒問題（見下一組設定）。
       "name": "Debug cli（離線假回應）",
@@ -51,13 +63,6 @@
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "program": { "lua": "${workspaceFolder}/build/lua.exe", "file": "examples/demo_stream.lua" }
-    },
-    {
-      "name": "Debug 目前開啟的 .lua 檔",
-      "type": "lua-local",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "program": { "lua": "${workspaceFolder}/build/lua.exe", "file": "${relativeFile}" }
     }
   ]
 }
