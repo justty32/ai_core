@@ -17,7 +17,7 @@
       "cwd": "${workspaceFolder}",
       "program": { "lua": "${workspaceFolder}/build/lua.exe", "file": "src/cli.lua" },
       "args": [
-        "--base-url", "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/test/fixtures/fake",
+        "--base-url", "file://${workspaceFolder}/test/fixtures/fake",
         "--infile", "test/sample_prompt.txt",
         "--temp", "0.7"
       ]

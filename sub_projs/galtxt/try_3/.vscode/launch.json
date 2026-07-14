@@ -10,7 +10,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug try3 (gdb/MinGW)",
+      "name": "Debug try3 (gdb)",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/try3.exe",
@@ -20,7 +20,15 @@
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
-      "miDebuggerPath": "C:/dev/mingw64/bin/gdb.exe",
+      // ★ miDebuggerPath 只放進「windows」平台區塊——Linux 上不給這欄，cppdbg 就用 PATH 上的 gdb。
+      //   平台區塊（windows / linux / osx）VSCode 與 nvim-dap 都支援：會把該平台的鍵合併到頂層。
+      //   這是「一份 launch.json 兩台機器共用」的關鍵——別把機器專屬路徑留在頂層。
+      "windows": {
+        "miDebuggerPath": "C:/dev/mingw64/bin/gdb.exe"
+      },
+      // preLaunchTask 指向 tasks.json 的「cmake: build」，該任務寫死 --preset mingw-debug（Windows 專用）。
+      // 這是 VSCode 專屬機制，nvim 的 dap **不會**跑 preLaunchTask——用 nvim 除錯前要自己先
+      // `cmake --build --preset linux-debug` 建置一次（見 README「編輯器整合」一節）。
       "preLaunchTask": "cmake: build",
       "setupCommands": [
         {

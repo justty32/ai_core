@@ -1,0 +1,32 @@
+{
+  // 編輯器中立的 lua-language-server（lua_ls）專案設定——放專案根，Neovim（nvim-lspconfig 直接讀）
+  // 與 VSCode（Lua 擴充套件亦讀 .luarc.json，優先於／疊加 .vscode/settings.json）兩邊共用同一份。
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+
+  // ⚠ 版本落差：vendored 的是 Lua 5.5.0（vendor/lua/，見 vendor/lua/lua.h 的 LUA_VERSION_MINOR），
+  //   但 lua_ls 的 runtime.version 選項目前最高只到 "Lua 5.4"（尚無 5.5）。5.4 是最接近的近似值——
+  //   5.5 對 5.4 沒有語法層大改動，這裡選 5.4 只是讓 lua_ls 用對的內建函式庫簽名做提示／診斷，
+  //   不代表專案真的是 5.4。lua_ls 補上 5.5 選項後記得換掉這行。
+  "runtime": {
+    "version": "Lua 5.4"
+  },
+
+  "diagnostics": {
+    // arg 是 host.cpp bind_arg_table() 綁進去的全域命令列表（Lua 慣例：arg[-1]/arg[0]/arg[1..]），
+    // 純腳本（非 require 得到）看不到定義來源，不設會被誤報 undefined-global。
+    "globals": ["arg"]
+  },
+
+  "workspace": {
+    // meta/ 放 cjson／http 兩個 native（C）模組的型別 stub（.lua 檔頭 ---@meta 標記，見該檔說明）。
+    // 掛進 library 讓 require("cjson")／require("http") 解析到定義、不再報 module not found，
+    // 且 llm.lua 用到的 json.encode／http.request 等也有型別提示（不只是消音診斷而已）。
+    "library": ["meta"],
+    "checkThirdParty": false
+  }
+
+  // 註：沒設 runtime.path。src/ 底下模組互相載入走的是 debug.getinfo 自解位址 + dofile（見
+  // src/cli.lua、src/_path.lua、test/test.lua、examples/*.lua），不是 require——dofile 的路徑
+  // 是執行期字串組出來的，lua_ls 本來就無法靜態解析，runtime.path 對這個模式幫不上忙，加了也是
+  // 白加。真正需要靠 runtime.path／workspace.library 解的只有上面那兩個 native 模組。
+}

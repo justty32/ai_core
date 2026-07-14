@@ -1,0 +1,17 @@
+# clangd 設定 — 編輯器中立（nvim/LazyVim、VSCode clangd 擴充皆讀這份）
+#
+# clangd 預設只往「當前檔案所在目錄」往上找 compile_commands.json，不會自動下探到 build/，
+# 這裡明講去哪找（CMakeLists.txt 已開 CMAKE_EXPORT_COMPILE_COMMANDS，configure 後就在 build/ 底下）。
+#
+# vcpkg 的 include 路徑（build/vcpkg_installed/x64-linux/include）不用在這裡另外加：
+# compile_commands.json 裡每條指令本來就帶 -isystem .../vcpkg_installed/x64-linux/include，
+# clangd 讀 compile_commands.json 時會原樣套用，驗證過（見 README「編輯器整合」一節）。
+CompileFlags:
+  CompilationDatabase: build
+  # 這三個是 CMake+Ninja 針對 C++20 modules 依賴掃描（P1689）塞給 GCC 的旗標——
+  # 本專案已回歸傳統 header、不用 modules，但 Ninja generator 仍會替每個編譯單元加這幾旗標。
+  # clang 驅動器不認得，會冒出 "Unknown argument" 診斷雜訊（不影響實際程式碼分析），過濾掉。
+  Remove:
+    - -fmodules-ts
+    - -fmodule-mapper=*
+    - -fdeps-format=*

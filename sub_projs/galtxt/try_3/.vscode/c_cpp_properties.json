@@ -1,14 +1,29 @@
 {
-  // galtxt try_3 — IntelliSense 設定（C/C++ 擴充）
-  // 優先讀 build/compile_commands.json（CMake 匯出）拿真實編譯旗標；配下面的預設當退路。
+  // galtxt try_3 — IntelliSense 設定（C/C++ 擴充 ms-vscode.cpptools）
+  //
+  // 真正的編譯旗標一律來自 `build/compile_commands.json`（CMake 匯出，見 CMakeLists 的
+  // CMAKE_EXPORT_COMPILE_COMMANDS）——底下的 compilerPath/standard 只是「資料庫沒涵蓋到的檔案」
+  // 的退路。所以**要先 configure 過一次**（`cmake --preset …`）IntelliSense 才會準。
+  //
+  // ★ 跨平台：兩台機器各一個 configuration。VSCode 會依 `name` 自動挑（Win32 / Linux / Mac），
+  //   不必手動切。⚠ 別把 `C_Cpp.default.*` 寫進 settings.json——那是**全域預設**、不分平台，
+  //   之前寫死 `C:/dev/mingw64/bin/g++.exe` 就把 Linux 也一起帶壞了。
   "version": 4,
   "configurations": [
     {
-      "name": "MinGW",
+      "name": "Win32",
       "compilerPath": "C:/dev/mingw64/bin/g++.exe",
       "cStandard": "c17",
-      "cppStandard": "c++26",
+      "cppStandard": "c++23",
       "intelliSenseMode": "windows-gcc-x64",
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+    },
+    {
+      "name": "Linux",
+      "compilerPath": "/usr/bin/g++",
+      "cStandard": "c17",
+      "cppStandard": "c++23",
+      "intelliSenseMode": "linux-gcc-x64",
       "compileCommands": "${workspaceFolder}/build/compile_commands.json"
     }
   ]

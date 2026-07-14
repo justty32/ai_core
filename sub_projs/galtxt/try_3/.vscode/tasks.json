@@ -1,14 +1,21 @@
 {
   // galtxt try_3 — 建置任務（Ctrl+Shift+B 跑預設 build；Terminal > Run Task 選其他）
   // 全走 cmake CLI，讀 CMakePresets.json；工具鏈路徑已在 preset 釘死，不需 PATH 有 mingw。
+  //
+  // ★ 跨平台：preset 名稱兩台機器不同（Windows＝`mingw-*`、Linux＝`linux-*`，見 CMakePresets.json
+  //   的 condition）。tasks.json 支援**平台區塊**（"windows" / "linux" / "osx"）——該平台的鍵會覆蓋
+  //   同名的頂層鍵，所以頂層放 Linux 的 args、"windows" 區塊覆蓋成 mingw 的，一份檔案兩台共用。
+  //   ⚠ 曾經寫死 `mingw-debug`：Linux 上 `cmake --preset mingw-debug` 直接失敗（該 preset 被 condition
+  //     排除、根本不存在），連帶 F5 的 preLaunchTask 也失敗 → 看起來像「VSCode 不能 build 也不能 debug」。
   "version": "2.0.0",
+  "options": { "cwd": "${workspaceFolder}" },
   "tasks": [
     {
       "label": "cmake: configure",
       "type": "shell",
       "command": "cmake",
-      "args": ["--preset", "mingw-debug"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "args": ["--preset", "linux-debug"],
+      "windows": { "args": ["--preset", "mingw-debug"] },
       "problemMatcher": []
     },
     {
@@ -17,18 +24,18 @@
       "label": "cmake: build",
       "type": "shell",
       "command": "cmake",
-      "args": ["--build", "--preset", "mingw-debug"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "args": ["--build", "--preset", "linux-debug"],
+      "windows": { "args": ["--build", "--preset", "mingw-debug"] },
       "dependsOn": "cmake: configure",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
     },
     {
+      // 產物名兩平台都是 try3.exe（CMakeLists 用 SUFFIX ".exe" 顯式指定），此行不必分流。
       "label": "run: try3",
       "type": "shell",
       "command": "${workspaceFolder}/build/try3.exe",
       "args": ["10", "主人"],
-      "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": "cmake: build",
       "problemMatcher": [],
       "presentation": { "clear": true }
@@ -38,7 +45,6 @@
       "type": "shell",
       "command": "cmake",
       "args": ["-E", "rm", "-rf", "build"],
-      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     }
   ]

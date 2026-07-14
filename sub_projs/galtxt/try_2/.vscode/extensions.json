@@ -1,0 +1,9 @@
+{
+  // galtxt try_2 — 建議安裝的 VSCode 擴充（開這個資料夾時 VSCode 會提示安裝）。
+  "recommendations": [
+    // Lua 靜態分析／自動完成（讀專案根的 .luarc.json＋meta/ 型別 stub）。
+    "sumneko.lua",
+    // launch.json 用的 lua-local 除錯器（純 Lua、不需原生模組；跑 build/lua.exe）。
+    "tomblind.local-lua-debugger-vscode"
+  ]
+}
