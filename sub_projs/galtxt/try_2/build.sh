@@ -25,10 +25,11 @@ case "$(uname -s)" in
 esac
 
 build_lua() {
-  echo "[build] build/liblua.a（除 lua.c/luac.c 兩個 main 外全部）"
+  echo "[build] build/liblua.a（vendored Lua 除 lua.c/luac.c ＋ 我方 native/cjson.c）"
   local objs=()
-  for f in $(ls vendor/lua/*.c | grep -vE '/(lua|luac)\.c$'); do
-    gcc -O2 -c "$f" -o "build/$(basename "${f%.c}").o"
+  # vendored Lua 全部（除兩個 main）＋ native/cjson.c（JSON codec，經 linit.c 註冊成內建 cjson）
+  for f in $(ls vendor/lua/*.c | grep -vE '/(lua|luac)\.c$') native/cjson.c; do
+    gcc -O2 -c "$f" -I vendor/lua -o "build/$(basename "${f%.c}").o"
     objs+=("build/$(basename "${f%.c}").o")
   done
   ar rcs build/liblua.a "${objs[@]}"

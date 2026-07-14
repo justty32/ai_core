@@ -40,6 +40,11 @@ static const luaL_Reg stdlibs[] = {
 };
 
 
+/* ── galtxt try_2 增修：native JSON codec（native/cjson.c）。宣告於此、於下方函式尾端
+**    塞進 package.preload，令 require("cjson") 惰性載入。放迴圈外＝不動 stdlibs/mask/assert。*/
+LUAMOD_API int luaopen_cjson (lua_State *L);
+
+
 /*
 ** require and preload selected standard libraries
 */
@@ -58,6 +63,10 @@ LUALIB_API void luaL_openselectedlibs (lua_State *L, int load, int preload) {
     }
   }
   lua_assert((mask >> 1) == LUA_UTF8LIBK);
+  /* ── galtxt try_2：把 cjson 塞進 PRELOAD 表（此刻仍在堆疊 -1）。host.exe 與 stock
+  **    lua.exe 都經本函式，故兩者 require("cjson") 皆可得。無條件、與上方 mask 無關。*/
+  lua_pushcfunction(L, luaopen_cjson);
+  lua_setfield(L, -2, "cjson");
   lua_pop(L, 1);  /* remove PRELOAD table */
 }
 

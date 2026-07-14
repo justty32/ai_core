@@ -13,10 +13,10 @@
 --- ★ 參數單一真相源＝下面的 M.schema：由它驅動 (1) 呼叫端參數驗證、(2) JSON 欄位對映、
 ---   (3) CLI 旗標名（cli.lua）、(4) CLI 值型別解析。新增一個參數＝schema 加一行，別處零改動。
 
--- JSON：vendored rxi/json.lua 0.1.2——json.encode / json.decode
--- 自解本檔目錄，載入同資料夾的 json.lua（location-independent，不綁 CWD）
-local HERE = debug.getinfo(1, "S").source:sub(2):match("^(.*[/\\])") or ""
-local json = dofile(HERE .. "json.lua")
+-- JSON：native C codec（native/cjson.c，編進 liblua.a、經 linit.c 註冊進 package.preload）。
+--   host.exe 與 stock lua.exe 都內建，require 即得——取代原 vendored rxi/json.lua（已退休）。
+--   API 與語意不變：cjson.encode / cjson.decode（序列自動陣列、中文原樣、null↔nil）。
+local json = require("cjson")
 
 local M = {}
 

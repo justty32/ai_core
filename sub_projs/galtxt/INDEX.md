@@ -6,7 +6,7 @@
 
 ## Repo 佈局
 
-工作流骨架 + 兩個**玩具實驗場**（`try_1` / `try_2`，刻意不套框架、先跑通 LLM 接口再往上抽）。
+工作流骨架 + 三個**玩具實驗場**（`try_1` / `try_2` / `try_3`，刻意不套框架、先跑通再往上抽）。
 
 | 路徑 | 內容 |
 |------|------|
@@ -14,7 +14,8 @@
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | [`try_1/`](try_1/README.md) | 玩具實驗場①：**s7 Scheme** 版 LLM 接口（`llm.scm`＋schema 生成簽章＋argv host `s7host.exe`）|
-| [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`json.lua`/`cli.lua`；schema 生成 `--flag` CLI）|
+| [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`cli.lua`＋native `cjson.c` JSON codec；schema 生成 `--flag` CLI）|
+| [`try_3/`](try_3/README.md) | 玩具實驗場③：**純 C++**（CMake + MinGW + VSCode/gdb；目前為可除錯骨架，不嵌腳本 VM）|
 
 ## 開發工作流
 
