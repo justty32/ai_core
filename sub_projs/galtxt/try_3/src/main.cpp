@@ -211,7 +211,94 @@ static void demo_structured() {
 #endif
 }
 
-static int run(const std::vector<std::string>& args) {
+// ── 真後端示範：打本機 LM Studio（llm::from_env()：AI_CORE_LLM_BASE_URL 預設
+//    http://localhost:1234/v1，AI_CORE_LLM_MODEL 預設 local-model）。四種能力各跑一次：
+//    ask 非串流、ask 串流、ask_as<T> 結構化輸出、ask_tools 工具呼叫，全繁體中文 prompt。
+//
+//    ⚠ 兩個真後端才會踩到的坑（離線 fixture 驗不出來，2026-07-14 實測）：
+//    1) 掛載的是 reasoning 模型（google/gemma-4-e4b）：思考鏈放在 message.reasoning_content、
+//       答案才在 message.content，**兩者共用同一份 max_tokens 預算**。這裡刻意「完全不設
+//       max_tokens」（client.max_tokens 維持 nullopt），交後端用 context 上限——實測設一個
+//       小值（如 600）會被 reasoning 吃光，content 變空字串。
+//    2) 回應很慢（reasoning 要想，單次可能 5～30 秒）：llm::from_env() 給了 120 秒逾時
+//       （client.timeout_ms），這裡逐步印進度字樣，讓人知道沒當掉、只是在等模型想。
+static void demo_real() {
+    llm::Client client = llm::from_env();
+    std::printf("[real] 後端＝%s\n", client.endpoint.c_str());
+    std::printf("[real] 模型＝%s（未設 max_tokens：交後端用 context 上限，避免 reasoning 吃光）\n",
+                client.model ? client.model->c_str() : "(未設)");
+
+    // 1) ask 非串流
+    std::printf("[real] (1/4) ask 非串流……送出中，reasoning 模型可能要等 5~30 秒，請耐心等候\n");
+    try {
+        std::string ans = client.ask("用一句話介紹你自己，請用繁體中文回答。");
+        std::printf("[real] 非串流答覆 => %s\n", ans.c_str());
+    } catch (const std::exception& e) {
+        std::printf("[real] 非串流失敗：%s\n", e.what());
+    }
+
+    // 2) ask 串流：逐段印出（SSE 拆框在 llm.cpp 裡做，這裡只管收 delta）
+    std::printf("[real] (2/4) ask 串流……逐段印出，看到字持續跑代表還活著\n");
+    try {
+        std::printf("[real] 串流逐段 => ");
+        std::string whole = client.ask(
+            "請用繁體中文數到五，每個數字後面加句號。", true,
+            [](std::string_view piece) {
+                std::printf("%.*s", static_cast<int>(piece.size()), piece.data());
+                std::fflush(stdout);   // 逐段即時吐出，不等緩衝
+                return true;
+            });
+        std::printf("\n[real] 串流合＝%s\n", whole.c_str());
+    } catch (const std::exception& e) {
+        std::printf("[real] 串流失敗：%s\n", e.what());
+    }
+
+    // 3) ask_as<T> 結構化輸出：丟 Character 進、拿 Character 出（schema 走 schema_of<T>()，見 llm_schema.hpp）
+    std::printf("[real] (3/4) ask_as<Character> 結構化輸出……送出中\n");
+    try {
+        if (auto c = llm::ask_as<Character>(client, "生成一個傲嬌女角色，繁體中文", "character")) {
+            std::printf("[real] 結構化 => name=%s affection=%d lines[0]=%s\n",
+                        c->name.c_str(), c->affection, c->lines.empty() ? "" : c->lines[0].c_str());
+        } else {
+            std::printf("[real] 結構化輸出解析失敗（模型回應解不回 Character）\n");
+        }
+    } catch (const std::exception& e) {
+        std::printf("[real] 結構化輸出失敗：%s\n", e.what());
+    }
+
+    // 4) ask_tools 工具呼叫：GetWeather struct 同時生 schema、又解回 arguments
+    std::printf("[real] (4/4) ask_tools 工具呼叫……送出中\n");
+    try {
+        llm::Tool weather = llm::make_tool<GetWeather>("get_weather", "查詢某城市天氣");
+        auto calls = llm::ask_tools(client, "東京現在天氣如何？請用攝氏顯示。", { weather });
+        std::printf("[real] 模型要求呼叫 %zu 個工具\n", calls.size());
+        for (const auto& c : calls) {
+            std::printf("[real]   %s(%s)\n", c.name.c_str(), c.arguments.c_str());
+            GetWeather args{};
+            if (!glz::read_json(args, c.arguments))
+                std::printf("[real]   解出參數 => city=%s unit=%s\n", args.city.c_str(), args.unit.c_str());
+        }
+    } catch (const std::exception& e) {
+        std::printf("[real] 工具呼叫失敗：%s\n", e.what());
+    }
+}
+
+static int run(const std::vector<std::string>& args_in) {
+    // ★ --real：另一條路徑，打真後端（本機 LM Studio）——不動離線 fixture 那條回歸路徑，
+    //   兩者互斥（給了 --real 就只跑真後端示範，離線 demo 全部略過）。
+    //   從 args 裡摘掉這個旗標，不干擾原本 N/名字的位置參數解析。
+    std::vector<std::string> args = args_in;
+    bool real = false;
+    for (auto it = args.begin(); it != args.end(); ) {
+        if (*it == "--real") { real = true; it = args.erase(it); }
+        else ++it;
+    }
+    if (real) {
+        std::printf("[real] --real 模式：打真後端，略過離線 fixture demo\n");
+        demo_real();
+        return 0;
+    }
+
     // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
     int n = 10;
     if (args.size() >= 2) {

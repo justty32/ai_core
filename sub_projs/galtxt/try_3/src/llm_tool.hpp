@@ -12,8 +12,9 @@
 #include <string_view>
 #include <vector>
 
-#include <glaze/glaze.hpp>   // write_json_schema：從 struct 反射生成 JSON Schema
+#include <glaze/glaze.hpp>   // read_json：把模型回的 arguments 反射解回 Args struct
 #include "llm.hpp"
+#include "llm_schema.hpp"    // schema_of<Args>()：反射生參數 schema（含 required）
 
 namespace llm {
 
@@ -27,11 +28,11 @@ struct Tool {
 // ★ 從 C++ struct 反射生成參數 JSON Schema —— 工具定義的「唯一真相源」就是這個 struct。
 //   用法：  struct GetWeather { std::string city; std::string unit; };
 //          llm::Tool t = llm::make_tool<GetWeather>("get_weather", "查詢某城市天氣");
+//   ★ 走 schema_of<>（kSchemaOpts）而非裸 write_json_schema——才會生 `required`，否則模型可以
+//     少給參數（Args 的欄位在 schema 裡全成選填）。理由詳見 llm_schema.hpp 檔頭。
 template <class Args>
 Tool make_tool(std::string name, std::string description) {
-    auto schema = glz::write_json_schema<Args>();
-    return Tool{ std::move(name), std::move(description),
-                 schema ? std::move(*schema) : std::string("{}") };
+    return Tool{ std::move(name), std::move(description), schema_of<Args>() };
 }
 
 // 模型要求呼叫的一次工具：id、函式名、arguments（模型產生的 JSON 字串，照 Tool.parameters）。

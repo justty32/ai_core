@@ -6,6 +6,7 @@
 
 #include "llm.hpp"
 
+#include <cstdlib>
 #include <optional>
 #include <vector>
 
@@ -54,7 +55,14 @@ http::Request build_request(const Client& client, std::string_view body_json) {
         .body = std::string(body_json),
     };
     if (!client.api_key.empty()) req.headers.push_back("Authorization: Bearer " + client.api_key);
+    req.timeout_ms = client.timeout_ms;   // 0＝不設逾時；from_env() 給真後端一個寬鬆值
     return req;
+}
+
+// getenv 包一層預設值（比照 try_1 llm_entry.cpp 的 env() 慣例）。
+std::string env_or(const char* key, const char* fallback) {
+    const char* v = std::getenv(key);
+    return v ? std::string(v) : std::string(fallback);
 }
 
 }  // namespace ask_impl
@@ -64,6 +72,16 @@ using namespace ask_impl;
 std::string post(const Client& client, std::string_view request_json) {
     http::Response resp = http::request(build_request(client, request_json));
     return std::move(resp.body);
+}
+
+Client from_env() {
+    Client c;
+    std::string base = env_or("AI_CORE_LLM_BASE_URL", "http://localhost:1234/v1");
+    c.endpoint = base + "/chat/completions";
+    c.model    = env_or("AI_CORE_LLM_MODEL", "local-model");
+    c.api_key  = env_or("AI_CORE_LLM_API_KEY", "");
+    c.timeout_ms = 120000;   // 2 分鐘：reasoning 模型單次可能要等數十秒，留寬裕空間
+    return c;
 }
 
 std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) {

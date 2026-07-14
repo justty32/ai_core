@@ -5,17 +5,17 @@
 //   response_format.json_schema 送出（約束模型只能回符合的 JSON）；回來的 JSON 再
 //   glz::read_json 反射回 T。全程零手寫 schema、零手寫解析。
 //
-// ⚠ OpenAI「strict」結構化輸出對 schema 有子集要求（所有欄位列入 required、additionalProperties:false…）。
-//   glaze 生成的 schema 已含 additionalProperties:false；required 視後端寬嚴而定，本地伺服器多半不挑。
-//   離線 fixture 不驗 schema，真後端 strict 模式若挑剔再按其規格微調 T 或 schema。
+// ★ schema 走 schema_of<T>()（＝kSchemaOpts，開 error_on_missing_keys）而非裸 write_json_schema——
+//   否則生出的 schema 沒有 `required`，模型可以只吐部分欄位。血淚實測與原理見 llm_schema.hpp 檔頭。
 
 #pragma once
 #include <optional>
 #include <string>
 #include <string_view>
 
-#include <glaze/glaze.hpp>   // write_json_schema<T>／read_json：反射生成 schema、反射解析
+#include <glaze/glaze.hpp>   // read_json：把回應反射回 T
 #include "llm.hpp"
+#include "llm_schema.hpp"    // schema_of<T>()：反射生回應 schema（含 required）
 
 namespace llm {
 
@@ -27,15 +27,13 @@ std::string ask_json_raw(const Client& client,
                          std::string_view schema_json);
 
 // ★ 結構化輸出：丟 struct T 進去，回 std::optional<T>。
-//   T＝唯一真相源：write_json_schema<T> 生成 schema 約束模型、read_json 把回應反射回 T。
-//   傳輸失敗會 throw（來自 post）；schema 生成或回應解析失敗＝回 nullopt。
+//   T＝唯一真相源：schema_of<T>() 生成 schema 約束模型、read_json 把回應反射回 T。
+//   傳輸失敗會 throw（來自 post）；回應解析失敗＝回 nullopt。
 template <class T>
 std::optional<T> ask_as(const Client& client,
                         std::string_view prompt,
                         std::string_view schema_name = "response") {
-    auto schema = glz::write_json_schema<T>();
-    if (!schema) return std::nullopt;
-    std::string content = ask_json_raw(client, prompt, schema_name, *schema);
+    std::string content = ask_json_raw(client, prompt, schema_name, schema_of<T>());
     T value{};
     if (glz::read_json(value, content)) return std::nullopt;   // 回應解不成 T
     return value;

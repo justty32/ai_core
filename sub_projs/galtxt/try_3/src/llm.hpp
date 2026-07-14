@@ -27,6 +27,8 @@ public:
     // ── 連線 ──
     std::string endpoint;                 // 後端 URL（真後端 https://…/chat/completions；離線 file://…）
     std::string api_key;                  // 選填：非空則送 Authorization: Bearer <key>
+    long timeout_ms = 0;                  // 0＝不設逾時（file:// 離線 fixture 不受影響）；
+                                           // from_env() 給真後端一個寬鬆預設（reasoning 模型會慢）
 
     // ── 取樣屬性（全部選填，未設＝不送、交給後端用它自己的默認）──
     //    用 std::optional：nullopt 時 glaze 自動略過該鍵（skip_null_members 預設開）。
@@ -49,6 +51,15 @@ public:
                     bool stream = false,
                     OnDelta on_delta = nullptr);
 };
+
+// 從環境變數建一個打「真後端」用的 Client（對齊 try_1/try_2 兩條線既有慣例，三線同名同預設）：
+//   AI_CORE_LLM_BASE_URL  預設 http://localhost:1234/v1（LM Studio 本機預設埠；到 /v1 為止，
+//                         這裡接上 /chat/completions 組成 endpoint）
+//   AI_CORE_LLM_MODEL     預設 local-model（LM Studio 認得這名字，會用「目前已載入」的模型）
+//   AI_CORE_LLM_API_KEY   預設空（有值才送 Authorization: Bearer；本機通常留空）
+// endpoint 事後仍可手動覆寫（離線 fixture 走 file:// 就是直接另外建 Client、不經過這個工廠）。
+// timeout_ms 給一個寬鬆預設：真後端（尤其 reasoning 模型）單次可能要等數十秒。
+Client from_env();
 
 // ── 供擴充模組（llm_tool／llm_media）共用的兩塊，讓它們不重造傳輸與取樣搬運 ──
 
