@@ -99,7 +99,9 @@ $env:AI_CORE_LLM_API_KEY  = "sk-你的key"
 
 檔案：[`llm.scm`](llm.scm)（接口本體＋schema）、[`json.scm`](json.scm)（s7⇄JSON，llm.scm `(load)` 它）、
 [`test.scm`](test.scm)（離線測試）、[`s7host.c`](s7host.c)＋[`shim_include/`](shim_include/)（argv-aware host，見文末）。
-s7 runtime 用 `C:\code\mine\pas\derived\s7-playground\s7.exe`（不需 FFI；純 Scheme ＋ `(system "curl…" #t)`）。
+s7 runtime（不需 FFI；純 Scheme ＋ `(system "curl…" #t)`）來自另一個 repo `s7-playground`（本 repo
+不版控 s7.c/s7.h）：Windows 用其已編好的 `s7.exe`；**Linux 先在該 repo跑一次**
+`bash setup.sh && bash build.sh` 抓原始碼＋編出 `./s7`，才有 s7host 要連結的 `s7.c`。
 
 **開發循環**（playground 哲學，REPL 一直開）：
 
@@ -116,7 +118,11 @@ keyword 參數 ＝ schema 的直接投影：`:prompt :in :out :sys :model :temp 
 簽章由它生成、取樣參數也由它 runtime 驅動塞入。要加參數（`stop`／`logit_bias`…）＝schema 加一行。
 
 **離線跑測**（curl `file://` 灌假回應，不需真後端）：`cd try_1` 後
-`…\s7.exe test.scm`（s7 只吃「剛好一個檔名」的參數）。
+`./s7host.exe test.scm`（或 s7-playground 的 `./s7 test.scm`，兩者皆可，s7 只吃「剛好一個檔名」的
+參數）。`test.scm` 用 `(system "pwd" #t)` 現拼目前工作目錄的 `file://` 絕對路徑（s7 無跨平台
+`getcwd`），所以**一定要在 `try_1` 目錄下跑**；假回應 fixture 在 [`fake/chat/completions`](fake/chat/completions)
+（OpenAI chat completion 格式的 JSON，**進版控**當測試資料——比照 [try_2 的 `test/fixtures/`](../try_2/test/fixtures/)。
+⚠ 這支 fixture 一度被 `.gitignore` 的 `fake/` 蓋掉、沒進版控，害 clone 下來 `test.scm` 直接跑不了，已扶正）。
 
 **設計要點 / 學到的**：
 - 請求用 s7 `inlet` 表達、`s7->json` 序列化；回應 `json->s7` 成 inlet 導航——同像性，零手工 escape。
@@ -134,19 +140,38 @@ s7 內建 `main()` 只吃「剛好一個檔名」、不把 argv 傳進 Scheme。
 `argv[2..]` 綁成 Scheme 變數 `*argv*`（字串 list、順序保持），再 `s7_load` 腳本（`argv[1]`）。
 Windows 上用 `wmain`＋`-municode`＋`WideCharToMultiByte` 轉 UTF-8，中文參數不亂碼。
 
-**編**（Git Bash，先 `export PATH=/c/dev/mingw64/bin:$PATH`）：
+**編**：`./build.sh`（比照 `try_2/build.sh` 風格，`case "$(uname -s)"` 分 Windows/Linux）。
+s7 原始碼路徑不寫死機器路徑，用環境變數 `S7_DIR` 可覆寫，沒給就依平台試預設候選（Linux：
+`$HOME/repo/pas/derived/s7-playground`；Windows：`C:/code/mine/pas/derived/s7-playground`），
+兩邊都找不到就報錯教你去 s7-playground 跑 `setup.sh`。手動指定：
 
 ```sh
-cd try_1
-gcc s7host.c "C:/code/mine/pas/derived/s7-playground/s7.c" -o s7host.exe \
-    -I "C:/code/mine/pas/derived/s7-playground" -I "./shim_include" \
-    -O2 -lm -municode
+S7_DIR=/path/to/s7-playground ./build.sh
+```
+
+build.sh 內部相當於（Windows，Git Bash，先 `export PATH=/c/dev/mingw64/bin:$PATH`）：
+
+```sh
+gcc s7host.c "$S7_DIR/s7.c" -o s7host.exe -I "$S7_DIR" -I "./shim_include" -O2 -lm -municode
+```
+
+Linux 原生 gcc 則是：
+
+```sh
+gcc s7host.c "$S7_DIR/s7.c" -o s7host.exe -I "$S7_DIR" -O2 -lm -ldl -Wl,-export-dynamic
 ```
 
 - 把 `s7.c` 當庫一起編、**不定義 `WITH_MAIN`**（否則撞 s7 自己的 main）。
-- MinGW 上 `WITH_C_LOADER` 自動變 0（不需 FFI），所以只缺 `<sys/utsname.h>` 一個標頭 →
-  由 [`shim_include/sys/utsname.h`](shim_include/sys/utsname.h) 補最小版（`dlfcn`/`realpath` 那兩個
-  只在 C-loader 開時才需要，此路用不到）。
+- **`shim_include/` 只給 MinGW 用、Linux 絕不能加進 include path**：MinGW 上 `WITH_C_LOADER`
+  自動變 0（不需 FFI），所以只缺 `<sys/utsname.h>` 一個標頭 → 由
+  [`shim_include/sys/utsname.h`](shim_include/sys/utsname.h) 補最小版（`dlfcn`/`realpath` 那兩個
+  只在 C-loader 開時才需要，此路用不到）。Linux 原生就有真正的 `<sys/utsname.h>`，
+  `WITH_C_LOADER` 也預設是開的（FFI 可用）——把 `shim_include` 塞進 Linux 的 include path
+  會**蓋掉系統標頭**、換上假資料版的 `uname()`，是不折不扣的地雷，`build.sh` 已避開（Linux
+  分支不帶 `-I ./shim_include`）。Linux 另外需要 `-ldl`（`dlopen`）＋`-Wl,-export-dynamic`
+  （讓現編的 `*_s7.so` 連得回 s7 符號），這兩個旗標 MinGW 分支不需要。
+- `s7host.c` 本身**不用改**：`main`/`wmain` 早就用 `#ifdef _WIN32` 分好了（見檔案開頭），
+  Linux 走一般 `main`、UTF-8 argv 原生就對。
 
 **用**：`s7host.exe <script.scm> [arg1 arg2 …]`；腳本裡 `(for-each display *argv*)` 取參數。
 無參數印用法回傳 1、腳本載入失敗回傳 2。範例見 [`argv_test.scm`](argv_test.scm)。
