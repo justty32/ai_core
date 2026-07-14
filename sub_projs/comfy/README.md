@@ -129,8 +129,18 @@ sbcl --script examples/hello.lisp
 
 ## 在 VSCode 裡開發／debug（Alive）
 
+> **首次設定的兩個坑（已排除，跨機重現時注意）**：
+> 1. **Alive LSP 的相依**：alive-lsp 需要 `usocket` / `cl-json` / `bordeaux-threads` / `flexi-streams`
+>    （＋內建 `sb-introspect`）。用 Quicklisp 下載一次即可：
+>    `(ql:quickload (list :usocket :cl-json :bordeaux-threads :flexi-streams))`。沒裝的話 LSP 一啟動就
+>    因 `Component USOCKET not found` 掛掉、REPL 進不去。
+> 2. **`alive.lsp.startCommand` 是完整啟動指令**（Alive 逐字執行、讀 stdout 抓 port），必須自己
+>    `load-system :alive-lsp` 並 `(alive/server:start)`——只填 sbcl 執行檔會啟不了 server。本夾
+>    `.vscode/settings.json` 已寫好正確序列（實測印出 `Started on port …`）。
+> 3. **別把 `*.lisp` 綁成語言 `lisp`**——Alive 用的是 `commonlisp`，綁錯文法與 LSP 都掛不上。
+
 1. 用 VSCode **開 `comfy/` 這個資料夾**（`.vscode/settings.json` 才會生效）。
-2. 命令面板 → **Alive: Start REPL And Attach**（會用設定裡的 sbcl 起一個 REPL 進程）。
+2. 命令面板 → **Alive: Start REPL And Attach**（依上面的 startCommand 起 LSP＋REPL）。
 3. 載入系統：REPL 打 `(asdf:load-system :comfy)`，或對 `comfy.asd`／原始碼用 Alive 的
    **Load File**、**inline eval**（游標停在某個 form 上按 eval 快捷鍵，結果就地顯示）。
 4. **除錯手段**（這就是「成熟環境」的本體）：
