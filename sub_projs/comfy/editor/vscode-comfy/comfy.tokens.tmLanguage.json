@@ -1,6 +1,6 @@
 {
   "scopeName": "comfy.tokens",
-  "injectionSelector": "L:(source.lisp -string -comment), L:(source.commonlisp -string -comment)",
+  "injectionSelector": "L:source.lisp -string -comment",
   "patterns": [
     {
       "comment": "true / false 布林糖（前後不接符號字元才算，避免撞到含 true 的長符號）",

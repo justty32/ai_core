@@ -1,32 +1,31 @@
 # vscode-comfy — comfy 語法糖高亮（注入文法）
 
-VSCode 的語法高亮是**靜態 TextMate 文法**在跑，跟 comfy 的 reader macro（**執行期**才改變讀取）
-是兩套系統，所以 comfy 的糖預設不會被正確上色：`true`/`false` 被當普通符號、`'a'` 被當 quote 誤上色、
-字串裡的 `\n` 不被標成轉義。這個小擴充用**注入文法**（injection grammar）補上，不改 Lisp 語言本身。
+VSCode 高亮是**靜態 TextMate 文法**，跟 comfy 的 reader macro（執行期）是兩套系統，所以 comfy 的糖
+預設不會被特別上色。這個小擴充用**注入文法**（injection grammar）補上，不改 Lisp 語言本身。
 
-上色規則：
-- `true` / `false` → `constant.language.boolean.comfy`
-- `'a'`、`'\n'` 等字元字面量 → `constant.character.comfy`
-- 字串內 `\n \t … \xHH \\ \" \'` → `constant.character.escape.comfy`
+補的兩項（其餘 Alive 已處理）：
+- `true` / `false` → `constant.language.boolean.comfy`（Alive 只認 `t`/`nil`，不認這兩個）
+- `'a'`、`'\n'` 等字元字面量 → `constant.character.comfy`（Alive 只把 `'` 當 quote）
 
-## 啟用（三選一）
+> 字串內的 `\n \t …` 轉義**不用這裡管**——Alive 的字串文法已有 `\\.` → `constant.character.escape`，
+> 本來就會上色。
 
-1. **開發宿主試跑（最快，不裝進全域）**：用 VSCode 開 `sub_projs/comfy/editor/vscode-comfy/`，按 `F5`
-   起 Extension Development Host，在那個視窗開 `.lisp` 檔看效果。
-2. **裝進全域**：把整個 `vscode-comfy/` 資料夾複製（或 symlink）到 `%USERPROFILE%\.vscode\extensions\`，
-   重啟 VSCode。
-3. 不想裝就算了——高亮不影響執行，comfy 的糖照樣跑。
+注入目標：`source.lisp`（Alive 的 Common Lisp base scope）。scope 開頭是標準的 `constant.language`／
+`constant.character`，主題對這兩類本就上色，故通常跟其他常數／字元同色。
 
-## 校準（重要）
+## 啟用
 
-TextMate 的 scope 名稱依你實際用的 Lisp 文法而定（內建 `.lisp`＝`source.lisp`；Alive 的
-Common Lisp 可能是 `source.commonlisp`）。若某條沒生效：
+已由安裝腳本複製到 `%USERPROFILE%\.vscode\extensions\local.vscode-comfy-0.0.1\`。
+改動文法後要重裝：把本資料夾內容覆蓋到該處，再 **Developer: Reload Window**。
 
-- 在 `.lisp` 檔裡把游標停在該 token 上 → 命令面板 **Developer: Inspect Editor Tokens and Scopes**，
-  看它真正的 scope（例如字串是不是 `string.quoted.double.lisp`），再對照本擴充的 `injectionSelector`／
-  `injectTo` 調整。
-- 顏色本身由你的主題決定（本擴充只指派 scope，不硬塞顏色）。想指定色，用 `editor.tokenColorCustomizations`
-  的 `textMateRules` 對上面那幾個 `*.comfy` scope 上色。
+也可不裝全域、開發宿主試跑：VSCode 開本資料夾 → `F5` → 在新視窗開 `.lisp` 檔。
 
-> ⚠ 這份是**第一版、未經渲染驗證**——文法 JSON 結構正確，但實際上色效果請你在 VSCode 裡眼睛確認、
-> 必要時照上面校準。
+## 校準（若沒生效）
+
+1. `.lisp` 檔裡游標停在 token 上 → 命令面板 **Developer: Inspect Editor Tokens and Scopes**，
+   確認 base scope 是不是 `source.lisp`、字串是不是 `string.quoted.double.commonlisp`。
+2. 若 Alive 的 **LSP 語意高亮**蓋過本擴充（連上 REPL 後才有），可在 settings 關掉該語言的
+   semantic highlighting，或用 `editor.tokenColorCustomizations` 對 `*.comfy` scope 指定顏色。
+3. 顏色由主題決定；本擴充只指派 scope、不硬塞顏色。
+
+> ⚠ TextMate 上色無法在編輯器外驗證，實際效果請在 VSCode 眼睛確認。

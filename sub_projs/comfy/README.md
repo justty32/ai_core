@@ -104,14 +104,16 @@ number→整數或 `double-float`。完整示範見 [`examples/json-demo.lisp`](
 ## 語法高亮（VSCode）
 
 VSCode 高亮是**靜態 TextMate 文法**，跟 comfy 的 reader macro（執行期）是兩套系統，所以糖預設不會被
-正確上色（`true`/`false` 當普通符號、`'a'` 被當 quote 誤色、字串 `\n` 不標轉義）。修法＝一個**注入文法
-小擴充**，已備在 [`editor/vscode-comfy/`](editor/vscode-comfy/README.md)。啟用（不影響執行，純視覺）：
+特別上色。用一個**注入文法小擴充**（[`editor/vscode-comfy/`](editor/vscode-comfy/README.md)）補兩項：
+`true`/`false`（Alive 只認 `t`/`nil`）、`'a'` 字元（Alive 只把 `'` 當 quote）。**字串轉義 `\n` 等 Alive
+本來就上色**，不用管。
 
-- **最快**：VSCode 開 `editor/vscode-comfy/` → 按 `F5` 起 Extension Development Host 看效果；
-- **裝全域**：複製該資料夾到 `%USERPROFILE%\.vscode\extensions\` 後重啟 VSCode。
+已安裝到 `%USERPROFILE%\.vscode\extensions\local.vscode-comfy-0.0.1\`——**命令面板 → Developer: Reload
+Window** 即生效。改文法後重裝＝覆蓋該處再 reload。scope 開頭是標準 `constant.language`／`constant.character`，
+主題本就上色。
 
-> ⚠ 該擴充是第一版、我這邊無法渲染驗證——文法 JSON 合法，實際上色請你眼睛確認、必要時照它 README
-> 用「Developer: Inspect Editor Tokens and Scopes」校準 scope 名。
+> ⚠ TextMate 上色我無法在編輯器外驗證，實際效果請你眼睛確認；沒生效就用「Developer: Inspect Editor
+> Tokens and Scopes」查真 scope 回報。若 Alive 的 LSP 語意高亮蓋過，見擴充 README 的校準節。
 
 ## 跑起來
 
