@@ -1,7 +1,7 @@
 {
   "name": "try-3",
   "version-string": "0.0.1",
-  "description": "galtxt try_3 — 純 C++／C++20 modules 實驗線",
+  "description": "galtxt try_3 — 純 C++（傳統 header）實驗線",
   "dependencies": [
     "glaze"
   ]

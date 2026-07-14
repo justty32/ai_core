@@ -4,7 +4,7 @@
   "configurePresets": [
     {
       "name": "mingw-debug",
-      "displayName": "MinGW + Ninja Debug (C++20 modules)",
+      "displayName": "MinGW + Ninja Debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "toolchainFile": "C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
@@ -18,7 +18,7 @@
     },
     {
       "name": "mingw-release",
-      "displayName": "MinGW + Ninja Release (C++20 modules)",
+      "displayName": "MinGW + Ninja Release",
       "inherits": "mingw-debug",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }

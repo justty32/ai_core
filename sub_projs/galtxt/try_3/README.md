@@ -1,18 +1,18 @@
-# try_3 — galtxt 玩具實驗場③：純 C++（C++20 modules）
+# try_3 — galtxt 玩具實驗場③：純 C++（傳統 header）
 
 ← [galtxt INDEX](../INDEX.md)
 
 galtxt 第三條實驗線，與 [try_1](../try_1/README.md)（s7 Scheme）、[try_2](../try_2/README.md)（C++ 內嵌 Lua 5.5）並存、互為對照。
 
-**這條完全 C++**——不嵌任何腳本 VM，純原生，並以 **C++20 modules**（`export module` / `import`）當骨架示範。建置走 **CMake + Ninja**（配 `CMakePresets.json` 釘死工具鏈、接 vcpkg toolchain），與 try_2 的手寫 `build.sh` 走不同路線，兩相對照。
+**這條完全 C++、純原生**——不嵌任何腳本 VM。（早期曾用 C++20 modules 當骨架示範，**已回歸傳統 header**：C++ 有 struct＋glaze 編譯期反射，接口的唯一真相源是 struct 本身，modules 那層抽象在此線畫蛇添足，拿掉。）建置走 **CMake + Ninja + vcpkg toolchain**（配 `CMakePresets.json` 釘死工具鏈），與 try_2 的手寫 `build.sh` 走不同路線，兩相對照。
 
-目前狀態：**可建置、可 VSCode/gdb 除錯，已長出兩塊地基**。模組：`src/demo.cppm`（具名模組 `demo`，`sum_to`/`greet` 除錯示範）、`src/http.cppm`（具名模組 `http`，native HTTP 傳輸）；`src/main.cpp` 以 `import demo; import http;` 取用，並串 glaze 反射 JSON。`build/try3.exe` 一趟跑完：計算＋字串、glaze 序列化/解析、HTTP file:// GET→glaze 解出台詞、串流逐塊回呼。
+目前狀態：**可建置、可 VSCode/gdb 除錯，已長出兩塊地基**。原始碼：`src/demo.{hpp,cpp}`（`sum_to`/`greet` 除錯示範）、`src/http.{hpp,cpp}`（native HTTP 傳輸）；`src/main.cpp` 以 `#include` 取用，並串 glaze 反射 JSON。`build/try3.exe` 一趟跑完：計算＋字串、glaze 序列化/解析、HTTP file:// GET→glaze 解出台詞、串流逐塊回呼。
 
 ## 需要的東西
 
-- **MinGW-w64**（本機 `C:/dev/mingw64`）：g++ 16（支援 C++20 modules）、gdb。
-- **CMake** 3.28+（本機 4.3.3；modules 需 3.28+）。
-- **Ninja** 1.11+（本機用 vcpkg 自帶的 **1.13.2**）。★ **modules 必須用 Ninja 或 VS generator——MinGW Makefiles 不支援 module 掃描**（CMake 會直接報錯）。
+- **MinGW-w64**（本機 `C:/dev/mingw64`）：g++ 16、gdb。
+- **CMake** 3.28+（本機 4.3.3）。
+- **Ninja** 1.11+（本機用 vcpkg 自帶的 **1.13.2**）。preset 用 Ninja（非模組建置亦適用；當初為 modules 掃描而選，回歸 header 後保留不換）。
   取得：`C:/dev/vcpkg/vcpkg.exe fetch ninja` 會下載並印出路徑（本機在 `C:/dev/vcpkg/downloads/tools/ninja-1.13.2-windows/ninja.exe`，已釘進 preset）。
 - **vcpkg**（本機 `C:/dev/vcpkg`）：preset 已接 `scripts/buildsystems/vcpkg.cmake` toolchain，日後加依賴（`vcpkg.json` manifest）即自動安裝。
 - **VSCode 擴充**：
@@ -30,7 +30,7 @@ cmake --build --preset mingw-debug  # 建置 → build/try3.exe
 ./build/try3.exe 5 星野             # N=5、名字＝星野
 ```
 
-Release：把 `mingw-debug` 換成 `mingw-release`。CMake 會自動掃 `import`/`export`、生 dyndep，**先編 `demo.cppm` 成 BMI（`demo.gcm`）再編 `main`**。
+Release：把 `mingw-debug` 換成 `mingw-release`。
 
 ## 依賴（vcpkg manifest）
 
@@ -55,42 +55,36 @@ Release：把 `mingw-debug` 換成 `mingw-release`。CMake 會自動掃 `import`
 
 > ⚠ **glaze 預設遇未知鍵報錯**：真後端回應（OpenAI chat completion）欄位遠多於你 struct 挑的那幾個。用 `glz::read<glz::opts{.error_on_unknown_keys=false}>(obj, src)` 才會忽略多餘鍵、只填 struct 有的。`main.cpp` 的 `demo_http()` 就是這樣把 `choices[0].message.content` 台詞挑出來。
 
-## native HTTP 傳輸（`src/http.cppm`）
+## native HTTP 傳輸（`src/http.{hpp,cpp}`）
 
-第二個具名模組 `http`＝**純 C++ 的 HTTP 傳輸層**，對照 [try_2](../try_2/README.md) 的 `native/http.c`（那條是 C＋Lua 綁定）。拋開 Lua C API 後 API 縫變乾淨：
+`http`＝**純 C++ 的 HTTP 傳輸層**，對照 [try_2](../try_2/README.md) 的 `native/http.c`（那條是 C＋Lua 綁定）。拋開 Lua C API 後 API 縫變乾淨：
 
 ```cpp
-import http;
+#include "http.hpp"
 http::Request  req{ .url = "...", .method = "POST", .headers = {"Content-Type: application/json"}, .body = "..." };
 http::Response r = http::request(req);                    // 非串流：傳輸失敗 throw std::runtime_error
 int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes */ return true; });  // 回 false 中止
 ```
 
 - **分層**（同 try_2）：C++ 是**笨管子**——只管 TLS＋HTTP round-trip、串流時逐塊把 raw bytes 交回呼；**SSE 拆框／UTF-8 分批／JSON 編解全留上層**（傳輸層語言中立、改起來便宜）。
+- **介面/實作分離**：`http.hpp` 只放乾淨介面（`Request`/`Response`/`OnData`/`request`/`stream`）；**系統標頭（`windows.h`／`winhttp.h`／`curl.h`）只在 `http.cpp` include，不外洩到 header**——傳統 header 的好處，取用端 `main.cpp` 不被 `windows.h` 汙染。
 - **平台分流**：Windows＝**WinHTTP**（系統內建、Schannel TLS，零安裝；連結 `winhttp`）；Linux/Mac＝**libcurl**（`find_package(CURL)`＋`CURL::libcurl`，需在 `vcpkg.json` 加 `curl`——目前僅 Windows 實測）。
 - **`file://` 特例**：兩平台共用，直接讀檔當 200 回應——保住**離線 fixture 測試 harness**（WinHTTP 不支援 `file://`，非在這層處理不可）。fixture 在 `test/fixtures/{fake,fake_stream}/chat/completions`（假 chat completion／SSE 回應，版控當測試資料）。
-- **★ modules 坑**：傳統系統標頭（`windows.h`／`winhttp.h`／`curl.h`）**必須放全域模組片段**（`module;` 之後、`export module http;` 之前）#include，模組本體只 export `Request`/`Response`/`request`/`stream`。
 - **fixture 路徑不寫死**：`CMakeLists` 用 `target_compile_definitions(... TRY3_SOURCE_DIR="${CMAKE_SOURCE_DIR}")` 注入源碼根，`main.cpp` 的 demo 據此組 `file://` 路徑（比照 try_2 `_path.lua` 不綁機器路徑的精神）。
 - exe 仍**全靜態獨立**：`objdump -p` 只剩 KERNEL32＋系統 CRT＋WINHTTP.dll（Windows 系統內建、必在），無 mingw runtime。
 
-> 這是本線「native HTTP 傳輸先」的落地：先把傳輸下沉成純原生模組，JSON 已有 glaze，**真後端 round-trip＋SSE 串流的縫都在**，接真後端與上層 ask/schema 是下一步。
+> 這是本線「native HTTP 傳輸先」的落地：先把傳輸下沉成純原生 `.cpp`，JSON 已有 glaze，**真後端 round-trip＋SSE 串流的縫都在**，接真後端與上層 ask 接口是下一步。
+>
+> **★ 上層接口方向定調（不搬 schema 表）**：try_1/try_2 的 schema 表是動態語言缺靜態反射的**補償拐杖**；C++ 有 struct＋glaze 編譯期反射，**struct 本身就是唯一真相源**。往上長 ask 接口時，JSON 對映／CLI 旗標／型別解析／驗證**全從欄位反射生成**（驗證還能移到編譯期），不把 Lua/s7 的 schema 表搬過來。
 
 ## VSCode 除錯
 
 以「**File > Open Folder**」開 `try_3` 這個資料夾（讓 `${workspaceFolder}=try_3`），然後：
 
 - **Ctrl+Shift+B** → 跑預設任務「cmake: build」建置。
-- **F5** → 「Debug try3 (gdb/MinGW)」：F5 前會自動建置（`preLaunchTask`），在 `demo.cppm` 的 `sum_to` 迴圈、`greet` 或 `main.cpp` 的 `run` 下中斷點試單步、看變數。
+- **F5** → 「Debug try3 (gdb/MinGW)」：F5 前會自動建置（`preLaunchTask`），在 `demo.cpp` 的 `sum_to` 迴圈、`greet` 或 `main.cpp` 的 `run` 下中斷點試單步、看變數。傳統 header 下符號名無模組修飾，`break sum_to` 直接命中（不像具名模組要 `sum_to@demo`）。
 
-`.vscode/` 四個檔：`tasks.json`（cmake configure/build/run，走 `--preset`、與 generator 無關）、`launch.json`（cppdbg + MinGW gdb）、`settings.json`（CMake/UTF-8）、`c_cpp_properties.json`（IntelliSense 讀 `build/compile_commands.json`）。
-
-## C++20 modules 重點與坑
-
-- **generator 必須 Ninja/VS**：Makefiles 不支援 module 掃描（CMake 明講）。故 preset 用 Ninja。
-- **CMake 接法**：`target_sources(try3 PRIVATE FILE_SET CXX_MODULES FILES src/demo.cppm)`——CMake 據此掃相依、排建置序（先 BMI 再引用者）。
-- **⚠ 除錯中斷點的模組修飾**：C++20 具名模組 export 的函式，符號名帶模組修飾（gdb 顯示 `sum_to@demo`）。
-  - **VSCode 行號槽中斷點（file:line）完全正常**——這是最常用的方式，不受影響。
-  - 若在 gdb/除錯主控台**按函式名**下中斷，純 `break sum_to` 找不到，要 `break sum_to@demo` 或改用 `break demo.cppm:16`（file:line 最穩）。
+`.vscode/` 四個檔：`tasks.json`（cmake configure/build/run，走 `--preset`）、`launch.json`（cppdbg + MinGW gdb）、`settings.json`（CMake/UTF-8）、`c_cpp_properties.json`（IntelliSense 讀 `build/compile_commands.json`）。
 
 ## 設計要點（吸取 try_2 踩過的坑）
 
@@ -103,7 +97,7 @@ int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes *
 
 工具鏈路徑目前寫死 Windows（`C:/dev/mingw64`、`C:/dev/vcpkg` 的 ninja、vcpkg toolchain）。回 Manjaro 需把 `CMakePresets.json`、`.vscode/*.json` 的編譯器／gdb／ninja／toolchain 路徑改成 Linux 原生：
 
-- g++（同樣支援 C++20 modules）、gdb：`/usr/bin/...`。
+- g++、gdb：`/usr/bin/...`。
 - ninja：`sudo pacman -S ninja`（→ `/usr/bin/ninja`），或一樣用 `vcpkg fetch ninja`。
 - vcpkg：clone 到家機路徑，toolchain 指該處 `scripts/buildsystems/vcpkg.cmake`。
 

@@ -3,9 +3,8 @@
   // 需先裝擴充套件：C/C++（發布者 Microsoft，ID: ms-vscode.cpptools）——提供 cppdbg 除錯器。
   //   （CMake Tools ms-vscode.cmake-tools 選裝：裝了能在側欄切 preset／建置，不裝也能用本設定。）
   //
-  // F5 前會自動跑 preLaunchTask「cmake: build」建置。中斷點：demo.cppm 的 sum_to 迴圈、greet、main.cpp 的 run。
-  // ℹ C++20 模組：在編輯器行號槽點中斷點（file:line）完全正常；若在除錯主控台按「函式名」下中斷，
-  //   模組 export 的函式帶修飾（如 sum_to@demo），純名找不到——用 break demo.cppm:16 或 break sum_to@demo。
+  // F5 前會自動跑 preLaunchTask「cmake: build」建置。中斷點：demo.cpp 的 sum_to 迴圈、greet、main.cpp 的 run。
+  //   傳統 header（非具名模組），符號名無模組修飾——除錯主控台 break sum_to 直接命中。
   // ⚠ 中文參數別用 args 傳（VSCode 傳給 gdb 的 argv 碼頁未必對）；要試中文改跑 build/try3.exe。
   // 以「File > Open Folder」開 try_3 這個資料夾（讓 ${workspaceFolder}=try_3）。
   "version": "0.2.0",

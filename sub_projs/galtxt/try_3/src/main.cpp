@@ -1,7 +1,7 @@
-// main.cpp — galtxt try_3 進入點：import 具名模組 demo、跑其邏輯
+// main.cpp — galtxt try_3 進入點：include demo/http 兩個 header、跑其邏輯
 //
 // try_3 是 galtxt 第三條實驗線：與 try_1（s7 Scheme）、try_2（C++ 內嵌 Lua）並存、互為對照。
-// 這條**完全 C++**——不嵌任何腳本 VM，純原生，並用 **C++20 modules**（import demo;）當骨架示範。
+// 這條**完全 C++、純原生**——不嵌任何腳本 VM。（早期曾用 C++20 modules 當骨架，已回歸傳統 header。）
 //
 // 跨平台：Windows 用 wmain + -municode 取寬字元命令列（中文 argv 不亂碼），
 //         並 SetConsoleOutputCP(CP_UTF8) 讓主控台照 UTF-8 讀我們吐的位元組；
@@ -17,6 +17,9 @@
 
 #include <glaze/glaze.hpp>   // 反射式 JSON↔struct（vcpkg 裝的，header-only、超快）
 
+#include "demo.hpp"          // sum_to / greet
+#include "http.hpp"          // native HTTP 傳輸：request / stream（file:// 離線可跑）
+
 #ifdef _WIN32
 #include <windows.h>
 // 寬字元 → UTF-8（對齊 try_2 host.cpp 的 w2u8）
@@ -29,9 +32,6 @@ static std::string w2u8(const wchar_t* w) {
     return s;
 }
 #endif
-
-import demo;             // ── 具名模組（提供 sum_to / greet）
-import http;             // ── 具名模組（native HTTP 傳輸：request / stream，file:// 離線可跑）
 
 // ── glaze JSON 示範：定義 struct，glaze 靠編譯期反射自動 JSON↔struct（不用寫任何映射巨集）
 struct Character {
@@ -124,8 +124,8 @@ static int run(const std::vector<std::string>& args) {
     }
     std::string name = (args.size() >= 3) ? args[2] : "主人";
 
-    std::string hello = greet(name);   // ← 來自 module demo
-    long long total = sum_to(n);       // ← 來自 module demo
+    std::string hello = greet(name);   // ← 來自 demo.hpp
+    long long total = sum_to(n);       // ← 來自 demo.hpp
 
     std::printf("%s\n", hello.c_str());
     std::printf("1..%d 的和 = %lld\n", n, total);

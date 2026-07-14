@@ -1,19 +1,17 @@
-# CMakeLists.txt — galtxt try_3（純 C++、C++20 modules）
+# CMakeLists.txt — galtxt try_3（純 C++、傳統 header）
 #
-# 與 try_2 的手寫 build.sh 走不同建置路線：這條用 CMake（配 CMakePresets.json 釘死工具鏈）。
-# ★ C++20 modules 需求：generator 必須是 Ninja/VS（Makefiles 不支援 module 掃描）——
-#   故 preset 用 Ninja（vcpkg 自帶的 1.13.2）。CMake 會自動掃 import/export、生 dyndep、
-#   先編 .cppm 成 BMI（demo.gcm）再編 main。
+# 與 try_2 的手寫 build.sh 走不同建置路線：這條用 CMake（配 CMakePresets.json 釘死工具鏈）
+# ＋Ninja＋vcpkg toolchain。（早期曾用 C++20 modules，已回歸傳統 header；Ninja 保留，非模組亦適用。）
 #
 # 用（命令列）：
 #   cmake --preset mingw-debug          # 首次 configure（讀 CMakePresets.json）
 #   cmake --build --preset mingw-debug  # 建置 → build/try3.exe
 # VSCode：Ctrl+Shift+B 建置、F5 除錯（見 .vscode/）。
 
-cmake_minimum_required(VERSION 3.28)   # C++20 named modules 支援門檻
+cmake_minimum_required(VERSION 3.28)
 project(try_3 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 23)             # glaze 需 C++23（g++16 支援）；modules 亦相容
+set(CMAKE_CXX_STANDARD 23)             # glaze 需 C++23（g++16 支援）
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -23,14 +21,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # vcpkg 依賴（manifest 模式，見 vcpkg.json）：glaze＝反射式 JSON↔struct、header-only、超快
 find_package(glaze CONFIG REQUIRED)
 
-add_executable(try3 src/main.cpp)
-
-# ★ 具名模組來源：FILE_SET CXX_MODULES —— CMake 據此掃描 module 相依、排建置序
-#   demo＝計算/字串示範；http＝native HTTP 傳輸（WinHTTP/libcurl，file:// 離線可跑）
-target_sources(try3 PRIVATE
-    FILE_SET CXX_MODULES FILES
-    src/demo.cppm
-    src/http.cppm)
+# 來源：main＋demo（計算/字串示範）＋http（native HTTP 傳輸，WinHTTP/libcurl，file:// 離線可跑）
+add_executable(try3
+    src/main.cpp
+    src/demo.cpp
+    src/http.cpp)
 
 target_link_libraries(try3 PRIVATE glaze::glaze)
 

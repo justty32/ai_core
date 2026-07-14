@@ -1,35 +1,17 @@
-// http.cppm — galtxt try_3：native（C++）HTTP 傳輸模組。
-//
-// 對照 try_2 的 native/http.c（C＋Lua 綁定），這裡是**純 C++20 named module**——
-// 拋開 Lua C API，API 縫變乾淨：struct 進出、傳輸失敗 throw std::runtime_error、
-// 串流回呼用 std::function。分層原則與 try_2 一致：
-//   C++ 是「笨管子」——只管 TLS＋HTTP round-trip、串流時逐塊把 raw bytes 交給回呼；
-//   SSE 拆框／UTF-8 分批／JSON 編解／ask 縫，全留給上層（改起來便宜、傳輸層語言中立）。
+// http.cpp — http.hpp 的實作。
 //
 // 平台（比照 main.cpp 的 #ifdef 分流）：
 //   Windows：WinHTTP（系統內建、Schannel TLS，零額外依賴；連結 -lwinhttp）。
 //   其它（Linux/Mac）：libcurl（vcpkg 裝 curl、連結 CURL::libcurl）。
 //   兩平台共用 file:// 特例：直接讀檔當 200 回應——保住離線 fixture 測試 harness
 //   （WinHTTP 不支援 file://，故非在這層處理不可）。
-//
-// ★ modules 關鍵：傳統系統標頭（windows.h／winhttp.h／curl.h）必須放在「全域模組片段」
-//   （module; 之後、export module 之前）#include，模組本體只 export 對外介面。
-//
-// API：
-//   http::Request { url, method="POST", headers{"K: V",…}, body, timeout_ms }
-//   http::Response { status:int, body:string }
-//   http::request(req) -> Response                （非串流；傳輸失敗 throw）
-//   http::stream(req, on_data) -> int(status)     （內容經 on_data 逐塊餵；回 false 中止）
 
-module;                 // ── 全域模組片段：傳統 header 在這裡 include
+#include "http.hpp"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <stdexcept>
-#include <string>
-#include <string_view>
-#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -38,33 +20,6 @@ module;                 // ── 全域模組片段：傳統 header 在這裡 i
 #include <curl/curl.h>
 #endif
 
-export module http;     // ── 具名模組 http 的主介面單元
-
-// ══════════════════════════ 對外介面（export） ══════════════════════════
-export namespace http {
-
-struct Request {
-    std::string url;
-    std::string method = "POST";
-    std::vector<std::string> headers;   // 每條完整 "Key: Value"
-    std::string body;
-    long timeout_ms = 0;                 // 0＝不設逾時
-};
-
-struct Response {
-    int status = 0;
-    std::string body;
-};
-
-// 每收到一塊 raw bytes 呼一次；回 false 表示中止傳輸。
-using OnData = std::function<bool(std::string_view)>;
-
-Response request(const Request& req);              // 非串流：累積整包 body
-int stream(const Request& req, const OnData& on_data);  // 串流：內容走 on_data，回 status
-
-}  // namespace http
-
-// ══════════════════════════ 模組內部（不 export） ══════════════════════════
 namespace {
 
 // 傳輸情境：串流→把每塊交給 on_data；非串流→累積進 buf。
@@ -234,10 +189,14 @@ http::Response run(const http::Request& req, bool streaming, const http::OnData*
 }  // anonymous namespace
 
 // ══════════════════════════ 介面定義 ══════════════════════════
-http::Response http::request(const Request& req) {
+namespace http {
+
+Response request(const Request& req) {
     return run(req, false, nullptr);
 }
 
-int http::stream(const Request& req, const OnData& on_data) {
+int stream(const Request& req, const OnData& on_data) {
     return run(req, true, &on_data).status;
 }
+
+}  // namespace http
