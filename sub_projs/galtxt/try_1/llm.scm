@@ -25,8 +25,8 @@
   (call-with-input-file path
     (lambda (p)
       (let loop ((cs ()))
-	(let ((c (read-char p)))
-	  (if (eof-object? c) (list->string (reverse cs)) (loop (cons c cs))))))))
+        (let ((c (read-char p)))
+          (if (eof-object? c) (list->string (reverse cs)) (loop (cons c cs))))))))
 
 (define (spit path str)                ; 字串寫檔
   (call-with-output-file path (lambda (p) (display str p))))
@@ -61,56 +61,56 @@
 ;;    取樣參數不再手寫——直接 for-each 迭代 *llm-schema*。
 (define (llm-entry-impl a)
   (let* ((prompt   (a 'prompt))
-	 (in       (a 'in))
-	 (out      (a 'out))
-	 (sys      (a 'sys))
-	 (model    (a 'model))
-	 (base-url (a 'base-url))
-	 (api-key  (a 'api-key))
-	 ;; 1. 組 prompt：--prompt 本體 ＋（--in 檔接在後面，中間補換行）
-	 (body (cond ((and prompt in) (string-append prompt "\n" (slurp in)))
-		     (prompt prompt)
-		     (in (slurp in))
-		     (else (error 'llm-entry "需要 :prompt 或 :in"))))
-	 (mdl  (or model *llm-model*))
-	 (base (or base-url *llm-base-url*))
-	 (key  (or api-key *llm-api-key*))
-	 ;; 2. messages（有 :sys 就前置 system role）
-	 (user (inlet 'role "user" 'content body))
-	 (msgs (if sys (vector (inlet 'role "system" 'content sys) user) (vector user)))
-	 ;; 3. 請求 inlet：固定欄位 ＋（下方）schema 驅動的取樣參數
-	 (req  (inlet 'model mdl 'messages msgs 'stream #f)))
+         (in       (a 'in))
+         (out      (a 'out))
+         (sys      (a 'sys))
+         (model    (a 'model))
+         (base-url (a 'base-url))
+         (api-key  (a 'api-key))
+         ;; 1. 組 prompt：--prompt 本體 ＋（--in 檔接在後面，中間補換行）
+         (body (cond ((and prompt in) (string-append prompt "\n" (slurp in)))
+                     (prompt prompt)
+                     (in (slurp in))
+                     (else (error 'llm-entry "需要 :prompt 或 :in"))))
+         (mdl  (or model *llm-model*))
+         (base (or base-url *llm-base-url*))
+         (key  (or api-key *llm-api-key*))
+         ;; 2. messages（有 :sys 就前置 system role）
+         (user (inlet 'role "user" 'content body))
+         (msgs (if sys (vector (inlet 'role "system" 'content sys) user) (vector user)))
+         ;; 3. 請求 inlet：固定欄位 ＋（下方）schema 驅動的取樣參數
+         (req  (inlet 'model mdl 'messages msgs 'stream #f)))
     ;; ★ 取樣參數：迭代 schema，非 ctrl 且有給才塞進 req（json 鍵＝schema 第二欄）
     (for-each (lambda (entry)
-		(unless (schema-ctrl? entry)
-		  (let ((v (a (car entry))))
-		    (when v (varlet req (cadr entry) v)))))
-	      *llm-schema*)
+                (unless (schema-ctrl? entry)
+                  (let ((v (a (car entry))))
+                    (when v (varlet req (cadr entry) v)))))
+              *llm-schema*)
     ;; 4. 寫請求檔 → curl → 捕捉回應
     (spit *req-file* (json-string req))
     (let* ((auth (if (> (length key) 0)
-		     (string-append " -H \"Authorization: Bearer " key "\"") ""))
-	   (cmd  (string-append "curl -sS \"" base "/chat/completions\""
-				" -H \"Content-Type: application/json\"" auth
-				" --data-binary @" *req-file* " 2>&1"))
-	   (resp (system cmd #t)))
+                     (string-append " -H \"Authorization: Bearer " key "\"") ""))
+           (cmd  (string-append "curl -sS \"" base "/chat/completions\""
+                                " -H \"Content-Type: application/json\"" auth
+                                " --data-binary @" *req-file* " 2>&1"))
+           (resp (system cmd #t)))
       ;; 5. 解析 choices[0].message.content
       (let ((content
-	     (catch #t
-	       (lambda ()
-		 (let* ((j (json->s7 resp))
-			(c0 ((j 'choices) 0)))
-		   ((c0 'message) 'content)))
-	       (lambda args #f))))
-	(if (not content)
-	    (begin (format *stderr* "llm-entry: 回應無 choices[0].message.content。原始回應：~%~A~%" resp) #f)
-	    (begin
-	      ;; token 計量（有才印）
-	      (catch #t (lambda ()
-			  (let ((toks ((json->s7 resp) 'usage)))
-			    (when (let? toks) (format *stderr* "[meter] total_tokens=~A~%" (toks 'total_tokens)))))
-		     (lambda args #f))
-	      (if out (begin (spit out content) out) content)))))))
+             (catch #t
+               (lambda ()
+                 (let* ((j (json->s7 resp))
+                        (c0 ((j 'choices) 0)))
+                   ((c0 'message) 'content)))
+               (lambda args #f))))
+        (if (not content)
+            (begin (format *stderr* "llm-entry: 回應無 choices[0].message.content。原始回應：~%~A~%" resp) #f)
+            (begin
+              ;; token 計量（有才印）
+              (catch #t (lambda ()
+                          (let ((toks ((json->s7 resp) 'usage)))
+                            (when (let? toks) (format *stderr* "[meter] total_tokens=~A~%" (toks 'total_tokens)))))
+                     (lambda args #f))
+              (if out (begin (spit out content) out) content)))))))
 
 ;; ── ★ 由 schema「生成」llm-entry 的 define* 簽章（消滅手寫參數列）。
 ;;    生成物等價於：
@@ -119,12 +119,12 @@
 ;;    ——薄殼只負責「收齊 keyword 值打包成 inlet」，真正邏輯全在 llm-entry-impl。
 (define (make-llm-entry! schema)
   (let ((sig   (map (lambda (e) (list (car e) #f)) schema))                 ; ((prompt #f) …)
-	(pairs (apply append
-		      (map (lambda (e) (list (list 'quote (car e)) (car e)))   ; ('prompt prompt …)
-			   schema))))
+        (pairs (apply append
+                      (map (lambda (e) (list (list 'quote (car e)) (car e)))   ; ('prompt prompt …)
+                           schema))))
     (eval `(define* (llm-entry ,@sig)
-	     (llm-entry-impl (inlet ,@pairs)))
-	  (rootlet))))
+             (llm-entry-impl (inlet ,@pairs)))
+          (rootlet))))
 
 (make-llm-entry! *llm-schema*)
 

@@ -33,6 +33,6 @@
   (check! "surrogate pair（emoji）" (j 'a) "😸"))
 (let ((j (json->s7 "{\"a\": \"x\", \"b\": {\"c\": [1, 2, true, false, null]}}")))
   (check! "巢狀／陣列／true/false/null 仍正常"
-	  (format #f "~A ~A ~A" (j 'a) (((j 'b) 'c) 0) (((j 'b) 'c) 2))
-	  "x 1 #t"))
+          (format #f "~A ~A ~A" (j 'a) (((j 'b) 'c) 0) (((j 'b) 'c) 2))
+          "x 1 #t"))
 (exit 0)
