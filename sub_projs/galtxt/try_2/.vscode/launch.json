@@ -10,7 +10,8 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // 中文走 --infile（讀檔是原始 UTF-8）；別用 --prompt 傳中文，lua.exe 的 argv 是 950 碼頁會壞。
+      // ⚠ 僅 Windows：別用 --prompt 傳中文（cmd 的 argv 是 950 碼頁會壞），走 --infile（讀檔是原始 UTF-8）。
+      //    Linux/macOS 的 argv 本來就是 UTF-8，--prompt 直接傳中文沒問題（見下一組設定）。
       "name": "Debug cli（離線假回應）",
       "type": "lua-local",
       "request": "launch",
