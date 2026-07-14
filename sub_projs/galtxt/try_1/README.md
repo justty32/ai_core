@@ -117,6 +117,23 @@ keyword 參數 ＝ schema 的直接投影：`:prompt :in :out :sys :model :temp 
 這串**不是手寫**的——`llm.scm` 裡的 `*llm-schema*` 是**唯一真相源**，`llm-entry` 的 `define*`
 簽章由它生成、取樣參數也由它 runtime 驅動塞入。要加參數（`stop`／`logit_bias`…）＝schema 加一行。
 
+**在編輯器裡開 REPL**（Neovim ＋ Conjure；設定在 `~/repo/my_lazyvim_settings/lua/plugins/scheme.lua`）：
+
+```sh
+cd sub_projs/galtxt/try_1 && nvim llm.scm     # ⚠ 一定要先 cd 進 try_1 再開
+```
+
+Conjure 的 stdio client 是**在 nvim 的 cwd 起 s7**，而 `llm.scm` 的 `(load "json.scm")`、fixture 的
+`file://` 路徑都是相對的——從別的目錄開 nvim 會 load 不到。鍵位（localleader ＝ `,`）：`,eb` 求值
+整個 buffer、`,ee` 求值游標所在 form、`,ls`／`,lv` 開 REPL log。**Conjure 起的是純 `s7`（不是
+`s7host.exe`），但兩者跑 `test.scm` 結果完全一樣**——REPL 裡玩得到全套，不必掛 host。
+
+> ★★ **REPL 必須包一層 `stdbuf -o0`**（scheme.lua 已處理）。s7 的 `> ` prompt 走 stdout，而 stdout
+> 接到 pipe 時 libc 是**全緩衝**，2 bytes 的 prompt 永遠填不滿緩衝區、出不來；Conjure 靠 prompt
+> 判斷「求值回完了」，收不到就**永遠不回話**——log 顯示 REPL started、eval 也送出去了，就是沒結果。
+> 而且 `printf '(+ 1 2)' | s7` **測不出這個 bug**（s7 讀到 EOF 就退出、退出時會 flush）。詳見
+> [gotchas「編輯器整合」](../workflows/common/gotchas.md)。
+
 **離線跑測**（curl `file://` 灌假回應，不需真後端）：`cd try_1` 後
 `./s7host.exe test.scm`（或 s7-playground 的 `./s7 test.scm`，兩者皆可，s7 只吃「剛好一個檔名」的
 參數）。`test.scm` 用 `(system "pwd" #t)` 現拼目前工作目錄的 `file://` 絕對路徑（s7 無跨平台

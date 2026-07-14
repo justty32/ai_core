@@ -28,6 +28,10 @@
 - **註冊某個 DAP adapter 名字，會招來 mason 自動下載對應套件**：`mason-nvim-dap` 的 `automatic_installation` 掃的是 `dap.adapters` 的 **key**，看到 `cppdbg` 就去解析成 `cpptools`（微軟那包 ~90MB 的 VSCode 擴充）然後開始下載——即使你只是想把 `cppdbg` 這個名字接到別的除錯器。對策：`automatic_installation = { exclude = { "cppdbg" } }`。反過來，`setup_handlers` **只對已安裝的套件動作**，所以套件沒裝就不會有 handler 跑來覆蓋你自己註冊的 adapter。
 - **CMake 3.28+ 配 Ninja 會塞 C++20 modules 的掃描旗標，clangd 看不懂**：即使專案完全不用 modules（一行 `import`／`export` 都沒有），Ninja generator 仍會給每個編譯單元加 `-fmodules-ts`／`-fmodule-mapper=…`／`-fdeps-format=p1689r5`（P1689 依賴掃描）。這些旗標會原樣進 `compile_commands.json`，clang 驅動器不認得 → 每個檔都噴 `Unknown argument` 診斷雜訊。對策：`.clangd` 的 `CompileFlags.Remove` 過濾掉（try_3 有實例）。任何吃 `compile_commands.json` 的工具（clang-tidy 等）都可能中同一招。
 - **clangd 不會自己下探 `build/` 找 `compile_commands.json`**：它只從當前檔案往**上層**找。CMake 產在 `build/` 底下，所以要在專案根放 `.clangd` 寫 `CompileFlags.CompilationDatabase: build`。手寫建置（try_2 的 `build.sh`）則直接把 CDB 寫到專案根。這兩種做法都是**編輯器中立**的（nvim 與 VSCode 的 clangd 都讀），比在編輯器設定裡塞 `--compile-commands-dir` 好。
+- **★★ 把 REPL 接進編輯器（stdio 型）時，REPL 的 prompt 會卡在 libc 的全緩衝裡出不來——「起得來但永遠不回話」**：Conjure 這類 stdio client 是靠**認得 prompt 字串**來判斷「這次求值回完了」。而 REPL 的 prompt 走 **stdout**；stdout 一旦不是終端機而是 pipe，libc 預設就從行緩衝變成**全緩衝（4KB）**——`> ` 才 2 bytes，永遠填不滿，於是 prompt 卡在緩衝區裡。client 等不到 prompt 就一直認為「還沒回完」，**結果一行都不會出現**。症狀很安靜：log 顯示 REPL `(started)`、eval 也確實送出去了，就是沒有結果。（s7 的 banner 走 **stderr**、stderr 無緩衝，所以你偏偏看得到 banner，更容易誤判成「REPL 活著、是求值壞了」。）
+  **⚠ 這個 bug 有個會騙人的「驗證法」**：在 shell 裡 `printf '(+ 1 2)' | s7` 看得到 prompt 和結果——但那是因為 s7 讀到 **EOF 就結束、退出時 libc 會 flush**。**行程不退出的情境（正是編輯器接 REPL 的情境）它完全不成立**，所以這個測法無法暴露 bug，別拿它當「REPL 沒問題」的證據。要測就得**讓 stdin 保持開著**（fifo）再看幾秒內 stdout 有沒有東西。
+  對策：把 REPL 包一層 **`stdbuf -o0`**（LD_PRELOAD 改掉 stdout 緩衝模式）。必須是 `-o0`（無緩衝）**不能**是 `-oL`（行緩衝）——prompt 結尾沒有換行，行緩衝一樣不會 flush。**凡是 prompt 不以換行結尾的 REPL 都吃這招。**（`~/repo/my_lazyvim_settings/lua/plugins/scheme.lua` 的 s7 踩過。）
+  順帶：Conjure 的 `#stdio#command` 要給**字串**不能給 table——它會直接字串串接去顯示狀態、也會對它做 `string.match` 判方言，給 table 兩邊都炸；代價是路徑不能含空白。
 
 ### Linux／跨平台（2026-07-14 Manjaro 首跑收）
 
