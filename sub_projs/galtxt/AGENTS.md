@@ -40,7 +40,7 @@ AGENTS.md（本檔，最頂）→ WORKFLOWS.md / INDEX.md → 各工作流入口
 
 ## 開發環境
 
-技術棧方向〔idea 礦脈 §9.2〕：主力 **C++ 效能核心 ＋ 內嵌 Lua VM 當通用腳本層**（Fennel 編譯成 Lua ⇒ 手寫用 Lisp/Fennel、同 runtime）；**少 Python（太慢）、少 bash**。語言中立的縫＝**LLM 的 socket 協定 ＋ 函式的 `--metadata` 文字契約**。
+技術棧方向〔idea 礦脈 §9.2〕：主力 **C++ 效能核心 ＋ 內嵌 Lua VM 當通用腳本層**（原案 Fennel 編成 Lua；**實際：Fennel 放棄——想玩 Lisp 走 s7 線 try_1，try_2 純 Lua**）；**少 Python（太慢）、少 bash**。語言中立的縫＝**LLM 的 socket 協定 ＋ 函式的 `--metadata` 文字契約**。
 
 **⚠️ 本機是 Windows**：core_handy 的 daemon 用 Unix domain socket（`sys/un.h`），直接 build 會卡——port 時要嘛先只搬 one-shot 那半、要嘛換 TCP。這是實機約束，動手前先確認。
 
