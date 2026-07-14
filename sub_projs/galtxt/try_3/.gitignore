@@ -3,3 +3,6 @@ build/
 *.exe
 *.o
 *.obj
+# C++ modules 手動編譯時的 BMI 快取（CMake 會放 build/ 內；此為手動 g++ 的退路）
+gcm.cache/
+*.gcm

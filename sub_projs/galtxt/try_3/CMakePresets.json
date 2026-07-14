@@ -1,22 +1,22 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
   "configurePresets": [
     {
       "name": "mingw-debug",
-      "displayName": "MinGW Debug",
-      "generator": "MinGW Makefiles",
+      "displayName": "MinGW + Ninja Debug (C++20 modules)",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "C:/dev/mingw64/bin/gcc.exe",
         "CMAKE_CXX_COMPILER": "C:/dev/mingw64/bin/g++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/dev/mingw64/bin/mingw32-make.exe"
+        "CMAKE_MAKE_PROGRAM": "C:/dev/vcpkg/downloads/tools/ninja-1.13.2-windows/ninja.exe"
       }
     },
     {
       "name": "mingw-release",
-      "displayName": "MinGW Release",
+      "displayName": "MinGW + Ninja Release (C++20 modules)",
       "inherits": "mingw-debug",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }

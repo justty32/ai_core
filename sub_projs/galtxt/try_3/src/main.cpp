@@ -1,14 +1,13 @@
-// main.cpp — galtxt try_3：純 C++ 專案骨架（CMake + MinGW + VSCode/gdb 除錯）
+// main.cpp — galtxt try_3 進入點：import 具名模組 demo、跑其邏輯
 //
 // try_3 是 galtxt 第三條實驗線：與 try_1（s7 Scheme）、try_2（C++ 內嵌 Lua）並存、互為對照。
-// 這條**完全 C++**——不嵌任何腳本 VM，純原生。本檔目前只是可建置、可除錯的最小骨架，
-// 提供幾個好下中斷點的目標（迴圈累加、字串處理），讓 VSCode + gdb 的除錯環境先跑起來。
+// 這條**完全 C++**——不嵌任何腳本 VM，純原生，並用 **C++20 modules**（import demo;）當骨架示範。
 //
 // 跨平台：Windows 用 wmain + -municode 取寬字元命令列（中文 argv 不亂碼），
 //         並 SetConsoleOutputCP(CP_UTF8) 讓主控台照 UTF-8 讀我們吐的位元組；
-//         Linux/Mac 走標準 main、原生 UTF-8 argv。所有 Windows 專屬碼以 #ifdef _WIN32 包起。
+//         Linux/Mac 走標準 main、原生 UTF-8 argv。Windows 專屬碼以 #ifdef _WIN32 包起。
 //
-// 建置／除錯：見同層 README.md 與 .vscode/。CLI 直接跑：build/try3.exe [N]
+// 建置／除錯：見同層 README.md 與 .vscode/。CLI 直接跑：build/try3.exe [N] [名字]
 
 #include <cstdio>
 #include <string>
@@ -27,23 +26,10 @@ static std::string w2u8(const wchar_t* w) {
 }
 #endif
 
-// ── 除錯示範目標 1：迴圈累加（在迴圈內下中斷點，觀察 acc / i 變化）
-static long long sum_to(int n) {
-    long long acc = 0;
-    for (int i = 1; i <= n; ++i) {
-        acc += i;
-    }
-    return acc;
-}
-
-// ── 除錯示範目標 2：字串處理（觀察 std::string 局部變數、中文位元組）
-static std::string greet(const std::string& name) {
-    std::string msg = "你好，" + name + "！這是 galtxt try_3（純 C++）。";
-    return msg;
-}
+import demo;             // ── 具名模組（提供 sum_to / greet）
 
 static int run(const std::vector<std::string>& args) {
-    // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10）。
+    // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
     int n = 10;
     if (args.size() >= 2) {
         n = std::atoi(args[1].c_str());
@@ -51,8 +37,8 @@ static int run(const std::vector<std::string>& args) {
     }
     std::string name = (args.size() >= 3) ? args[2] : "主人";
 
-    std::string hello = greet(name);
-    long long total = sum_to(n);
+    std::string hello = greet(name);   // ← 來自 module demo
+    long long total = sum_to(n);       // ← 來自 module demo
 
     std::printf("%s\n", hello.c_str());
     std::printf("1..%d 的和 = %lld\n", n, total);
