@@ -28,9 +28,40 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
 
 ## 需要什麼
 
-- **SBCL**（本機 winget 裝在 `C:\Program Files\Steel Bank Common Lisp\sbcl.exe`，實測 2.6.6）。ASDF 內建。
-- **VSCode ＋ Alive 擴充**（`rheller.alive`，已裝）。
-- **Quicklisp**（已裝到 `~/quicklisp`，`~/.sbclrc` 已設自動載入）＋ JSON 庫 **`com.inuoe.jzon`**（見「JSON」節）。
+- **SBCL**（Windows 端 winget 裝在 `C:\Program Files\Steel Bank Common Lisp\sbcl.exe`，實測 2.6.6）。ASDF 內建。
+- **VSCode ＋ Alive 擴充**（`rheller.alive`）＋ **alive-lsp 的相依**（見「跨平台」）。
+- **Quicklisp**（`~/quicklisp`，`~/.sbclrc` 設自動載入）＋ JSON 庫 **`com.inuoe.jzon`**（見「JSON」節）。
+
+## 跨平台（Windows ⇄ Manjaro）
+
+本 sub-proj 在**兩台機器共用同一 repo**：公司 Windows、家裡 Manjaro。原始碼（`.lisp`／糖／測試）
+純可攜；只有**工具鏈與絕對路徑**是本機的，處理如下：
+
+- **`.vscode/settings.json` 已 gitignore**（含絕對 sbcl 路徑、本機專用）。各機**從模板複製**：
+  - Windows： `cp .vscode/settings.windows.jsonc .vscode/settings.json`
+  - Manjaro： `cp .vscode/settings.linux.jsonc  .vscode/settings.json`
+  - 差別只有 `startCommand` 的 `command[0]`：Windows 用 sbcl.exe 絕對路徑（Node spawn 不補 `.exe`），
+    Linux 直接 `sbcl`（在 PATH）。其餘序列一致。
+- **`~/.sbclrc`／`~/quicklisp`**：本機層，不在 repo。用 `(user-homedir-pathname)` 寫路徑故可攜。
+
+**Manjaro 首次設定清單**（回家照做一次）：
+
+```sh
+sudo pacman -S sbcl                                   # 1. SBCL
+# 2. Quicklisp
+curl -O https://beta.quicklisp.org/quicklisp.lisp
+sbcl --non-interactive --load quicklisp.lisp --eval '(quicklisp-quickstart:install)'
+#    把載入片段寫進 ~/.sbclrc（#-quicklisp (load ~/quicklisp/setup.lisp)）
+# 3. alive-lsp 的相依（否則 Alive 的 LSP 起不來）
+sbcl --non-interactive --eval '(ql:quickload (list :usocket :cl-json :bordeaux-threads :flexi-streams))'
+# 4. VSCode 裝 Alive 擴充（rheller.alive）
+# 5. comfy 高亮擴充
+cp -r editor/vscode-comfy ~/.vscode/extensions/local.vscode-comfy-0.0.1
+# 6. 複製 Linux 版 settings 模板
+cp .vscode/settings.linux.jsonc .vscode/settings.json
+```
+
+驗證：`sbcl --script test/run.lisp` 應印 `ALL GREEN`（純可攜，兩平台都該綠）。
 
 ## 佈局
 
@@ -42,7 +73,7 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
 | `test/run.lisp` | 無框架 sanity 測試（`sbcl --script test/run.lisp`）|
 | `examples/hello.lisp` | 糖示範 |
 | `examples/json-demo.lisp` | jzon（Quicklisp）JSON round-trip 示範 |
-| `.vscode/settings.json` | Alive 設定（指到上面的 sbcl.exe）|
+| `.vscode/settings.{windows,linux}.jsonc` | Alive 設定的兩平台模板（複製成 `.vscode/settings.json`，見「跨平台」）|
 | `editor/vscode-comfy/` | 讓 comfy 糖在 VSCode 正確上色的**注入文法小擴充**（見「語法高亮」節）|
 
 ## 舒適糖用法

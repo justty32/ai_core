@@ -1,0 +1,22 @@
+// settings.windows.jsonc — Windows 用模板。
+// 用法： 複製成 .vscode/settings.json（該檔已 gitignore，本機專用）。
+//   Git Bash:  cp .vscode/settings.windows.jsonc .vscode/settings.json
+{
+  // Alive startCommand 是「完整啟動指令」，Alive 逐字 spawn（不走 shell）並讀 stdout 抓 port。
+  // Windows：Node spawn 不自動補 .exe，故 command[0] 用 sbcl.exe 的絕對路徑最保險。
+  "alive.lsp.startCommand": [
+    "C:\\Program Files\\Steel Bank Common Lisp\\sbcl.exe",
+    "--noinform",
+    "--eval", "(require :asdf)",
+    "--eval", "(let ((s (merge-pathnames \"quicklisp/setup.lisp\" (user-homedir-pathname)))) (when (probe-file s) (load s)))",
+    "--eval", "(asdf:load-system :alive-lsp)",
+    "--eval", "(alive/server:start)"
+  ],
+
+  "editor.formatOnType": true,
+  "[commonlisp]": {
+    "editor.wordSeparators": "()[]{}\",'`;#|",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}

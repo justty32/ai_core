@@ -1,0 +1,22 @@
+// settings.linux.jsonc — Linux（Manjaro 等）用模板。
+// 用法： 複製成 .vscode/settings.json（該檔已 gitignore，本機專用）。
+//   cp .vscode/settings.linux.jsonc .vscode/settings.json
+{
+  // Linux：sbcl 在 PATH 上（pacman -S sbcl），command[0] 直接寫 sbcl 即可
+  //（Linux 無 .exe 副檔名問題，spawn 不走 shell 也找得到）。其餘序列與 Windows 完全一致。
+  "alive.lsp.startCommand": [
+    "sbcl",
+    "--noinform",
+    "--eval", "(require :asdf)",
+    "--eval", "(let ((s (merge-pathnames \"quicklisp/setup.lisp\" (user-homedir-pathname)))) (when (probe-file s) (load s)))",
+    "--eval", "(asdf:load-system :alive-lsp)",
+    "--eval", "(alive/server:start)"
+  ],
+
+  "editor.formatOnType": true,
+  "[commonlisp]": {
+    "editor.wordSeparators": "()[]{}\",'`;#|",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}

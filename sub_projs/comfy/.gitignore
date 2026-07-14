@@ -1,6 +1,9 @@
 # SBCL / ASDF build 產物
 *.fasl
-*.f"*"
 .cache/
-# ASDF 預設把 fasl 丟到使用者的 cache，本地若改丟樹內也一併忽略
 bin/
+
+# VSCode 本機設定：用 .vscode/settings.<os>.jsonc 模板複製產生，本機專用、勿進版控
+.vscode/settings.json
+# Alive 產生的 fasl / session 狀態
+.vscode/alive/
