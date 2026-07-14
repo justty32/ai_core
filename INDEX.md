@@ -20,7 +20,7 @@
 |------|------|
 | [workflows/](WORKFLOWS.md) | ★ 當前主線：開發工作流＋活的規劃內容。[roadmap.md](workflows/roadmap/README.md)（★ 北極星／戰略主文件，回來先讀這個）、[spec/](workflows/spec/)（權威設計規範 8 項＝原 core_nature，扶正者為定案；其中 lib_spec／axis_spec／execution_forms／composite_spec 已超標拆成資料夾＋index）、[plans/](workflows/plans/README.md)（spec 的實作規劃）、[intake/](workflows/intake/README.md)（口述線一條龍，產 raw/cleaned）、[notes/](workflows/notes/)（匯總筆記）、[ideas/](workflows/ideas/README.md)（腦暴 brainstorm＋研究 research＋spec 候選）、idea-capture.md（腦暴 critique/expand）、common/。派發入口 [WORKFLOWS.md](WORKFLOWS.md) |
 | [docs/](docs/README.md) | 快照家族入口（spec 已移出）：`kb/`（知識庫快照三夾 knowledge_base・kb-ext・kb-ss，凍結快照）、`html/`（手工多頁總覽站，vibe check）。入口 [docs/README.md](docs/README.md) |
-| [sub_projs/](sub_projs/README.md) | 次級物：`llm_forge/`（框架規劃地／爐子：固化階梯等機制之家）＋ `galtxt/`（動手實驗場／第一把刀：依賴 llm_forge，先跑通再搬回固化）＋ `ver_1/`（早期 Python 實作封存，半封存、不在現役維護鏈）。入口 [sub_projs/README.md](sub_projs/README.md) |
+| [sub_projs/](sub_projs/README.md) | 次級物：`llm_forge/`（框架規劃地／爐子：固化階梯等機制之家）＋ `galtxt/`（動手實驗場／第一把刀：依賴 llm_forge，先跑通再搬回固化）＋ `comfy/`（舒適 Common Lisp 地基＋VSCode/Alive debug 環境，框架外實驗場）＋ `ver_1/`（早期 Python 實作封存，半封存、不在現役維護鏈）。入口 [sub_projs/README.md](sub_projs/README.md) |
 
 ## 開發工作流
 

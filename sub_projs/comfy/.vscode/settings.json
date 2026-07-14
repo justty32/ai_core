@@ -1,0 +1,17 @@
+{
+  // ── Alive（Common Lisp 擴充 rheller.alive）──
+  // 用完整路徑指到 winget 裝的 SBCL，免得 VSCode 環境沒即時吃到 PATH 更新。
+  "alive.lsp.startCommand": ["C:\\Program Files\\Steel Bank Common Lisp\\sbcl.exe"],
+
+  // ── 開發手感 ──
+  "editor.formatOnType": true,
+  "files.associations": {
+    "*.lisp": "lisp",
+    "*.asd": "lisp"
+  },
+  "[lisp]": {
+    "editor.wordSeparators": "()[]{}\",'`;#|",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}

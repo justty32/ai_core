@@ -1,0 +1,6 @@
+# SBCL / ASDF build 產物
+*.fasl
+*.f"*"
+.cache/
+# ASDF 預設把 fasl 丟到使用者的 cache，本地若改丟樹內也一併忽略
+bin/
