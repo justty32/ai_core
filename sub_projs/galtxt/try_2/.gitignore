@@ -1,11 +1,7 @@
-# build 產物（vendor/lua/*.c/*.h 是 vendored 原始碼、要進版控；host.cpp 是源碼，留版控）
-host.exe
+# build 產物全落 build/（vendor/lua/*.c/*.h 是 vendored 原始碼、host.cpp 是源碼，都進版控）
+build/
 *.exe
 *.o
-vendor/lua/liblua.a
 
-# 執行期暫存 / 測試 fixture
-galtxt_llm_req.json
-fake/
-fake_lua/
-fake_stream/
+# 註：請求 body 暫存改寫到系統 TEMP，不在專案內；
+#     test/fixtures/ 是離線測試資料（假回應），要進版控。

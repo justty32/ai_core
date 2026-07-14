@@ -10,7 +10,8 @@
 ---
 --- completion 印到 stdout；token 用量／錯誤印到 stderr。旗標名＝schema 名稱把底線換連字號。
 
-local llm = dofile("llm.lua")
+local HERE = debug.getinfo(1, "S").source:sub(2):match("^(.*[/\\])") or ""
+local llm = dofile(HERE .. "llm.lua")
 
 -- 由 schema 生成 flag → entry 對照（--name-with-hyphens）；func 型參數（如 callback）CLI 無法帶，跳過
 local function flag_of(name) return "--" .. (name:gsub("_", "-")) end

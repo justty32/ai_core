@@ -2,8 +2,9 @@
 -- 跑：host.exe demo_lua.lua
 -- 這是 try_2 的關鍵洞見：runtime 就是 Lua，何必讓模型吐 JSON 再拿 parser 解？
 -- 讓模型吐 Lua table 字面量 → sandbox load → 回來就是能直接導航／運算的原生 table。
-local llm = dofile("llm.lua")
-llm.base_url = "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/fake_lua"
+local HERE = debug.getinfo(1, "S").source:sub(2):match("^(.*[/\\])") or ""
+local llm = dofile(HERE .. "../src/llm.lua")
+llm.base_url = dofile(HERE .. "../src/_path.lua").fixture("fake_lua")
 
 local ch = llm.llm_entry{
   sys = "你只輸出一個 Lua table，欄位 name(字串) affection(整數) lines(字串陣列)，不要多餘文字。",

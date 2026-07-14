@@ -1,7 +1,9 @@
--- test.lua — 全離線：curl file:// 灌假回應，驗 request 組裝 + 回應解析（cwd 需在 try_2）
--- 跑：host.exe test.lua
-local llm = dofile("llm.lua")
-llm.base_url = "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/fake"
+-- test.lua — 全離線：curl file:// 灌假回應，驗 request 組裝 + 回應解析
+-- 跑：host.exe test/test.lua（從 try_2 根跑；路徑自解，不寫死機器路徑）
+local HERE = debug.getinfo(1, "S").source:sub(2):match("^(.*[/\\])") or ""
+local llm = dofile(HERE .. "../src/llm.lua")
+local P = dofile(HERE .. "../src/_path.lua")
+llm.base_url = P.fixture("fake")
 
 io.write("=== 呼叫 llm_entry ===\n")
 local r = llm.llm_entry{
@@ -12,7 +14,7 @@ local r = llm.llm_entry{
 io.write("content => " .. tostring(r) .. "\n")
 
 io.write("=== 送出的請求 body（回讀暫存檔）===\n")
-local f = assert(io.open("galtxt_llm_req.json", "rb"))
+local f = assert(io.open(llm.req_file, "rb"))
 io.write(f:read("a") .. "\n"); f:close()
 
 -- 邊界：未知參數要被擋
@@ -26,7 +28,7 @@ io.write((ok2 and "✗ 沒擋住" or ("✓ 擋住：" .. tostring(err2))) .. "\n
 
 -- Lua 格式輸出：模型吐 Lua table 字面量 → sandbox load → 原生 table
 io.write("=== Lua 格式輸出（--lua / lua=true）===\n")
-llm.base_url = "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/fake_lua"
+llm.base_url = P.fixture("fake_lua")
 local ch = llm.llm_entry{ prompt = "生成角色", lua = true }
 io.write(("解析型別=%s name=%s affection+1=%s 台詞1=%s\n"):format(
   type(ch), tostring(ch and ch.name), tostring(ch and (ch.affection + 1)), tostring(ch and ch.lines[1])))
@@ -37,7 +39,7 @@ io.write((evil == nil and ("✓ 沙箱擋住副作用（" .. tostring(eerr) .. "
 
 -- 串流：callback 持續被餵、UTF-8 不切半、拼回＝完整內容、回傳 {ok=true}
 io.write("=== 串流（streaming=true + callback，chunk_chars=3）===\n")
-llm.base_url = "file:///C:/code/mine/ai_core/sub_projs/galtxt/try_2/fake_stream"
+llm.base_url = P.fixture("fake_stream")
 local calls, parts, bad = 0, {}, false
 local sr = llm.ask{
   prompt = "hi", streaming = true, chunk_chars = 3,

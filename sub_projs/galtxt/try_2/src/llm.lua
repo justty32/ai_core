@@ -13,8 +13,10 @@
 --- ★ 參數單一真相源＝下面的 M.schema：由它驅動 (1) 呼叫端參數驗證、(2) JSON 欄位對映、
 ---   (3) CLI 旗標名（cli.lua）、(4) CLI 值型別解析。新增一個參數＝schema 加一行，別處零改動。
 
--- JSON：vendored rxi/json.lua 0.1.2——json.encode / json.decode（相對 cwd 載入，cwd 需在 try_2）
-local json = dofile("json.lua")
+-- JSON：vendored rxi/json.lua 0.1.2——json.encode / json.decode
+-- 自解本檔目錄，載入同資料夾的 json.lua（location-independent，不綁 CWD）
+local HERE = debug.getinfo(1, "S").source:sub(2):match("^(.*[/\\])") or ""
+local json = dofile(HERE .. "json.lua")
 
 local M = {}
 
@@ -23,7 +25,9 @@ M.base_url = os.getenv("AI_CORE_LLM_BASE_URL") or "http://localhost:1234/v1"  --
 M.model    = os.getenv("AI_CORE_LLM_MODEL")    or "local-model"               -- LM Studio 用當前載入模型
 M.api_key  = os.getenv("AI_CORE_LLM_API_KEY")  or ""                          -- 有值才加 Authorization
 
-local REQ_FILE = "galtxt_llm_req.json"   -- 暫存請求 body（避開命令列引號地獄）
+-- 暫存請求 body（避開命令列引號地獄）：寫到系統 TEMP，絕對路徑 curl 吃得到、不髒專案目錄
+local REQ_FILE = (os.getenv("TEMP") or os.getenv("TMP") or "."):gsub("[/\\]+$", "") .. "/galtxt_llm_req.json"
+M.req_file = REQ_FILE                     -- 公開給 test 回讀驗證用
 
 -- ── ★ 參數 schema：唯一真相源。每列＝{名稱, JSON鍵或"ctrl", 值型別}
 --    JSON鍵或"ctrl"："ctrl"＝控制參數（本體流程手動處理）；其它字串＝直接塞進 OpenAI 請求的 JSON 欄位鍵

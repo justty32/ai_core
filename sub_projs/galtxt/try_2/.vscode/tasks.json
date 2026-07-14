@@ -31,23 +31,23 @@
       "problemMatcher": []
     },
     {
-      "label": "run: 離線 test.lua",
+      "label": "run: 離線 test",
       "type": "shell",
-      "command": "./host.exe test.lua",
+      "command": "./build/host.exe test/test.lua",
       "problemMatcher": [],
       "presentation": { "clear": true }
     },
     {
-      "label": "run: demo_lua.lua (Lua 格式輸出示範)",
+      "label": "run: demo_lua (Lua 格式輸出示範)",
       "type": "shell",
-      "command": "./host.exe demo_lua.lua",
+      "command": "./build/host.exe examples/demo_lua.lua",
       "problemMatcher": [],
       "presentation": { "clear": true }
     },
     {
-      "label": "run: demo_stream.lua (串流示範)",
+      "label": "run: demo_stream (串流示範)",
       "type": "shell",
-      "command": "./host.exe demo_stream.lua",
+      "command": "./build/host.exe examples/demo_stream.lua",
       "problemMatcher": [],
       "presentation": { "clear": true }
     }
