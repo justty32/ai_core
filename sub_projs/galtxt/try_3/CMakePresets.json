@@ -8,6 +8,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "toolchainFile": "C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "C:/dev/mingw64/bin/g++.exe",
@@ -21,10 +22,31 @@
       "displayName": "MinGW + Ninja Release",
       "inherits": "mingw-debug",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux (g++) + Ninja Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "/home/lorkhan/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+        "CMAKE_MAKE_PROGRAM": "/usr/bin/ninja"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux (g++) + Ninja Release",
+      "inherits": "linux-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }
   ],
   "buildPresets": [
     { "name": "mingw-debug", "configurePreset": "mingw-debug" },
-    { "name": "mingw-release", "configurePreset": "mingw-release" }
+    { "name": "mingw-release", "configurePreset": "mingw-release" },
+    { "name": "linux-debug", "configurePreset": "linux-debug" },
+    { "name": "linux-release", "configurePreset": "linux-release" }
   ]
 }

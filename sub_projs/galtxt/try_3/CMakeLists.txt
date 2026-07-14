@@ -34,6 +34,10 @@ add_executable(try3
 
 target_link_libraries(try3 PRIVATE glaze::glaze)
 
+# 產物名一律帶 .exe：Windows 本來就是（MinGW 預設），Linux 顯式加上——
+# 與 try_2 build.sh 的慣例一致（Linux 不在意副檔名，換來跨平台指令一致：./build/try3.exe 兩邊通用）。
+set_target_properties(try3 PROPERTIES SUFFIX ".exe")
+
 # 注入源碼根目錄，讓 main.cpp 的 http 示範用 file:// 讀 test/fixtures/ 而不寫死機器路徑
 target_compile_definitions(try3 PRIVATE TRY3_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 

@@ -6,8 +6,12 @@ local M = {}
 -- 平台偵測：package.config 首字＝目錄分隔符（Windows "\"、Unix "/"）
 local IS_WIN = package.config:sub(1, 1) == "\\"
 
+-- cwd 探測：兩平台都走 io.popen（Windows "cd"／Unix "pwd"）。
+-- ⚠ Linux 上這要求 liblua.a 是用 -DLUA_USE_LINUX 編的，否則 io.popen 是「不支援」的錯誤樁——
+--    build.sh 的 LUAPLAT 已負責給。別改讀 $PWD／$CD 繞過：cmd/PowerShell 不把 CD 傳進子行程環境，
+--    那樣會在 Windows 上靜靜退化成 "."。
 local function getcwd()
-  local p = io.popen(IS_WIN and "cd" or "pwd")   -- Windows cmd 用 cd；Unix sh 用 pwd
+  local p = io.popen(IS_WIN and "cd" or "pwd")
   local d = p:read("l"); p:close()
   return (d or "."):gsub("[/\\]+$", "")
 end

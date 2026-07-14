@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fake","object":"chat.completion","created":1234567890,"model":"local-model","choices":[{"index":0,"message":{"role":"assistant","content":"喵～主人好壞，人家才不是為了你才回答的呢！"},"finish_reason":"stop"}],"usage":{"prompt_tokens":42,"completion_tokens":21,"total_tokens":63}}

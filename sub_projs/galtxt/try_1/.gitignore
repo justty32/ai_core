@@ -3,6 +3,8 @@ llm_entry.exe
 s7host.exe
 *.o
 
-# s7 執行期暫存 / 測試 fixture
+# s7 執行期暫存（llm.scm 組請求時落的檔）
 galtxt_llm_req.json
-fake/
+
+# 註：fake/ 是離線測試的假回應 fixture，**要進版控**（比照 try_2 的 test/fixtures/）——
+#     曾被 ignore 掉，害 clone 下來 test.scm 直接跑不了（fixture 不存在），已扶正。
