@@ -14,7 +14,7 @@
 - **刻意暫緩至 v0：A4（組合軸推導）＋ B 系列（B1 語意欄位 / B2 共用模組 / B3 沙箱）** — 留給 v0 切片逼出優先序，見 [roadmap.md](workflows/roadmap/README.md) §7。
 - **workflows/spec/overview.md 仍是「待填」stub** — 規範家族缺總覽定位（這套設計模式是工具集？設計模式？執行組織框架？），見 [workflows/spec/overview.md](workflows/spec/overview.md)「待填：本質是什麼」節。
 - **galtxt/llm_forge 角色切分（新定調 7/13，文檔已對齊）**：`sub_projs/galtxt/`＝**動手實驗場**（先執行、跑通想法、galgame 生成器本身），`sub_projs/llm_forge/`＝**框架/爐子**（確定的機制才從 galtxt 搬來固化）；galtxt 依賴 llm_forge。兩邊 AGENTS/INDEX/WORKFLOWS 均已改述對齊。galtxt 已套 workflows 分層模板建骨架、無程式碼，**第一片切口待定**（port core_handy LLM 地基 vs 4.2 rating 工具），見 [sub_projs/galtxt/SESSION-LOG.md](sub_projs/galtxt/SESSION-LOG.md)。
-- **舒適 CL 地基 `comfy/` 已立（框架外實驗場，與 galtxt s7 線並存、兩邊都推）**：SBCL 2.6.6＋Alive/VSCode 環境就緒，`:comfy` 糖層（`true`/`false`＋`'a'` 字元＋C 風格字串轉義 `"a\nb"`）測試全綠；已裝 Quicklisp＋`com.inuoe.jzon`，JSON round-trip 實測過（`examples/json-demo.lisp`）；VSCode 注入文法高亮擴充備於 `editor/vscode-comfy/`（**待使用者眼睛確認上色**）。相依分層：糖本體零外部相依，庫（JSON）走 Quicklisp。下一步：更多順手糖／把 s7「schema→CLI 由同像性生成」洞見在 CL 用 macro 重生。細節見 [sub_projs/comfy/README.md](sub_projs/comfy/README.md)。
+- **舒適 CL 地基 `comfy/` 已立且環境全通（框架外實驗場，與 galtxt s7 線並存、兩邊都推）**：SBCL 2.6.6＋Alive（LSP／REPL／inline-eval／高亮）**使用者已在 VSCode 實測成功**；`:comfy` 糖層（`true`/`false`＋`'a'` 字元＋C 風格字串轉義 `"a\nb"`）測試全綠；Quicklisp＋`com.inuoe.jzon` JSON round-trip 過；高亮＝`editor/vscode-comfy/` 注入文法。**跨平台**：Windows／Manjaro 共用 repo，`.vscode/settings.json` 改本機檔＋兩平台模板，Manjaro 首次設定清單見 README。相依分層：糖本體零外部相依，庫走 Quicklisp。下一步：更多順手糖／把 s7「schema→CLI 由同像性生成」洞見在 CL 用 macro 重生。細節見 [sub_projs/comfy/README.md](sub_projs/comfy/README.md)。
 
 ## 各工作流 session-log
 
