@@ -40,9 +40,10 @@ static const luaL_Reg stdlibs[] = {
 };
 
 
-/* ── galtxt try_2 增修：native JSON codec（native/cjson.c）。宣告於此、於下方函式尾端
-**    塞進 package.preload，令 require("cjson") 惰性載入。放迴圈外＝不動 stdlibs/mask/assert。*/
+/* ── galtxt try_2 增修：native 模組（cjson＝JSON codec、http＝HTTP 傳輸）。宣告於此、於下方
+**    函式尾端塞進 package.preload，令 require 惰性載入。放迴圈外＝不動 stdlibs/mask/assert。*/
 LUAMOD_API int luaopen_cjson (lua_State *L);
+LUAMOD_API int luaopen_http (lua_State *L);
 
 
 /*
@@ -63,10 +64,12 @@ LUALIB_API void luaL_openselectedlibs (lua_State *L, int load, int preload) {
     }
   }
   lua_assert((mask >> 1) == LUA_UTF8LIBK);
-  /* ── galtxt try_2：把 cjson 塞進 PRELOAD 表（此刻仍在堆疊 -1）。host.exe 與 stock
-  **    lua.exe 都經本函式，故兩者 require("cjson") 皆可得。無條件、與上方 mask 無關。*/
+  /* ── galtxt try_2：把 cjson／http 塞進 PRELOAD 表（此刻仍在堆疊 -1）。host.exe 與 stock
+  **    lua.exe 都經本函式，故兩者 require 皆可得。無條件、與上方 mask 無關。*/
   lua_pushcfunction(L, luaopen_cjson);
   lua_setfield(L, -2, "cjson");
+  lua_pushcfunction(L, luaopen_http);
+  lua_setfield(L, -2, "http");
   lua_pop(L, 1);  /* remove PRELOAD table */
 }
 

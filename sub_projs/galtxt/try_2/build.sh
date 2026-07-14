@@ -13,22 +13,25 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p build
 
-# ── 平台偵測：Windows 需 MinGW + -municode（wmain 寬字元）；Linux 原生、不需
+# ── 平台偵測：Windows 需 MinGW + -municode（wmain 寬字元）＋ WinHTTP（native/http.c）；
+#    Linux 原生、HTTP 走 libcurl。HTTPLIBS 連結到 host.exe/lua.exe（liblua.a 含 http.o 引用其符號）。
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
     export PATH="/c/dev/mingw64/bin:$PATH"
     MUNICODE="-municode"
+    HTTPLIBS="-lwinhttp"
     ;;
   *)
     MUNICODE=""
+    HTTPLIBS="-lcurl"
     ;;
 esac
 
 build_lua() {
-  echo "[build] build/liblua.a（vendored Lua 除 lua.c/luac.c ＋ 我方 native/cjson.c）"
+  echo "[build] build/liblua.a（vendored Lua 除 lua.c/luac.c ＋ 我方 native/*.c）"
   local objs=()
-  # vendored Lua 全部（除兩個 main）＋ native/cjson.c（JSON codec，經 linit.c 註冊成內建 cjson）
-  for f in $(ls vendor/lua/*.c | grep -vE '/(lua|luac)\.c$') native/cjson.c; do
+  # vendored Lua 全部（除兩個 main）＋ native/*.c（cjson＝JSON codec、http＝HTTP 傳輸，經 linit.c 註冊）
+  for f in $(ls vendor/lua/*.c | grep -vE '/(lua|luac)\.c$') native/*.c; do
     gcc -O2 -c "$f" -I vendor/lua -o "build/$(basename "${f%.c}").o"
     objs+=("build/$(basename "${f%.c}").o")
   done
@@ -39,13 +42,13 @@ build_lua() {
 
 build_host() {
   echo "[build] build/host.exe"
-  g++ -std=c++20 -O2 host.cpp -I vendor/lua -L build -llua -lm $MUNICODE -o build/host.exe
+  g++ -std=c++20 -O2 host.cpp -I vendor/lua -L build -llua -lm $MUNICODE $HTTPLIBS -o build/host.exe
   echo "[build] build/host.exe 完成"
 }
 
 build_luaexe() {
   echo "[build] build/lua.exe（標準直譯器 = lua.c + liblua.a）"
-  gcc -O2 vendor/lua/lua.c -I vendor/lua -L build -llua -lm -o build/lua.exe
+  gcc -O2 vendor/lua/lua.c -I vendor/lua -L build -llua -lm $HTTPLIBS -o build/lua.exe
   echo "[build] build/lua.exe 完成"
 }
 

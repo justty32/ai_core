@@ -13,9 +13,8 @@ local r = llm.llm_entry{
 }
 io.write("content => " .. tostring(r) .. "\n")
 
-io.write("=== 送出的請求 body（回讀暫存檔）===\n")
-local f = assert(io.open(llm.req_file, "rb"))
-io.write(f:read("a") .. "\n"); f:close()
+io.write("=== 送出的請求 body（llm.last_request）===\n")
+io.write(llm.last_request .. "\n")
 
 -- 邊界：未知參數要被擋
 io.write("=== 未知參數應報錯 ===\n")

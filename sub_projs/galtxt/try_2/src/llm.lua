@@ -1,4 +1,4 @@
---- llm.lua — galtxt try_2：Lua 5.5 版統一 LLM 接口（schema 驅動，無 streaming）
+--- llm.lua — galtxt try_2：Lua 5.5 版統一 LLM 接口（schema 驅動，含串流）
 ---
 --- 開發循環（playground 哲學）：改本檔 → 用 host.exe 跑腳本 → 直接呼叫。
 ---   local llm = dofile("llm.lua")
@@ -7,8 +7,8 @@
 ---   llm.llm_entry{ infile = "q.txt", outfile = "a.txt", sys = "你是傲嬌貓娘",
 ---                  temp = 0.8, top_p = 0.9, max_tokens = 256 }
 ---
---- HTTP 走 io.popen("curl …") 捕捉輸出（跨後端 http/https 通吃）。請求用 Lua table 表達、
---- json.encode 序列化；回應 json.decode 成 table 導航——零手工 escape。
+--- HTTP 走 native `http` 模組（WinHTTP／libcurl，跨後端 http/https 通吃）。請求用 Lua table 表達、
+--- cjson.encode 序列化；回應 cjson.decode 成 table 導航——零手工 escape、零暫存檔、零外部 curl。
 ---
 --- ★ 參數單一真相源＝下面的 M.schema：由它驅動 (1) 呼叫端參數驗證、(2) JSON 欄位對映、
 ---   (3) CLI 旗標名（cli.lua）、(4) CLI 值型別解析。新增一個參數＝schema 加一行，別處零改動。
@@ -17,6 +17,9 @@
 --   host.exe 與 stock lua.exe 都內建，require 即得——取代原 vendored rxi/json.lua（已退休）。
 --   API 與語意不變：cjson.encode / cjson.decode（序列自動陣列、中文原樣、null↔nil）。
 local json = require("cjson")
+-- HTTP：native C 傳輸（native/http.c，Windows=WinHTTP／Linux=libcurl，file:// 亦由它處理）。
+--   取代原本的 io.popen("curl …")＋暫存檔——請求 body 直接以字串進 C，零暫存、零外部 curl 依賴。
+local http = require("http")
 
 local M = {}
 
@@ -25,11 +28,8 @@ M.base_url = os.getenv("AI_CORE_LLM_BASE_URL") or "http://localhost:1234/v1"  --
 M.model    = os.getenv("AI_CORE_LLM_MODEL")    or "local-model"               -- LM Studio 用當前載入模型
 M.api_key  = os.getenv("AI_CORE_LLM_API_KEY")  or ""                          -- 有值才加 Authorization
 
--- 暫存請求 body（避開命令列引號地獄）：寫到系統暫存目錄，絕對路徑 curl 吃得到、不髒專案目錄
--- 跨平台：Windows 用 TEMP/TMP；Linux/Mac 用 TMPDIR，退回 /tmp
-local TMPDIR = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("TMPDIR") or "/tmp"
-local REQ_FILE = TMPDIR:gsub("[/\\]+$", "") .. "/galtxt_llm_req.json"
-M.req_file = REQ_FILE                     -- 公開給 test 回讀驗證用
+-- 送出的請求 body 留最後一份（http 直接吃字串、不再寫暫存檔）；公開給 test/除錯回讀驗證。
+M.last_request = nil
 
 -- ── ★ 參數 schema：唯一真相源。每列＝{名稱, JSON鍵或"ctrl", 值型別}
 --    JSON鍵或"ctrl"："ctrl"＝控制參數（本體流程手動處理）；其它字串＝直接塞進 OpenAI 請求的 JSON 欄位鍵
@@ -69,10 +69,6 @@ end
 local function spit(path, str)                 -- 字串寫檔
   local f = assert(io.open(path, "wb")); f:write(str); f:close()
 end
-local function capture(cmd)                    -- 跑指令、捕捉 stdout（含 2>&1）
-  local p = assert(io.popen(cmd, "r"))
-  local out = p:read("a"); p:close(); return out
-end
 
 -- ── UTF-8 安全切分：把字串分成「完整字前綴 / 殘餘不完整位元組 / 完整字數」，絕不切半個字。
 local function utf8_split_complete(s)
@@ -82,16 +78,15 @@ local function utf8_split_complete(s)
   return head, s:sub(bad), (utf8.len(head) or 0)
 end
 
--- ── 串流傳輸：curl -N 逐行讀 SSE，delta.content 累積到門檻→呼叫 callback（UTF-8 對齊）。
+-- ── 串流傳輸：http.stream 把 raw bytes 逐塊經 on_data 餵回；這裡自己拆 SSE 行
+--    （C 是笨管子、不保證分塊對齊行邊界），delta.content 累積到門檻→呼叫 callback（UTF-8 對齊）。
 --    chunk_chars 有值＝每滿這麼多字吐一次；沒值＝每片就緒的完整字即吐。收尾把殘留全吐。
---    回傳 {ok=bool, err=?}——內容不放回傳值，全走 callback（依設計）。
-local function run_stream(cmd, callback, chunk_chars)
-  local p, oerr = io.popen(cmd, "r")
-  if not p then return { ok = false, err = "popen 失敗：" .. tostring(oerr) } end
-  local buf = ""
+--    回傳 {ok=bool, status=?, err=?}——內容不放回傳值，全走 callback（依設計）。
+local function run_stream(url, headers, body, callback, chunk_chars)
+  local content = ""                           -- 已解出的 delta.content（utf8 分批用）
   local function emit_ready(force)
     while true do
-      local head, tail, count = utf8_split_complete(buf)
+      local head, tail, count = utf8_split_complete(content)
       if count == 0 then break end
       local take
       if chunk_chars and chunk_chars > 0 and not force then
@@ -102,27 +97,37 @@ local function run_stream(cmd, callback, chunk_chars)
       end
       local cut = utf8.offset(head, take + 1) or (#head + 1)
       callback(head:sub(1, cut - 1))
-      buf = head:sub(cut) .. tail
+      content = head:sub(cut) .. tail
     end
   end
-  for line in p:lines() do
-    local data = line:match("^data:%s?(.*)")   -- SSE：data: {…} / data: [DONE]
-    if data then
-      if data == "[DONE]" then break end
-      local dok, chunk = pcall(json.decode, data)
-      if dok and chunk.choices and chunk.choices[1] and chunk.choices[1].delta then
-        local piece = chunk.choices[1].delta.content
-        if type(piece) == "string" and #piece > 0 then
-          buf = buf .. piece
-          emit_ready(false)
-        end
+  local function feed_line(line)               -- SSE：data: {…} / data: [DONE]
+    local data = line:match("^data:%s?(.*)")
+    if not data or data == "[DONE]" then return end
+    local dok, chunk = pcall(json.decode, data)
+    if dok and chunk.choices and chunk.choices[1] and chunk.choices[1].delta then
+      local piece = chunk.choices[1].delta.content
+      if type(piece) == "string" and #piece > 0 then
+        content = content .. piece
+        emit_ready(false)
       end
     end
   end
+  local raw = ""                               -- 尚未成行的原始 bytes
+  local function on_data(bytes)
+    raw = raw .. bytes
+    while true do
+      local nl = raw:find("\n", 1, true)
+      if not nl then break end
+      feed_line((raw:sub(1, nl - 1):gsub("\r$", "")))
+      raw = raw:sub(nl + 1)
+    end
+  end
+  local ok, status = pcall(http.stream, { url = url, headers = headers, body = body, on_data = on_data })
+  if not ok then return { ok = false, err = status } end
+  if #raw > 0 then feed_line((raw:gsub("\r$", ""))) end   -- 收尾：最後一行可能沒換行
   emit_ready(true)                             -- 收尾：剩下的完整字全吐
-  if #buf > 0 then callback(buf) end           -- 連殘餘不完整位元組也吐（罕見；串流正常收在字邊界）
-  p:close()
-  return { ok = true }
+  if #content > 0 then callback(content) end   -- 連殘餘不完整位元組也吐（罕見；串流正常收在字邊界）
+  return { ok = true, status = status }
 end
 
 -- ── ★ Lua 格式輸出：把模型吐的「Lua table 字面量」sandbox load 成原生 table（零 JSON parse）。
@@ -194,20 +199,25 @@ function M.llm_entry(opts)
     local name, kind = e[1], e[2]
     if kind ~= "ctrl" and opts[name] ~= nil then req[kind] = opts[name] end
   end
-  -- 4. 寫請求檔 → curl
-  spit(REQ_FILE, json.encode(req))
-  local auth = (#key > 0) and (' -H "Authorization: Bearer ' .. key .. '"') or ""
-  local base_cmd = 'curl -sS "' .. base .. '/chat/completions"'
-      .. ' -H "Content-Type: application/json"' .. auth
-      .. ' --data-binary @' .. REQ_FILE
+  -- 4. 序列化請求 body（留一份供 test/除錯回讀）＋組標頭＋URL
+  local reqbody = json.encode(req)
+  M.last_request = reqbody
+  local url = base .. "/chat/completions"
+  local headers = { "Content-Type: application/json" }
+  if #key > 0 then headers[#headers + 1] = "Authorization: Bearer " .. key end
   -- ── ★ 串流模式：需 callback；即時回 {ok=…}，內容全走 callback（不回內容本體）
   if opts.streaming then
     if type(opts.callback) ~= "function" then
       error("llm-entry: streaming=true 需要 callback 函式", 2)
     end
-    return run_stream(base_cmd .. " -N", opts.callback, opts.chunk_chars)
+    return run_stream(url, headers, reqbody, opts.callback, opts.chunk_chars)
   end
-  local resp = capture(base_cmd .. " 2>&1")
+  -- 非串流：http.request 回 status, body（傳輸失敗會 raise，這裡 pcall 收）
+  local hok, status, resp = pcall(http.request, { url = url, headers = headers, body = reqbody })
+  if not hok then
+    io.stderr:write("llm-entry: HTTP 請求失敗：" .. tostring(status) .. "\n")
+    return nil
+  end
   -- 5. 解析 choices[1].message.content
   local ok, j = pcall(json.decode, resp)
   local content
@@ -215,7 +225,8 @@ function M.llm_entry(opts)
     content = j.choices[1].message.content
   end
   if type(content) ~= "string" then
-    io.stderr:write("llm-entry: 回應無 choices[1].message.content。原始回應：\n" .. resp .. "\n")
+    io.stderr:write(("llm-entry: 回應無 choices[1].message.content（HTTP %s）。原始回應：\n%s\n")
+      :format(tostring(status), resp))
     return nil
   end
   -- token 計量（有才印）
