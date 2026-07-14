@@ -12,8 +12,10 @@
    REPL 邊寫邊測、condition/restart 互動除錯、`trace`/`step`/`break` 全在手邊。
 
 > **⚠ 在 AGENTS.md 鐵律之外**：專案鐵律定「實作只用 Python 3.11+ 標準庫、POSIX、Windows 不考慮」。
-> 本夾與 try_1 一樣是**框架外的實驗場**（Common Lisp / SBCL / Windows），故**不受該鐵律約束**；
-> 但仍守「零外部相依」的精神——只用 SBCL 隨附的 ASDF，不碰 Quicklisp（有真依賴再說）。
+> 本夾與 try_1 一樣是**框架外的實驗場**（Common Lisp / SBCL / Windows），故**不受該鐵律約束**。
+> 相依原則：**糖本體（`:comfy` 系統）維持零外部相依**（只用 SBCL 內建 ASDF）；至於真實工作需要的
+> 庫（如 JSON），走 **Quicklisp** 引入——galtxt 的 LLM 接口一定要 JSON，故已裝 Quicklisp ＋
+> `com.inuoe.jzon`（見「JSON」節）。糖與庫分層：載入糖不會拖進任何外部相依。
 
 ## 由來
 
@@ -26,8 +28,9 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
 
 ## 需要什麼
 
-- **SBCL**（本機 winget 裝在 `C:\Program Files\Steel Bank Common Lisp\sbcl.exe`，實測 2.6.6）。
-- **VSCode ＋ Alive 擴充**（`rheller.alive`，已裝）。ASDF 隨 SBCL 內建，免另裝。
+- **SBCL**（本機 winget 裝在 `C:\Program Files\Steel Bank Common Lisp\sbcl.exe`，實測 2.6.6）。ASDF 內建。
+- **VSCode ＋ Alive 擴充**（`rheller.alive`，已裝）。
+- **Quicklisp**（已裝到 `~/quicklisp`，`~/.sbclrc` 已設自動載入）＋ JSON 庫 **`com.inuoe.jzon`**（見「JSON」節）。
 
 ## 佈局
 
@@ -35,10 +38,12 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
 |------|--------|
 | `comfy.asd` | ASDF 系統定義（`(asdf:load-system :comfy)`）|
 | `src/package.lisp` | 套件 `:comfy` 與匯出清單 |
-| `src/comfy.lisp` | 糖本體：`true`/`false` 常數、`'a'` 字元讀取器、`*comfy-readtable*` |
+| `src/comfy.lisp` | 糖本體：`true`/`false` 常數、`'a'` 字元讀取器、C 風格字串讀取器、`*comfy-readtable*` |
 | `test/run.lisp` | 無框架 sanity 測試（`sbcl --script test/run.lisp`）|
 | `examples/hello.lisp` | 糖示範 |
+| `examples/json-demo.lisp` | jzon（Quicklisp）JSON round-trip 示範 |
 | `.vscode/settings.json` | Alive 設定（指到上面的 sbcl.exe）|
+| `editor/vscode-comfy/` | 讓 comfy 糖在 VSCode 正確上色的**注入文法小擴充**（見「語法高亮」節）|
 
 ## 舒適糖用法
 
@@ -78,6 +83,36 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
 支援 `\n \t \r \a \b \f \v \0 \\ \" \'` 與 `\xHH`；其餘 `\X` → `X`。**數字不動**（`42`、`3.14`、
 `#xFF` 都照標準 CL 讀）。字串 reader 一樣只裝在 `*comfy-readtable*`。
 
+## JSON（Quicklisp ＋ jzon）
+
+CL 無標準庫 JSON，用成熟庫 **[`com.inuoe.jzon`](https://github.com/Zulu-Inuoe/jzon)**（純 CL、快、無 C 依賴）。
+已裝好 Quicklisp（`~/quicklisp`）與 jzon，`~/.sbclrc` 會自動載入 Quicklisp——**REPL/Alive 裡直接**：
+
+```lisp
+(ql:quickload :com.inuoe.jzon)
+(com.inuoe.jzon:parse "{\"msg\":\"你好\",\"n\":42,\"ok\":true}")  ; => hash-table（中文原樣）
+(com.inuoe.jzon:stringify ht)                                     ; CL 資料 → JSON 字串
+```
+
+對照表：JSON object→`hash-table`（鍵字串）、array→`vector`、true/false→`t`/`nil`、null→`null`（符號）、
+number→整數或 `double-float`。完整示範見 [`examples/json-demo.lisp`](examples/json-demo.lisp)
+（`sbcl --script examples/json-demo.lisp`，實測解析中文＋round-trip＋用 comfy 的 `true` 組 JSON 全對）。
+
+> `--script` 不讀 `~/.sbclrc`，故腳本裡要手動 `(load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))`；
+> 互動的 Alive/REPL 則自動載入，免手動。
+
+## 語法高亮（VSCode）
+
+VSCode 高亮是**靜態 TextMate 文法**，跟 comfy 的 reader macro（執行期）是兩套系統，所以糖預設不會被
+正確上色（`true`/`false` 當普通符號、`'a'` 被當 quote 誤色、字串 `\n` 不標轉義）。修法＝一個**注入文法
+小擴充**，已備在 [`editor/vscode-comfy/`](editor/vscode-comfy/README.md)。啟用（不影響執行，純視覺）：
+
+- **最快**：VSCode 開 `editor/vscode-comfy/` → 按 `F5` 起 Extension Development Host 看效果；
+- **裝全域**：複製該資料夾到 `%USERPROFILE%\.vscode\extensions\` 後重啟 VSCode。
+
+> ⚠ 該擴充是第一版、我這邊無法渲染驗證——文法 JSON 合法，實際上色請你眼睛確認、必要時照它 README
+> 用「Developer: Inspect Editor Tokens and Scopes」校準 scope 名。
+
 ## 跑起來
 
 ```powershell
@@ -108,5 +143,7 @@ sbcl --script examples/hello.lisp
 ## 目前狀態 / 下一步
 
 - ✅ SBCL＋Alive 環境就緒；`:comfy` 系統可載入；`true`/`false`＋`'a'` 字元＋C 風格字串轉義測試全綠。
+- ✅ Quicklisp ＋ jzon 裝好，JSON round-trip 實測通過（`examples/json-demo.lisp`）。
+- ✅ VSCode 注入文法擴充備妥（`editor/vscode-comfy/`）——**待你在 VSCode 眼睛確認上色**。
 - 之後想加的糖（等實際用到再長）：更多順手別名、字串／格式小工具；
   以及把 s7 那邊「schema→CLI 旗標由同像性生成」的洞見，在 CL 這邊用 macro 重生。

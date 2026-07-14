@@ -1,0 +1,23 @@
+{
+  "name": "vscode-comfy",
+  "displayName": "comfy 語法糖高亮（注入文法）",
+  "description": "替 comfy 的糖上色：true/false 常數、'a' 字元字面量、C 風格字串轉義。注入到 Lisp 文法，不改語言本身。",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": { "vscode": "^1.60.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "grammars": [
+      {
+        "scopeName": "comfy.tokens",
+        "path": "./comfy.tokens.tmLanguage.json",
+        "injectTo": ["source.lisp", "source.commonlisp"]
+      },
+      {
+        "scopeName": "comfy.string-escapes",
+        "path": "./comfy.string-escapes.tmLanguage.json",
+        "injectTo": ["source.lisp", "source.commonlisp"]
+      }
+    ]
+  }
+}

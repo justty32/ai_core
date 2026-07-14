@@ -1,0 +1,16 @@
+{
+  "scopeName": "comfy.tokens",
+  "injectionSelector": "L:(source.lisp -string -comment), L:(source.commonlisp -string -comment)",
+  "patterns": [
+    {
+      "comment": "true / false 布林糖（前後不接符號字元才算，避免撞到含 true 的長符號）",
+      "name": "constant.language.boolean.comfy",
+      "match": "(?<![-A-Za-z0-9+*/=<>!?%&_.])(true|false)(?![-A-Za-z0-9+*/=<>!?%&_.])"
+    },
+    {
+      "comment": "'a' 字元字面量：' 後接（\\轉義字元｜單一非引號字元）再接收尾 '",
+      "name": "constant.character.comfy",
+      "match": "'(\\\\.|[^'])'"
+    }
+  ]
+}
