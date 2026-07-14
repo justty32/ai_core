@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 # build.sh — 建置全部產物到 build/：liblua.a（vendored Lua 5.5）、host.exe（內嵌 Lua 的 C++ host）、
-#            lua.exe（標準 Lua 直譯器，給 VSCode debug／一般跑腳本用；內建 arg 表）
-# 用（Git Bash）：./build.sh          # 全建（build/liblua.a + build/host.exe + build/lua.exe）
-#                 ./build.sh host    # 只重建 host.exe（liblua.a 已在時最常用）
-#                 ./build.sh luaexe  # 只重建 lua.exe
-#                 ./build.sh lua     # 只重建 liblua.a
+#            lua.exe（標準 Lua 直譯器，給 debug／一般跑腳本用；內建 arg 表）
+# 用（Git Bash / Linux bash）：
+#   ./build.sh          # 全建（build/{liblua.a, host.exe, lua.exe}）
+#   ./build.sh host     # 只重建 host.exe（liblua.a 已在時最常用）
+#   ./build.sh luaexe   # 只重建 lua.exe
+#   ./build.sh lua      # 只重建 liblua.a
 #
-# 需要：MinGW g++/gcc/ar 在 PATH（本機 C:\dev\mingw64\bin）。產物全落 build/（gitignored）。
+# 跨平台：Windows（MinGW，本機 C:\dev\mingw64\bin）＋ Linux（原生 g++/gcc，如 Manjaro）。
+# 產物名一律帶 .exe（Linux 不在意副檔名、指令跨平台一致）；全落 build/（gitignored）。
 set -euo pipefail
-export PATH="/c/dev/mingw64/bin:$PATH"
 cd "$(dirname "$0")"
 mkdir -p build
+
+# ── 平台偵測：Windows 需 MinGW + -municode（wmain 寬字元）；Linux 原生、不需
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    export PATH="/c/dev/mingw64/bin:$PATH"
+    MUNICODE="-municode"
+    ;;
+  *)
+    MUNICODE=""
+    ;;
+esac
 
 build_lua() {
   echo "[build] build/liblua.a（除 lua.c/luac.c 兩個 main 外全部）"
@@ -26,7 +38,7 @@ build_lua() {
 
 build_host() {
   echo "[build] build/host.exe"
-  g++ -std=c++20 -O2 host.cpp -I vendor/lua -L build -llua -o build/host.exe -municode
+  g++ -std=c++20 -O2 host.cpp -I vendor/lua -L build -llua -lm $MUNICODE -o build/host.exe
   echo "[build] build/host.exe 完成"
 }
 

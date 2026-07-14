@@ -25,8 +25,10 @@ M.base_url = os.getenv("AI_CORE_LLM_BASE_URL") or "http://localhost:1234/v1"  --
 M.model    = os.getenv("AI_CORE_LLM_MODEL")    or "local-model"               -- LM Studio 用當前載入模型
 M.api_key  = os.getenv("AI_CORE_LLM_API_KEY")  or ""                          -- 有值才加 Authorization
 
--- 暫存請求 body（避開命令列引號地獄）：寫到系統 TEMP，絕對路徑 curl 吃得到、不髒專案目錄
-local REQ_FILE = (os.getenv("TEMP") or os.getenv("TMP") or "."):gsub("[/\\]+$", "") .. "/galtxt_llm_req.json"
+-- 暫存請求 body（避開命令列引號地獄）：寫到系統暫存目錄，絕對路徑 curl 吃得到、不髒專案目錄
+-- 跨平台：Windows 用 TEMP/TMP；Linux/Mac 用 TMPDIR，退回 /tmp
+local TMPDIR = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("TMPDIR") or "/tmp"
+local REQ_FILE = TMPDIR:gsub("[/\\]+$", "") .. "/galtxt_llm_req.json"
 M.req_file = REQ_FILE                     -- 公開給 test 回讀驗證用
 
 -- ── ★ 參數 schema：唯一真相源。每列＝{名稱, JSON鍵或"ctrl", 值型別}

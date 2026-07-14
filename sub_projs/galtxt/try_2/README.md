@@ -112,10 +112,12 @@ llm.ask{
 
 ## 需要什麼
 
-- **MinGW g++/gcc/ar**（本機 `C:\dev\mingw64\bin`，實測 16.1.0）
-- **curl**（Windows 10+ 內建）
+- **C++/C 編譯器**：Windows 用 MinGW g++/gcc/ar（本機 `C:\dev\mingw64\bin`，實測 16.1.0）；Linux（如 Manjaro）用原生 g++/gcc。
+- **curl**（Windows 10+ 內建；Linux 裝套件）
 - 一個 OpenAI 相容端點（本機 LM Studio，或雲端 DeepSeek 之類）
 - Lua 5.5.0 原始碼**已 vendored 進 [`vendor/lua/`](vendor/lua/)**（官方 lua.org 下載，進版控）——不需另裝 Lua。
+
+> **跨平台**：`build.sh` 以 `uname` 偵測平台（Windows 補 MinGW PATH＋`-municode`；Linux 原生、免旗標），產物名一律帶 `.exe`（Linux 不在意副檔名，指令跨平台一致）。Lua 端用 `package.config` 偵測 OS（`src/_path.lua` 的 cwd 探測、`llm.lua` 的暫存目錄都已跨平台）；`host.cpp` 的 Windows 專屬碼用 `#ifdef _WIN32` 包起、Linux 走純 `main`＋原生 UTF-8 argv。**`.vscode/` 是 Windows VSCode 用的**；Linux 上另用編輯器（neovim 等）自行接除錯。
 
 ## 編譯
 

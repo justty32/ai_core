@@ -23,6 +23,7 @@
   - **★ 串流（`streaming=true`＋`callback`）**：即時回 `{ok=…}`、內容經 callback 持續餵；`chunk_chars` 設累積幾個 **UTF-8 字**才呼一次（Lua 5.5 `utf8` 庫，**絕不切半個中文字**、跨 SSE delta 重組）。傳輸 `curl -N` 逐行讀 SSE。CLI `--streaming` 用內建 stdout callback；`callback`（func 型）CLI 跳過。離線 `demo_stream.lua`＋`fake_stream/`，chunk_chars=3 精準分組＋拼回完整＋無半字皆綠。
   - **這幾個機制（Lua 格式輸出／ask 縫／串流）待使用者整體確認後可畢業去 llm_forge 固化。**
   - **踩坑收錄**（都記 [common/gotchas](workflows/common/gotchas.md)）：① SAC 偶發擋新編 exe 雜湊→重編即解；② Windows 中文兩坑——終端碼頁（host.exe `SetConsoleOutputCP` 自救）＋標準 `main` argv 是 950 碼頁（host.exe `wmain` 解決；lua.exe 中鏢，中文走 `--infile`）。
+  - **跨平台（Windows ⇄ Manjaro 雙機開發）**：`build.sh` 用 `uname` 偵測（Windows 補 MinGW＋`-municode`；Linux 原生），產物名一律 `.exe`；Lua 端用 `package.config` 偵測 OS（`_path.lua` cwd 探測 cd/pwd、`llm.lua` 暫存目錄 TEMP//tmp）；`host.cpp` Windows 碼用 `#ifdef _WIN32` 包起、Linux 走純 main＋原生 UTF-8 argv。**Windows 已實測全綠；Linux 按跨平台寫法撰寫、尚未於 Manjaro 實測**（回家首跑要驗）。`.vscode/` 僅 Windows VSCode 用；Manjaro 改用 **neovim/lazyvim**（除錯設定待該環境自建，暫不處理）。
   - **工具路標（評估過、暫不接，免下次重查）**：CLI 現手刻 `cli.lua`（從 schema 生成）最貼合；**長出子命令**時選 `mpeterv/argparse`（單檔純 Lua、MIT、最主流，優於 lua_cliargs／lummander），且仍**從 `llm.schema` 生成**其定義。REPL＝stock `lua.exe -i`（已是 5.5，不需 LuaConsole＝停在 5.4）；要行歷史再給 lua.exe 編 **linenoise**。串流想上色＝`ansicolors`/`lua-term`。shell 膠水 `luash` 不適用（`os.execute` 不能增量串流）。
   - **open 待辦（下一步）**：Fennel（編成 Lua、手寫用 Lisp）疊上去；把 llm_entry 傳輸層（HTTP／JSON 組解）下沉成 C++ 原生函式、退休 `json.lua`（等設計凍結或瓶頸）。
   - **待使用者**：接真後端跑一次真回應（與 try_1 共用那關）——見 [WAIT_USER](WAIT_USER.md)。
