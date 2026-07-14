@@ -21,11 +21,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # vcpkg 依賴（manifest 模式，見 vcpkg.json）：glaze＝反射式 JSON↔struct、header-only、超快
 find_package(glaze CONFIG REQUIRED)
 
-# 來源：main＋demo（計算/字串示範）＋http（native HTTP 傳輸，WinHTTP/libcurl，file:// 離線可跑）
+# 來源：main＋demo（計算/字串示範）＋http（native HTTP 傳輸）＋llm（llm::Client，struct＋反射 ask 接口）
 add_executable(try3
     src/main.cpp
     src/demo.cpp
-    src/http.cpp)
+    src/http.cpp
+    src/llm.cpp)
 
 target_link_libraries(try3 PRIVATE glaze::glaze)
 

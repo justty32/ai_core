@@ -19,6 +19,7 @@
 
 #include "demo.hpp"          // sum_to / greet
 #include "http.hpp"          // native HTTP 傳輸：request / stream（file:// 離線可跑）
+#include "llm.hpp"           // llm::Client：struct＋反射 ask 接口
 
 #ifdef _WIN32
 #include <windows.h>
@@ -115,6 +116,31 @@ static void demo_http_stream() {
 #endif
 }
 
+// ── llm::Client 示範：離線把 endpoint 指向 fixture（file:// 走 http 讀檔特例當 200 回應）。
+//    非串流讀 fake/、串流讀 fake_stream/（SSE），驗 struct＋反射組請求／解回應整條通。
+static void demo_llm() {
+#ifdef TRY3_SOURCE_DIR
+    std::string base = std::string("file://") + TRY3_SOURCE_DIR + "/test/fixtures/";
+    try {
+        // 非串流：一次收完、反射解析、取答覆
+        llm::Client client{ .endpoint = base + "fake/chat/completions" };
+        std::printf("[llm] 非串流 => %s\n", client.ask("你好").c_str());
+
+        // 串流：SSE 逐段經 on_delta 餵出（笨管子逐塊、上層拆框）
+        llm::Client streamer{ .endpoint = base + "fake_stream/chat/completions" };
+        std::printf("[llm] 串流逐段 => ");
+        std::string whole = streamer.ask("你好", true, [](std::string_view piece) {
+            // string_view 非 null 結尾，printf 用 %.*s（帶長度）；每段 [] 框起看得出分段
+            std::printf("[%.*s]", static_cast<int>(piece.size()), piece.data());
+            return true;
+        });
+        std::printf("　合＝%s\n", whole.c_str());
+    } catch (const std::exception& e) {
+        std::printf("[llm] 失敗：%s\n", e.what());
+    }
+#endif
+}
+
 static int run(const std::vector<std::string>& args) {
     // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
     int n = 10;
@@ -133,6 +159,7 @@ static int run(const std::vector<std::string>& args) {
     demo_json();          // ── glaze JSON 往返示範
     demo_http();          // ── native HTTP（file://）→ glaze 解碼取台詞
     demo_http_stream();   // ── native HTTP 串流（逐塊回呼）
+    demo_llm();           // ── llm::Client：struct＋反射 ask 接口（離線 fixture）
     return 0;
 }
 
