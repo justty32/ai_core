@@ -1,0 +1,45 @@
+{
+  // galtxt try_3 — 建置任務（Ctrl+Shift+B 跑預設 build；Terminal > Run Task 選其他）
+  // 全走 cmake CLI，讀 CMakePresets.json；工具鏈路徑已在 preset 釘死，不需 PATH 有 mingw。
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cmake: configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "mingw-debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      // 預設建置（F5 除錯前會自動跑，見 launch.json 的 preLaunchTask）
+      // 依賴 configure：首次會先產生 build/；已 configure 過時 cmake 幾乎 no-op。
+      "label": "cmake: build",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "mingw-debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": "cmake: configure",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "run: try3",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/try3.exe",
+      "args": ["10", "主人"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": "cmake: build",
+      "problemMatcher": [],
+      "presentation": { "clear": true }
+    },
+    {
+      "label": "clean: 刪 build/",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["-E", "rm", "-rf", "build"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

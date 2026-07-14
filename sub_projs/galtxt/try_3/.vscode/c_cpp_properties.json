@@ -1,0 +1,15 @@
+{
+  // galtxt try_3 — IntelliSense 設定（C/C++ 擴充）
+  // 優先讀 build/compile_commands.json（CMake 匯出）拿真實編譯旗標；配下面的預設當退路。
+  "version": 4,
+  "configurations": [
+    {
+      "name": "MinGW",
+      "compilerPath": "C:/dev/mingw64/bin/g++.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "windows-gcc-x64",
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+    }
+  ]
+}

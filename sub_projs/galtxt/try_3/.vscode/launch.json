@@ -1,0 +1,38 @@
+{
+  // galtxt try_3 — C++ 除錯設定（gdb / MinGW）
+  // 需先裝擴充套件：C/C++（發布者 Microsoft，ID: ms-vscode.cpptools）——提供 cppdbg 除錯器。
+  //   （CMake Tools ms-vscode.cmake-tools 選裝：裝了能在側欄切 preset／建置，不裝也能用本設定。）
+  //
+  // F5 前會自動跑 preLaunchTask「cmake: build」建置。中斷點：main.cpp 的 sum_to 迴圈、greet、run。
+  // ⚠ 中文參數別用 args 傳（VSCode 傳給 gdb 的 argv 碼頁未必對）；要試中文改跑 build/try3.exe。
+  // 以「File > Open Folder」開 try_3 這個資料夾（讓 ${workspaceFolder}=try_3）。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug try3 (gdb/MinGW)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/try3.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/dev/mingw64/bin/gdb.exe",
+      "preLaunchTask": "cmake: build",
+      "setupCommands": [
+        {
+          "description": "為 gdb 啟用整齊列印（std::string/vector 等顯示成人看得懂的樣子）",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "字元集設 UTF-8（中文字串/變數在除錯視窗顯示正常）",
+          "text": "set charset UTF-8",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

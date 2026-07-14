@@ -1,0 +1,10 @@
+{
+  // galtxt try_3 — VSCode 工作區設定（C++ / CMake / UTF-8）
+  // 除錯用 C/C++ 擴充（cppdbg，見 launch.json）；IntelliSense 見 c_cpp_properties.json。
+  "cmake.useCMakePresets": "always",           // CMake Tools 一律用 CMakePresets.json（若有裝）
+  "C_Cpp.default.compilerPath": "C:/dev/mingw64/bin/g++.exe",
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.intelliSenseMode": "windows-gcc-x64",
+  "files.encoding": "utf8",                     // 檔案存 UTF-8（中文註解/字串）
+  "files.eol": "\n"
+}
