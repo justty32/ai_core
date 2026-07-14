@@ -11,7 +11,9 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "C:/dev/mingw64/bin/g++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/dev/vcpkg/downloads/tools/ninja-1.13.2-windows/ninja.exe"
+        "CMAKE_MAKE_PROGRAM": "C:/dev/vcpkg/downloads/tools/ninja-1.13.2-windows/ninja.exe",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+        "VCPKG_HOST_TRIPLET": "x64-mingw-static"
       }
     },
     {

@@ -32,24 +32,26 @@ cmake --build --preset mingw-debug  # 建置 → build/try3.exe
 
 Release：把 `mingw-debug` 換成 `mingw-release`。CMake 會自動掃 `import`/`export`、生 dyndep，**先編 `demo.cppm` 成 BMI（`demo.gcm`）再編 `main`**。
 
-## 加 GitHub 依賴（vcpkg manifest）— 下一步
+## 依賴（vcpkg manifest）
 
-vcpkg toolchain 已在 preset 接好，用 **manifest 模式** 加庫（宣告式、隨專案版控）：
+已接 **glaze**（反射式 JSON↔struct、header-only、超快）當第一個 vcpkg 庫，兼作整條鏈的驗證。用 **manifest 模式**（宣告式、隨專案版控）：
 
-1. try_3 根建 `vcpkg.json`：
+1. [`vcpkg.json`](vcpkg.json) 宣告依賴：
    ```json
-   { "name": "try-3", "version-string": "0.0.1", "dependencies": ["fmt"] }
+   { "name": "try-3", "version-string": "0.0.1", "dependencies": ["glaze"] }
    ```
-2. **★ MinGW triplet（最容易踩的雷）**：vcpkg 預設 triplet 是 `x64-windows`（MSVC 導向），在 MinGW 上會建置／連結失敗。在 `CMakePresets.json` 的 `cacheVariables` 補（選 static，與本線 `-static` 獨立 exe 哲學一致）：
+2. **★ MinGW triplet（最容易踩的雷）**：vcpkg 預設 triplet 是 `x64-windows`（MSVC 導向），在 MinGW 上會建置／連結失敗。`CMakePresets.json` 的 `cacheVariables` 已設（static，與本線 `-static` 獨立 exe 哲學一致）：
    ```json
    "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
    "VCPKG_HOST_TRIPLET":   "x64-mingw-static"
    ```
    （要動態庫改 `x64-mingw-dynamic`，但那樣 exe 執行期要找 DLL，與本線 `-static` 相左。）
-3. `CMakeLists.txt` 用庫：`find_package(fmt CONFIG REQUIRED)` ＋ `target_link_libraries(try3 PRIVATE fmt::fmt)`。
-4. 重配置 `cmake --preset mingw-debug` → vcpkg 從源碼建依賴、自動裝（首次較久）。
+3. `CMakeLists.txt`：`find_package(glaze CONFIG REQUIRED)` ＋ `target_link_libraries(try3 PRIVATE glaze::glaze)`。glaze 需 **C++23**（已把 `CMAKE_CXX_STANDARD` 提到 23，g++16 支援）。
+4. `cmake --preset mingw-debug` 配置時 vcpkg 自動裝依賴（glaze header-only，約數秒）。vcpkg 裝到 `build/vcpkg_installed/`（gitignored）。
 
-> ⚠ **第一次裝庫先挑小庫（如 `fmt`）** 驗整條 vcpkg→MinGW→靜態連結通不通，再往上堆設計——triplet／靜態連結的雷這時才會現形，先在小範圍打通。**本設定 Windows 尚未實跑過任何 vcpkg 庫。**
+**要再加庫**：`vcpkg.json` 的 `dependencies` 加一個名字 → `find_package`＋`target_link_libraries` → 重配置。實測 glaze 7.8.4：`glz::write_json(struct)` / `glz::read_json(struct, src)` 反射自動映射、中文原樣 UTF-8，`main.cpp` 的 `demo_json()` 有往返示範。
+
+> ℹ glaze 這種現代 C++ 庫用**編譯期反射**：定義 `struct` 就自動 JSON↔struct，不用寫映射巨集（這正是 C++26 `std::meta` 反射要標準化的東西，glaze 現在就有）。
 
 ## VSCode 除錯
 

@@ -13,12 +13,15 @@
 cmake_minimum_required(VERSION 3.28)   # C++20 named modules 支援門檻
 project(try_3 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)             # glaze 需 C++23（g++16 支援）；modules 亦相容
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 匯出 compile_commands.json：給 cpptools / clangd 讀正確的編譯旗標（IntelliSense 準）
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# vcpkg 依賴（manifest 模式，見 vcpkg.json）：glaze＝反射式 JSON↔struct、header-only、超快
+find_package(glaze CONFIG REQUIRED)
 
 add_executable(try3 src/main.cpp)
 
@@ -26,6 +29,8 @@ add_executable(try3 src/main.cpp)
 target_sources(try3 PRIVATE
     FILE_SET CXX_MODULES FILES
     src/demo.cppm)
+
+target_link_libraries(try3 PRIVATE glaze::glaze)
 
 # Debug 帶完整符號、關優化，方便 gdb 單步；Release 開 -O2
 target_compile_options(try3 PRIVATE

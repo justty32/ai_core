@@ -32,7 +32,8 @@
   - **★ modules 關鍵**：generator **必須 Ninja/VS**——MinGW Makefiles 不支援 module 掃描（CMake 直接報錯，這是換掉 Makefiles 的原因）。cmake 需 3.28+、ninja 需 1.11+。
   - **設計要點**：`-static` 靜態連 libstdc++/libgcc/winpthread → 獨立 exe，不靠 PATH（否則 gdb 啟 exe 找不到 runtime DLL）；中文靠 `wmain`+`-municode`+`SetConsoleOutputCP`（同 try_2）；`#ifdef _WIN32` 包 Windows 碼、Linux 走純 main。
   - **踩坑**（併記 [common/gotchas](workflows/common/gotchas.md)）：① SAC 偶發擋新編 exe（重連結產生新 hash 即解，同 try_2）；② 從 Git Bash 直呼原生 `gdb.exe`，多字詞 `-ex "break foo"` 引號分組會遺失→改 `gdb --batch -x cmds.gdb`（VSCode cppdbg 走 MI 不受影響）；③ **C++20 模組 export 函式帶模組修飾**（gdb 顯示 `sum_to@demo`）——編輯器行號槽中斷點（file:line）正常，但按函式名下中斷要 `break sum_to@demo` 或 `break demo.cppm:16`。
-  - **open 待辦（下一步）**：骨架之上長真東西（方向待定；此線定位＝純原生 C++／modules 對照組）；vcpkg 加依賴時 triplet 用 `x64-mingw-dynamic`。
+  - **★ vcpkg 依賴鏈已驗（2026-07-14）**：接第一個庫 **glaze 7.8.4**（反射式 JSON↔struct、header-only、超快）＝兼作整條 vcpkg→MinGW→連結驗證。manifest 模式（`vcpkg.json`）；**MinGW triplet 雷**：預設 `x64-windows`（MSVC）會壞，preset 設 `VCPKG_TARGET_TRIPLET`/`VCPKG_HOST_TRIPLET`＝**`x64-mingw-static`**（與本線 `-static` 一致）；CMake `find_package(glaze CONFIG REQUIRED)`＋link `glaze::glaze`；glaze 需 **C++23**（`CMAKE_CXX_STANDARD` 提到 23、g++16 支援）。`main.cpp` `demo_json()` 實跑：struct→JSON／JSON→struct 雙向對、中文原樣 UTF-8、exe 仍全靜態獨立。裝到 `build/vcpkg_installed/`（gitignored）。加庫套路＝`vcpkg.json` 加名＋`find_package`＋link＋重配置。（用 glaze＝取代不了的原因：try_2 `cjson.c` 是 JSON↔Lua value、綁 Lua C API，try_3 無 Lua 拿不來，且它不做 struct 映射。）
+  - **open 待辦（下一步）**：骨架＋glaze 就緒，開始長真東西（方向待定；此線定位＝純原生 C++／modules 對照組）。
 
 > 註：舒適 CL 環境已另立為兄弟子專案 [`sub_projs/comfy/`](../comfy/README.md)（與本 s7 線並存、兩邊都推），其活狀態記在該處與頂層 [SESSION-LOG](../../SESSION-LOG.md)，不在 galtxt hub 裡。
 

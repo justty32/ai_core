@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <glaze/glaze.hpp>   // 反射式 JSON↔struct（vcpkg 裝的，header-only、超快）
+
 #ifdef _WIN32
 #include <windows.h>
 // 寬字元 → UTF-8（對齊 try_2 host.cpp 的 w2u8）
@@ -28,6 +30,31 @@ static std::string w2u8(const wchar_t* w) {
 
 import demo;             // ── 具名模組（提供 sum_to / greet）
 
+// ── glaze JSON 示範：定義 struct，glaze 靠編譯期反射自動 JSON↔struct（不用寫任何映射巨集）
+struct Character {
+    std::string name;
+    int affection{};
+    std::vector<std::string> lines;
+};
+
+static void demo_json() {
+    // struct → JSON（序列化）
+    Character c{ "星野", 42, { "哼，才不是為你回答的", "……下不為例喔" } };
+    auto j = glz::write_json(c);
+    if (j) std::printf("[glaze] 序列化 => %s\n", j->c_str());
+
+    // JSON → struct（解析，含中文）
+    std::string src = R"({"name":"綾波","affection":88,"lines":["嗯","抱抱"]})";
+    Character parsed{};
+    auto ec = glz::read_json(parsed, src);
+    if (!ec) {
+        std::printf("[glaze] 解析 => name=%s affection=%d lines[0]=%s\n",
+                    parsed.name.c_str(), parsed.affection, parsed.lines[0].c_str());
+    } else {
+        std::printf("[glaze] 解析失敗\n");
+    }
+}
+
 static int run(const std::vector<std::string>& args) {
     // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
     int n = 10;
@@ -42,6 +69,8 @@ static int run(const std::vector<std::string>& args) {
 
     std::printf("%s\n", hello.c_str());
     std::printf("1..%d 的和 = %lld\n", n, total);
+
+    demo_json();   // ── glaze JSON 往返示範
     return 0;
 }
 
