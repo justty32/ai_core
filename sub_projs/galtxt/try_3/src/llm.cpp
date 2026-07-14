@@ -14,8 +14,10 @@
 
 namespace llm {
 
-// 匿名 namespace＝內部連結，避免與其它 TU（main.cpp）同名 struct 撞 ODR。
-namespace {
+// 具名的內部 namespace（不用匿名）：這些 struct 名（ReqBody/RespBody…）在 llm_tool/llm_media
+// 也各有一份，若用匿名 namespace，GCC 一律 mangle 成 _GLOBAL__N_1、glaze 的 quoted_key_v
+// COMDAT section 會跨 TU 撞名（大小不同→折疊後給錯 JSON 鍵）。給每個 TU 唯一 namespace 名即避開。
+namespace ask_impl {
 
 // ── 送出：OpenAI chat completions 請求體（欄位名即送出的 JSON 鍵；optional 未設則略過）
 struct ReqMessage { std::string role; std::string content; };
@@ -43,37 +45,42 @@ struct StreamChunk  { std::vector<StreamChoice> choices; };
 
 constexpr glz::opts kLenient{ .error_on_unknown_keys = false };  // 後端回應欄位多，寬鬆解析
 
-}  // anonymous namespace
+// 用 client 的連線設定，把已組好的 body JSON 包成 http::Request（POST＋標頭＋Bearer）。
+http::Request build_request(const Client& client, std::string_view body_json) {
+    http::Request req{
+        .url = client.endpoint,
+        .method = "POST",
+        .headers = { "Content-Type: application/json" },
+        .body = std::string(body_json),
+    };
+    if (!client.api_key.empty()) req.headers.push_back("Authorization: Bearer " + client.api_key);
+    return req;
+}
+
+}  // namespace ask_impl
+using namespace ask_impl;
+
+// 共用傳輸（非串流）：組請求→送→回原始回應本體。傳輸失敗 throw。
+std::string post(const Client& client, std::string_view request_json) {
+    http::Response resp = http::request(build_request(client, request_json));
+    return std::move(resp.body);
+}
 
 std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) {
     // 1) 用 struct 組請求，glaze 反射成 JSON（不手寫映射、不查 schema 表）。
-    //    取樣屬性一一搬進 payload；optional 保持 nullopt 就不會出現在 JSON 裡。
+    //    取樣屬性用 apply_sampling 灌入；optional 保持 nullopt 就不會出現在 JSON 裡。
     ReqBody payload;
-    payload.model = model;
     payload.messages = { { "user", std::string(prompt) } };
-    payload.temperature = temperature;
-    payload.top_p = top_p;
     payload.stream = stream;
-    payload.max_tokens = max_tokens;
-    payload.presence_penalty = presence_penalty;
-    payload.frequency_penalty = frequency_penalty;
-    payload.seed = seed;
+    apply_sampling(*this, payload);
     auto body = glz::write_json(payload);
     if (!body) return {};   // 序列化失敗（理論上不會）
 
-    http::Request req{
-        .url = endpoint,
-        .method = "POST",
-        .headers = { "Content-Type: application/json" },
-        .body = *body,
-    };
-    if (!api_key.empty()) req.headers.push_back("Authorization: Bearer " + api_key);
-
-    // 2a) 非串流：一次收完 → 反射解析 → 取第一則答覆內容
+    // 2a) 非串流：共用 post 一次收完 → 反射解析 → 取第一則答覆內容
     if (!stream) {
-        http::Response resp = http::request(req);   // 傳輸失敗會 throw，交給呼叫端
+        std::string raw = post(*this, *body);
         RespBody parsed{};
-        auto ec = glz::read<kLenient>(parsed, resp.body);
+        auto ec = glz::read<kLenient>(parsed, raw);
         if (ec || parsed.choices.empty()) return {};
         return parsed.choices[0].message.content;
     }
@@ -82,7 +89,7 @@ std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) 
     //     跨塊維持一個行緩衝（網路分塊不對齊行邊界），逐行解 data:，累積並餵 on_delta。
     std::string answer;
     std::string line_buf;
-    http::stream(req, [&](std::string_view part) -> bool {
+    http::stream(build_request(*this, *body), [&](std::string_view part) -> bool {
         line_buf.append(part);
         size_t nl;
         while ((nl = line_buf.find('\n')) != std::string::npos) {

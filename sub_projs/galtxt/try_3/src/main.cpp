@@ -20,6 +20,9 @@
 #include "demo.hpp"          // sum_to / greet
 #include "http.hpp"          // native HTTP 傳輸：request / stream（file:// 離線可跑）
 #include "llm.hpp"           // llm::Client：struct＋反射 ask 接口
+#include "llm_tool.hpp"      // llm::ask_tools：工具呼叫（function calling）
+#include "llm_media.hpp"     // llm::ask_vision：多媒體/vision
+#include "llm_json.hpp"      // llm::ask_as<T>：結構化輸出（丟 struct 進、拿 struct 出）
 
 #ifdef _WIN32
 #include <windows.h>
@@ -141,6 +144,73 @@ static void demo_llm() {
 #endif
 }
 
+// ── 工具呼叫示範：工具參數用 struct 定義（make_tool 反射生成 schema），離線讀 fake_tool。
+//    GetWeather 就是工具參數的「唯一真相源」——它既生成送出的 schema，也解回模型產生的 arguments。
+struct GetWeather {
+    std::string city;   // 城市名
+    std::string unit;   // 溫度單位：celsius / fahrenheit
+};
+
+static void demo_tool() {
+#ifdef TRY3_SOURCE_DIR
+    std::string url = std::string("file://") + TRY3_SOURCE_DIR + "/test/fixtures/fake_tool/chat/completions";
+    llm::Client client{ .endpoint = url };
+    try {
+        llm::Tool weather = llm::make_tool<GetWeather>("get_weather", "查詢某城市天氣");
+        auto calls = llm::ask_tools(client, "東京天氣如何？", { weather });
+        std::printf("[tool] 模型要求呼叫 %zu 個工具\n", calls.size());
+        for (const auto& c : calls) {
+            std::printf("[tool]   %s(%s)\n", c.name.c_str(), c.arguments.c_str());
+            // arguments 是 JSON 字串 → 反射解回 GetWeather struct
+            GetWeather args{};
+            if (!glz::read_json(args, c.arguments))
+                std::printf("[tool]   解出參數 => city=%s unit=%s\n", args.city.c_str(), args.unit.c_str());
+        }
+    } catch (const std::exception& e) {
+        std::printf("[tool] 失敗：%s\n", e.what());
+    }
+#endif
+}
+
+// ── 多媒體示範：帶文字＋圖片發問（離線 endpoint 指 fake，回罐頭答覆）。
+//    另外用 image_from_file 讀一個現成檔驗 base64 data URI 組得出來（內容不必是真圖）。
+static void demo_media() {
+#ifdef TRY3_SOURCE_DIR
+    std::string root = std::string(TRY3_SOURCE_DIR);
+    llm::Client client{ .endpoint = "file://" + root + "/test/fixtures/fake/chat/completions" };
+    try {
+        // 外部 URL 的圖：組多模態請求、離線拿罐頭答覆
+        auto img = llm::image_from_url("https://example.com/cat.png");
+        std::printf("[media] vision 答覆 => %s\n", llm::ask_vision(client, "這張圖是什麼？", { img }).c_str());
+
+        // 本地檔 → base64 data URI（拿現成 fixture 當 bytes，只驗 data URI 組得出來）
+        auto local = llm::image_from_file(root + "/test/fixtures/fake/chat/completions", "image/png");
+        std::printf("[media] data URI 前綴 => %.30s… (共 %zu 字)\n", local.url.c_str(), local.url.size());
+    } catch (const std::exception& e) {
+        std::printf("[media] 失敗：%s\n", e.what());
+    }
+#endif
+}
+
+// ── 結構化輸出示範：丟 Character 這個 struct 進去、拿 Character 出來（離線讀 fake_json）。
+//    Character 就是唯一真相源——反射生成送出的 schema（約束模型），回來的 JSON 再反射回它。
+static void demo_structured() {
+#ifdef TRY3_SOURCE_DIR
+    std::string url = std::string("file://") + TRY3_SOURCE_DIR + "/test/fixtures/fake_json/chat/completions";
+    llm::Client client{ .endpoint = url };
+    try {
+        if (auto c = llm::ask_as<Character>(client, "生成一個傲嬌女角色", "character")) {
+            std::printf("[json] 結構化 => name=%s affection=%d lines[0]=%s\n",
+                        c->name.c_str(), c->affection, c->lines.empty() ? "" : c->lines[0].c_str());
+        } else {
+            std::printf("[json] 解析失敗\n");
+        }
+    } catch (const std::exception& e) {
+        std::printf("[json] 失敗：%s\n", e.what());
+    }
+#endif
+}
+
 static int run(const std::vector<std::string>& args) {
     // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
     int n = 10;
@@ -160,6 +230,9 @@ static int run(const std::vector<std::string>& args) {
     demo_http();          // ── native HTTP（file://）→ glaze 解碼取台詞
     demo_http_stream();   // ── native HTTP 串流（逐塊回呼）
     demo_llm();           // ── llm::Client：struct＋反射 ask 接口（離線 fixture）
+    demo_tool();          // ── llm::ask_tools：工具呼叫（離線 fixture）
+    demo_media();         // ── llm::ask_vision：多媒體/vision（離線 fixture）
+    demo_structured();    // ── llm::ask_as<T>：結構化輸出（離線 fixture）
     return 0;
 }
 

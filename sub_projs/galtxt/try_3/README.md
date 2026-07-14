@@ -6,7 +6,7 @@ galtxt 第三條實驗線，與 [try_1](../try_1/README.md)（s7 Scheme）、[tr
 
 **這條完全 C++、純原生**——不嵌任何腳本 VM。（早期曾用 C++20 modules 當骨架示範，**已回歸傳統 header**：C++ 有 struct＋glaze 編譯期反射，接口的唯一真相源是 struct 本身，modules 那層抽象在此線畫蛇添足，拿掉。）建置走 **CMake + Ninja + vcpkg toolchain**（配 `CMakePresets.json` 釘死工具鏈），與 try_2 的手寫 `build.sh` 走不同路線，兩相對照。
 
-目前狀態：**可建置、可 VSCode/gdb 除錯，已長出兩塊地基**。原始碼：`src/demo.{hpp,cpp}`（`sum_to`/`greet` 除錯示範）、`src/http.{hpp,cpp}`（native HTTP 傳輸）；`src/main.cpp` 以 `#include` 取用，並串 glaze 反射 JSON。`build/try3.exe` 一趟跑完：計算＋字串、glaze 序列化/解析、HTTP file:// GET→glaze 解出台詞、串流逐塊回呼。
+目前狀態：**可建置、可 VSCode/gdb 除錯，兩塊地基＋上層 LLM 接口都長出來了**。原始碼：`src/demo.{hpp,cpp}`（`sum_to`/`greet` 除錯示範）、`src/http.{hpp,cpp}`（native HTTP 傳輸）、`src/llm.{hpp,cpp}`（`llm::Client` ask 接口）、`src/llm_tool.{hpp,cpp}`（工具呼叫）、`src/llm_media.{hpp,cpp}`（多媒體/vision）、`src/llm_json.{hpp,cpp}`（結構化輸出）。`build/try3.exe` 一趟把全部離線 fixture 跑一遍：計算/字串、glaze 往返、HTTP file:// GET＋串流、`ask` 非串流/串流、工具呼叫、vision、結構化輸出，全綠。
 
 ## 需要的東西
 
@@ -76,6 +76,51 @@ int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes *
 > 這是本線「native HTTP 傳輸先」的落地：先把傳輸下沉成純原生 `.cpp`，JSON 已有 glaze，**真後端 round-trip＋SSE 串流的縫都在**，接真後端與上層 ask 接口是下一步。
 >
 > **★ 上層接口方向定調（不搬 schema 表）**：try_1/try_2 的 schema 表是動態語言缺靜態反射的**補償拐杖**；C++ 有 struct＋glaze 編譯期反射，**struct 本身就是唯一真相源**。往上長 ask 接口時，JSON 對映／CLI 旗標／型別解析／驗證**全從欄位反射生成**（驗證還能移到編譯期），不把 Lua/s7 的 schema 表搬過來。
+
+## 上層 LLM 接口（`src/llm*.{hpp,cpp}`）
+
+在 http＋glaze 兩塊地基上長的 LLM 接口，全部落地「**struct＝唯一真相源**」：請求/回應都是 struct，glaze 反射自動 JSON↔struct，零 schema 表。命名循 `http::` 慣例（`llm::` namespace、`ask` 動詞、PascalCase 型別）。
+
+**`llm::Client`（`llm.hpp`）＝核心**：持 endpoint＋取樣設定的呼叫端。
+
+```cpp
+#include "llm.hpp"
+llm::Client client{ .endpoint = "https://…/chat/completions" };
+client.api_key = "sk-…";                 // 選填 → Authorization: Bearer
+client.temperature = 0.7f;               // 取樣屬性全 std::optional，未設就不送、交後端默認
+std::string ans = client.ask("你好");    // 非串流
+client.ask("你好", true, [](std::string_view delta){ …; return true; });  // 串流（回 false 中止）
+```
+
+- 取樣屬性（`model`/`temperature`/`top_p`/`max_tokens`/`presence_penalty`/`frequency_penalty`/`seed`）**全選填**，`std::optional` 未設時 glaze 略過（`skip_null_members`），交後端用默認（⚠ `model` 例外：本地伺服器可省、OpenAI 雲端必填）。
+- 串流＝上層拆 SSE（跨塊行緩衝、逐行解 `data:`、`[DONE]` 收工）；回呼 `OnDelta` 收 `string_view`（零複製，與 `http::OnData` 一致）。
+- 共用件：`llm::post()`（傳輸重用）＋ `llm::apply_sampling()`（取樣屬性 DRY 灌入任意請求 struct）——三個擴充都靠它們，不重造傳輸。
+
+**三個擴充（各一組 `llm_*` 檔）**：
+
+| 檔 | 能力 | 入口 | 「struct＝真相源」怎麼體現 |
+|---|---|---|---|
+| `llm_tool` | 工具呼叫（function calling）| `make_tool<Args>()`＋`ask_tools()` | `Args` struct 反射生成工具**參數 schema**（`glz::write_json_schema`）；回來的 `ToolCall.arguments`（JSON 字串）再反射解回 `Args` |
+| `llm_media` | 多媒體/vision | `image_from_file`/`image_from_url`＋`ask_vision()` | 多模態 `content` 陣列（文字＋圖）；本地檔→base64 data URI（`glz::write_base64`）|
+| `llm_json` | 結構化輸出 | `ask_as<T>()` | **丟 struct `T` 進、拿 `T` 出**：`T` 反射生成 schema 塞進 `response_format` 約束模型，回來的 JSON 再反射回 `T` |
+
+```cpp
+// 工具呼叫：Args struct 同時生成 schema、又解回 arguments
+struct GetWeather { std::string city; std::string unit; };
+auto calls = llm::ask_tools(client, "東京天氣如何？", { llm::make_tool<GetWeather>("get_weather", "查天氣") });
+GetWeather a{}; glz::read_json(a, calls[0].arguments);   // a.city="東京" …
+
+// 多媒體：文字＋圖（URL 或本地檔 base64）
+auto img = llm::image_from_file("photo.png", "image/png");
+std::string ans = llm::ask_vision(client, "這是什麼？", { img });
+
+// 結構化輸出：丟 struct 進、拿 struct 出
+std::optional<Character> c = llm::ask_as<Character>(client, "生成一個傲嬌角色");
+```
+
+- 三個擴充都**非串流**（先做這段），各自的請求/回應 struct 放在**唯一命名的內部 namespace**（`tool_impl`/`media_impl`/`json_impl`）——★ 不可用匿名 namespace：GCC 把匿名 namespace 一律 mangle 成 `_GLOBAL__N_1`，同名 struct（`ReqBody`…）的 glaze `quoted_key_v` COMDAT section 會跨 TU 撞名、大小不同→折疊後給錯 JSON 鍵（見 [common/gotchas](../workflows/common/gotchas.md)）。
+- ⚠ OpenAI **strict** 結構化輸出對 schema 有子集要求（全欄位列 `required` 等）；glaze 生成的 schema 已含 `additionalProperties:false`，`required` 視後端寬嚴，離線不驗，真後端挑剔再微調。
+- 全部離線可測：endpoint 給 `file://` 指 `test/fixtures/{fake,fake_stream,fake_tool,fake_json}/chat/completions`，`main.cpp` 的 `demo_*()` 端到端跑過。
 
 ## VSCode 除錯
 

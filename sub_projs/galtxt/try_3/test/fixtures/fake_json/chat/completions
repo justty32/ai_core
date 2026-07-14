@@ -1,0 +1,1 @@
+{"id":"chatcmpl-json","object":"chat.completion","created":1234567890,"model":"local-model","choices":[{"index":0,"message":{"role":"assistant","content":"{\"name\":\"星野\",\"affection\":42,\"lines\":[\"哼，才不是為你生成的\",\"下不為例喔\"]}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":40,"completion_tokens":30,"total_tokens":70}}

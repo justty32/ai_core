@@ -50,4 +50,23 @@ public:
                     OnDelta on_delta = nullptr);
 };
 
+// ── 供擴充模組（llm_tool／llm_media）共用的兩塊，讓它們不重造傳輸與取樣搬運 ──
+
+// 把已組好的請求 JSON（非串流）送到 client.endpoint（帶 api_key），回原始回應本體字串。
+// 傳輸失敗會 throw。回傳原始 body，讓呼叫端各自用自己的 struct 反射解析。
+std::string post(const Client& client, std::string_view request_json);
+
+// 把 client 的取樣屬性（model/temperature/… 全 optional）灌進任意「具同名欄位」的請求
+// struct（Body 需有那些欄位）。DRY：不在每個模組重抄一遍那七行 optional 搬運。
+template <class Body>
+void apply_sampling(const Client& client, Body& body) {
+    body.model = client.model;
+    body.temperature = client.temperature;
+    body.top_p = client.top_p;
+    body.max_tokens = client.max_tokens;
+    body.presence_penalty = client.presence_penalty;
+    body.frequency_penalty = client.frequency_penalty;
+    body.seed = client.seed;
+}
+
 }  // namespace llm

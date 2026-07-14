@@ -15,7 +15,7 @@
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | [`try_1/`](try_1/README.md) | 玩具實驗場①：**s7 Scheme** 版 LLM 接口（`llm.scm`＋schema 生成簽章＋argv host `s7host.exe`）|
 | [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`cli.lua`＋native `cjson.c` JSON codec；schema 生成 `--flag` CLI）|
-| [`try_3/`](try_3/README.md) | 玩具實驗場③：**純 C++（傳統 header）**（CMake + Ninja + vcpkg + MinGW + VSCode/gdb；不嵌腳本 VM；早期用 C++20 modules，已回歸 header）。已長：glaze 反射 JSON、native HTTP 傳輸 `http.{hpp,cpp}`（WinHTTP/libcurl，file:// 離線 fixture）|
+| [`try_3/`](try_3/README.md) | 玩具實驗場③：**純 C++（傳統 header）**（CMake + Ninja + vcpkg + MinGW + VSCode/gdb；不嵌腳本 VM；早期用 C++20 modules，已回歸 header）。已長：glaze 反射 JSON、native HTTP（`http`）、**LLM 接口**（`llm::Client` ask＋工具呼叫`llm_tool`／多媒體`llm_media`／結構化輸出`llm_json`，全走「struct＝唯一真相源」反射、file:// 離線 fixture）|
 
 ## 開發工作流
 
