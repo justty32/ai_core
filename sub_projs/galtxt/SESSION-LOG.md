@@ -17,6 +17,16 @@
   - **open 待辦（下一步）**：由 `*llm-schema*` **生成 `--flag` CLI 薄殼**（解析 `s7host.exe` 給的 `*argv*` → 呼叫 `llm-entry`），讓 `s7host.exe cli.scm --prompt "hi" --temp 0.7` 成真——這是「函式參數 ⇄ CLI 旗標由 schema 生成」洞見的最後一哩，schema／host 兩塊地基都已就位。
   - **待使用者**：接真後端（LM Studio 開 server / DeepSeek key）跑一次真回應——見 [WAIT_USER](WAIT_USER.md)。
 
+- **try_2 玩具實驗場：C++ 內嵌 Lua 5.5 線，離線 E2E 全綠**（`sub_projs/galtxt/try_2/`，與 try_1 s7 線並存、兩條互為對照；細節 [try_2/README](try_2/README.md)）。地基：vendored Lua **5.5.0**（`vendor/lua/`＋`liblua.a`）＋ `host.cpp`→`host.exe`（內嵌 Lua、綁全域 `arg` 表、`-municode` 中文不亂碼、跑 .lua）。腳本層四塊：`json.lua`（vendored **rxi/json.lua 0.1.2**, MIT；序列自動編陣列、無 array/null 包裹）、`llm.lua`（★schema 唯一真相源＋接口本體，`os.getenv` 讀 env）、`cli.lua`（**由 schema 生成 `--flag` CLI**——try_1 還沒做到的那一哩，try_2 因 argv 從第一天就有而直接補上）、`test.lua`（離線）。schema 每列 `{名稱, JSON鍵或ctrl, 值型別}` 三欄，同時驅動 呼叫驗證／JSON對映／旗標名／值型別解析。離線全鏈路驗過：中文 prompt、取樣參數塞入、`--outfile`、型別/未知旗標/缺 prompt 全擋。另有 `lua.exe`（標準直譯器，同源編）＋`.vscode/`（Local Lua Debugger launch.json＋tasks.json＋sumneko settings）供 VSCode 除錯／建置；`sample_prompt.txt` 中文 fixture。
+  - **★ 設計亮點：Lua 格式輸出（`--lua`/`lua=true`）**——讓 LLM 直接吐 **Lua table 字面量**，`load()` 成原生 table，跳過 JSON parse（內容層；API 信封仍 JSON）。同像性收束、多行中文台詞用 `[[…]]` 免跳脫。**沙箱**：`load(src,"=llm","t",{})`＝純文字＋空環境（無 os/io），杜絕 RCE；自動剝 ```` ```lua ```` 圍欄／補 `return`。離線示範 `demo_lua.lua`＋`fake_lua/` 假回應，原生 table 導航／運算＋沙箱擋 `os.exit` 皆綠。schema 也順勢長出 bool 旗標支援。
+  - **★ API 縫定調（使用者拍板）：`llm.ask{…}` = Lua table 進、table 出**——JSON/HTTP 是縫背後可換實作（現 Lua、將來 C++ 原生函式推 table，呼叫端不改）。回傳選 (A)：只回模型答案 table，metadata 走旁路。`json.lua` 定位成「可退休的內部件」。
+  - **★ 串流（`streaming=true`＋`callback`）**：即時回 `{ok=…}`、內容經 callback 持續餵；`chunk_chars` 設累積幾個 **UTF-8 字**才呼一次（Lua 5.5 `utf8` 庫，**絕不切半個中文字**、跨 SSE delta 重組）。傳輸 `curl -N` 逐行讀 SSE。CLI `--streaming` 用內建 stdout callback；`callback`（func 型）CLI 跳過。離線 `demo_stream.lua`＋`fake_stream/`，chunk_chars=3 精準分組＋拼回完整＋無半字皆綠。
+  - **這幾個機制（Lua 格式輸出／ask 縫／串流）待使用者整體確認後可畢業去 llm_forge 固化。**
+  - **踩坑收錄**（都記 [common/gotchas](workflows/common/gotchas.md)）：① SAC 偶發擋新編 exe 雜湊→重編即解；② Windows 中文兩坑——終端碼頁（host.exe `SetConsoleOutputCP` 自救）＋標準 `main` argv 是 950 碼頁（host.exe `wmain` 解決；lua.exe 中鏢，中文走 `--infile`）。
+  - **工具路標（評估過、暫不接，免下次重查）**：CLI 現手刻 `cli.lua`（從 schema 生成）最貼合；**長出子命令**時選 `mpeterv/argparse`（單檔純 Lua、MIT、最主流，優於 lua_cliargs／lummander），且仍**從 `llm.schema` 生成**其定義。REPL＝stock `lua.exe -i`（已是 5.5，不需 LuaConsole＝停在 5.4）；要行歷史再給 lua.exe 編 **linenoise**。串流想上色＝`ansicolors`/`lua-term`。shell 膠水 `luash` 不適用（`os.execute` 不能增量串流）。
+  - **open 待辦（下一步）**：Fennel（編成 Lua、手寫用 Lisp）疊上去；把 llm_entry 傳輸層（HTTP／JSON 組解）下沉成 C++ 原生函式、退休 `json.lua`（等設計凍結或瓶頸）。
+  - **待使用者**：接真後端跑一次真回應（與 try_1 共用那關）——見 [WAIT_USER](WAIT_USER.md)。
+
 > 註：舒適 CL 環境已另立為兄弟子專案 [`sub_projs/comfy/`](../comfy/README.md)（與本 s7 線並存、兩邊都推），其活狀態記在該處與頂層 [SESSION-LOG](../../SESSION-LOG.md)，不在 galtxt hub 裡。
 
 ## 各工作流 session-log

@@ -6,14 +6,15 @@
 
 ## Repo 佈局
 
-現階段只有工作流骨架，**尚無程式碼**（第一片實作拉動時才長出產出目錄）。
+工作流骨架 + 兩個**玩具實驗場**（`try_1` / `try_2`，刻意不套框架、先跑通 LLM 接口再往上抽）。
 
 | 路徑 | 內容 |
 |------|------|
 | `AGENTS.md` / `CLAUDE.md` / `WORKFLOWS.md` / `INDEX.md` / `DEV-GUIDE.md` | 頂層路由 / 轉址 / 派發 / 地圖 / 結構整理參考 |
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
-| 產出目錄（長出來才建）| 第一片實作拉動時建；依技術棧 C++／Lua 落目錄，附程式碼導航 index |
+| [`try_1/`](try_1/README.md) | 玩具實驗場①：**s7 Scheme** 版 LLM 接口（`llm.scm`＋schema 生成簽章＋argv host `s7host.exe`）|
+| [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`json.lua`/`cli.lua`；schema 生成 `--flag` CLI）|
 
 ## 開發工作流
 
