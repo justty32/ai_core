@@ -19,3 +19,5 @@
 (format t "換行 '\\n' 讀成 ~s，Tab '\\t' 讀成 ~s~%" '\n' '\t')
 (format t "quote 仍然正常： '(1 2 3) → ~s~%" '(1 2 3))
 (format t "布林糖上場： (if true 'y' 'n') → ~s~%" (if true 'y' 'n'))
+(let ((s "one\ntwo"))   ; comfy：\n 是真的換行（標準 CL 這裡會是字面 n）
+  (format t "C 風格字串 \"one\\ntwo\" 長度 ~a，含真換行：~%~a~%" (length s) s))

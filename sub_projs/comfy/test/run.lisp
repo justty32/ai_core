@@ -34,9 +34,23 @@
     (assert (equal (read-from-string "'x")       '(quote x)))
     (assert (equal (read-from-string "'foo-bar") '(quote foo-bar)))
     (assert (equal (read-from-string "'(1 2 3)") '(quote (1 2 3))))
-    (assert (equal (read-from-string "''a")      '(quote (quote a)))))
+    (assert (equal (read-from-string "''a")      '(quote (quote a))))
 
-  (format t "~&ALL GREEN — 布林糖 + 'a' 字元讀取器全數通過。~%")
+    ;; (3) C 風格字串轉義
+    (assert (string= (read-from-string "\"aaaa\"") "aaaa"))          ; 普通字串不變
+    (let ((s (read-from-string "\"a\\nb\"")))                        ; "a\nb" → a 換行 b
+      (assert (= (length s) 3))
+      (assert (char= (char s 1) #\Newline)))
+    (assert (char= (char (read-from-string "\"x\\ty\"") 1) #\Tab))   ; \t
+    (assert (char= (char (read-from-string "\"\\a\"") 0) (code-char 7)))  ; \a bell
+    (assert (string= (read-from-string "\"say \\\"hi\\\"\"") "say \"hi\""))  ; \" → "
+    (assert (string= (read-from-string "\"back\\\\slash\"") "back\\slash")) ; \\ → \
+    (assert (char= (char (read-from-string "\"\\x41\"") 0) #\A))     ; \x41 → A
+    ;; 數字不動：確認整數/浮點照標準讀
+    (assert (= (read-from-string "42") 42))
+    (assert (= (read-from-string "3.14") 3.14)))
+
+  (format t "~&ALL GREEN — 布林糖 + 'a' 字元 + C 風格字串轉義全數通過。~%")
   t)
 
 (handler-case (progn (run) (uiop:quit 0))

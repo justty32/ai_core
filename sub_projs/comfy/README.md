@@ -6,7 +6,8 @@
 目的兩個：
 
 1. **一層薄薄的順手糖**，蓋在標準 Common Lisp 上，把幾個我不習慣的寫法換成舒服的——
-   目前：`true`/`false` 代 `t`/`nil`、`'a'` 代 `#\a`（含 `'\n'` 這類轉義）。
+   目前：`true`/`false` 代 `t`/`nil`、`'a'` 代 `#\a`、**C 風格字串轉義**（`"a\nb"` 含真換行）。
+   數字與其餘資料形式本就與 C 一致，不動。
 2. **一個成熟、能在 VSCode 裡真 debug 的開發環境**：SBCL ＋ Alive 擴充 ＋ 內建 ASDF，
    REPL 邊寫邊測、condition/restart 互動除錯、`trace`/`step`/`break` 全在手邊。
 
@@ -55,13 +56,27 @@ VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JV
   (comfy:enable-comfy-syntax))
 
 'a'        ; => #\a
-'\n'       ; => #\Newline      （轉義： \n \t \r \s(空白) \0(NUL) \\ \'）
+'\n'       ; => #\Newline      （轉義： \n \t \r \a \b \f \v \0 \s(空白) \\ \'）
 'x         ; => (quote x)      ← 一般 quote 完全不變
 '(1 2 3)   ; => (quote (1 2 3))
 ```
 
 分辨規則：讀到 `'` 後往下探一格——**後面緊跟收尾 `'` 就是字元**（`'a'`），否則**退回標準 quote**
 （`'x`、`'(…)`）。只裝在 `*comfy-readtable*`，不污染全域 `*readtable*`。
+
+**C 風格字串**——同樣需啟用 comfy readtable。標準 CL 字串裡反斜線**只** escape `"` 與 `\`，
+所以 `"a\nb"` 在 CL 是字面的 `a n b`（不含換行），C 慣用者會踩坑。comfy 把 `"…"` 換成 **C 語意**：
+
+```lisp
+"a\nb"          ; => 三字元字串： a、換行、b
+"tab\there"     ; => \t 是真 Tab
+"say \"hi\""    ; => \" → "（同 C，也同標準 CL）
+"back\\slash"   ; => \\ → 單一反斜線
+"\x41\x42"      ; => "AB"（\xHH 兩位十六進位）
+```
+
+支援 `\n \t \r \a \b \f \v \0 \\ \" \'` 與 `\xHH`；其餘 `\X` → `X`。**數字不動**（`42`、`3.14`、
+`#xFF` 都照標準 CL 讀）。字串 reader 一樣只裝在 `*comfy-readtable*`。
 
 ## 跑起來
 
@@ -92,6 +107,6 @@ sbcl --script examples/hello.lisp
 
 ## 目前狀態 / 下一步
 
-- ✅ SBCL＋Alive 環境就緒；`:comfy` 系統可載入；`true`/`false`＋`'a'`（含轉義）測試全綠。
+- ✅ SBCL＋Alive 環境就緒；`:comfy` 系統可載入；`true`/`false`＋`'a'` 字元＋C 風格字串轉義測試全綠。
 - 之後想加的糖（等實際用到再長）：更多順手別名、字串／格式小工具；
   以及把 s7 那邊「schema→CLI 旗標由同像性生成」的洞見，在 CL 這邊用 macro 重生。

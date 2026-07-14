@@ -15,5 +15,6 @@
    ;; 讀取器 / readtable
    #:*comfy-readtable*
    #:comfy-quote-reader
+   #:comfy-string-reader
    #:enable-comfy-syntax
    #:with-comfy-syntax))
