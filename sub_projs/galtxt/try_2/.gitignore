@@ -1,0 +1,11 @@
+# build 產物（vendor/lua/*.c/*.h 是 vendored 原始碼、要進版控；host.cpp 是源碼，留版控）
+host.exe
+*.exe
+*.o
+vendor/lua/liblua.a
+
+# 執行期暫存 / 測試 fixture
+galtxt_llm_req.json
+fake/
+fake_lua/
+fake_stream/
