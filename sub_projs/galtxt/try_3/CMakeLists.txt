@@ -26,11 +26,16 @@ find_package(glaze CONFIG REQUIRED)
 add_executable(try3 src/main.cpp)
 
 # ★ 具名模組來源：FILE_SET CXX_MODULES —— CMake 據此掃描 module 相依、排建置序
+#   demo＝計算/字串示範；http＝native HTTP 傳輸（WinHTTP/libcurl，file:// 離線可跑）
 target_sources(try3 PRIVATE
     FILE_SET CXX_MODULES FILES
-    src/demo.cppm)
+    src/demo.cppm
+    src/http.cppm)
 
 target_link_libraries(try3 PRIVATE glaze::glaze)
+
+# 注入源碼根目錄，讓 main.cpp 的 http 示範用 file:// 讀 test/fixtures/ 而不寫死機器路徑
+target_compile_definitions(try3 PRIVATE TRY3_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 # Debug 帶完整符號、關優化，方便 gdb 單步；Release 開 -O2
 target_compile_options(try3 PRIVATE
@@ -44,4 +49,10 @@ if(WIN32)
     target_link_options(try3 PRIVATE
         -municode
         -static -static-libgcc -static-libstdc++)
+    # http 模組的 WinHTTP 傳輸：系統內建、Schannel TLS，零額外依賴
+    target_link_libraries(try3 PRIVATE winhttp)
+else()
+    # 非 Windows：http 模組走 libcurl（vcpkg 裝 curl；見 vcpkg.json 註）
+    find_package(CURL REQUIRED)
+    target_link_libraries(try3 PRIVATE CURL::libcurl)
 endif()

@@ -6,7 +6,7 @@ galtxt 第三條實驗線，與 [try_1](../try_1/README.md)（s7 Scheme）、[tr
 
 **這條完全 C++**——不嵌任何腳本 VM，純原生，並以 **C++20 modules**（`export module` / `import`）當骨架示範。建置走 **CMake + Ninja**（配 `CMakePresets.json` 釘死工具鏈、接 vcpkg toolchain），與 try_2 的手寫 `build.sh` 走不同路線，兩相對照。
 
-目前狀態：**可建置、可 VSCode/gdb 除錯的最小骨架**。`src/demo.cppm` 是具名模組 `demo`（`sum_to` 迴圈累加、`greet` 字串處理），`src/main.cpp` 以 `import demo;` 取用。
+目前狀態：**可建置、可 VSCode/gdb 除錯，已長出兩塊地基**。模組：`src/demo.cppm`（具名模組 `demo`，`sum_to`/`greet` 除錯示範）、`src/http.cppm`（具名模組 `http`，native HTTP 傳輸）；`src/main.cpp` 以 `import demo; import http;` 取用，並串 glaze 反射 JSON。`build/try3.exe` 一趟跑完：計算＋字串、glaze 序列化/解析、HTTP file:// GET→glaze 解出台詞、串流逐塊回呼。
 
 ## 需要的東西
 
@@ -52,6 +52,28 @@ Release：把 `mingw-debug` 換成 `mingw-release`。CMake 會自動掃 `import`
 **要再加庫**：`vcpkg.json` 的 `dependencies` 加一個名字 → `find_package`＋`target_link_libraries` → 重配置。實測 glaze 7.8.4：`glz::write_json(struct)` / `glz::read_json(struct, src)` 反射自動映射、中文原樣 UTF-8，`main.cpp` 的 `demo_json()` 有往返示範。
 
 > ℹ glaze 這種現代 C++ 庫用**編譯期反射**：定義 `struct` 就自動 JSON↔struct，不用寫映射巨集（這正是 C++26 `std::meta` 反射要標準化的東西，glaze 現在就有）。
+
+> ⚠ **glaze 預設遇未知鍵報錯**：真後端回應（OpenAI chat completion）欄位遠多於你 struct 挑的那幾個。用 `glz::read<glz::opts{.error_on_unknown_keys=false}>(obj, src)` 才會忽略多餘鍵、只填 struct 有的。`main.cpp` 的 `demo_http()` 就是這樣把 `choices[0].message.content` 台詞挑出來。
+
+## native HTTP 傳輸（`src/http.cppm`）
+
+第二個具名模組 `http`＝**純 C++ 的 HTTP 傳輸層**，對照 [try_2](../try_2/README.md) 的 `native/http.c`（那條是 C＋Lua 綁定）。拋開 Lua C API 後 API 縫變乾淨：
+
+```cpp
+import http;
+http::Request  req{ .url = "...", .method = "POST", .headers = {"Content-Type: application/json"}, .body = "..." };
+http::Response r = http::request(req);                    // 非串流：傳輸失敗 throw std::runtime_error
+int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes */ return true; });  // 回 false 中止
+```
+
+- **分層**（同 try_2）：C++ 是**笨管子**——只管 TLS＋HTTP round-trip、串流時逐塊把 raw bytes 交回呼；**SSE 拆框／UTF-8 分批／JSON 編解全留上層**（傳輸層語言中立、改起來便宜）。
+- **平台分流**：Windows＝**WinHTTP**（系統內建、Schannel TLS，零安裝；連結 `winhttp`）；Linux/Mac＝**libcurl**（`find_package(CURL)`＋`CURL::libcurl`，需在 `vcpkg.json` 加 `curl`——目前僅 Windows 實測）。
+- **`file://` 特例**：兩平台共用，直接讀檔當 200 回應——保住**離線 fixture 測試 harness**（WinHTTP 不支援 `file://`，非在這層處理不可）。fixture 在 `test/fixtures/{fake,fake_stream}/chat/completions`（假 chat completion／SSE 回應，版控當測試資料）。
+- **★ modules 坑**：傳統系統標頭（`windows.h`／`winhttp.h`／`curl.h`）**必須放全域模組片段**（`module;` 之後、`export module http;` 之前）#include，模組本體只 export `Request`/`Response`/`request`/`stream`。
+- **fixture 路徑不寫死**：`CMakeLists` 用 `target_compile_definitions(... TRY3_SOURCE_DIR="${CMAKE_SOURCE_DIR}")` 注入源碼根，`main.cpp` 的 demo 據此組 `file://` 路徑（比照 try_2 `_path.lua` 不綁機器路徑的精神）。
+- exe 仍**全靜態獨立**：`objdump -p` 只剩 KERNEL32＋系統 CRT＋WINHTTP.dll（Windows 系統內建、必在），無 mingw runtime。
+
+> 這是本線「native HTTP 傳輸先」的落地：先把傳輸下沉成純原生模組，JSON 已有 glaze，**真後端 round-trip＋SSE 串流的縫都在**，接真後端與上層 ask/schema 是下一步。
 
 ## VSCode 除錯
 
