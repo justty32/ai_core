@@ -32,6 +32,25 @@ cmake --build --preset mingw-debug  # 建置 → build/try3.exe
 
 Release：把 `mingw-debug` 換成 `mingw-release`。CMake 會自動掃 `import`/`export`、生 dyndep，**先編 `demo.cppm` 成 BMI（`demo.gcm`）再編 `main`**。
 
+## 加 GitHub 依賴（vcpkg manifest）— 下一步
+
+vcpkg toolchain 已在 preset 接好，用 **manifest 模式** 加庫（宣告式、隨專案版控）：
+
+1. try_3 根建 `vcpkg.json`：
+   ```json
+   { "name": "try-3", "version-string": "0.0.1", "dependencies": ["fmt"] }
+   ```
+2. **★ MinGW triplet（最容易踩的雷）**：vcpkg 預設 triplet 是 `x64-windows`（MSVC 導向），在 MinGW 上會建置／連結失敗。在 `CMakePresets.json` 的 `cacheVariables` 補（選 static，與本線 `-static` 獨立 exe 哲學一致）：
+   ```json
+   "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+   "VCPKG_HOST_TRIPLET":   "x64-mingw-static"
+   ```
+   （要動態庫改 `x64-mingw-dynamic`，但那樣 exe 執行期要找 DLL，與本線 `-static` 相左。）
+3. `CMakeLists.txt` 用庫：`find_package(fmt CONFIG REQUIRED)` ＋ `target_link_libraries(try3 PRIVATE fmt::fmt)`。
+4. 重配置 `cmake --preset mingw-debug` → vcpkg 從源碼建依賴、自動裝（首次較久）。
+
+> ⚠ **第一次裝庫先挑小庫（如 `fmt`）** 驗整條 vcpkg→MinGW→靜態連結通不通，再往上堆設計——triplet／靜態連結的雷這時才會現形，先在小範圍打通。**本設定 Windows 尚未實跑過任何 vcpkg 庫。**
+
 ## VSCode 除錯
 
 以「**File > Open Folder**」開 `try_3` 這個資料夾（讓 `${workspaceFolder}=try_3`），然後：
