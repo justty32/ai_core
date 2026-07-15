@@ -63,7 +63,15 @@ try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／L
 
 **至此 try_4 的 `ask` 完整表面＋三擴充（工具／結構化／多媒體）全綁上兩個 VM，共 10 支示範腳本（5 能力 × 2 語言）離線全綠。** 三線整合的核心目標達成：C++ 核心一套、s7／Lua 兩層薄殼吃同一套 function API。
 
-**可選後續（非必要）**：① 三擴充也接串流；② schema／工具定義由腳本側的**表描述**生成（把 try_1/try_2 的 schema 表精神接回來，免手寫 JSON Schema 字串）；③ 真後端整條驗（取樣數值、schema/tools 是否真送對——離線 fixture 驗不出）；④ CLI 薄殼（比照 try_2 cli.lua，讓 `try4.exe` 直接吃 `--flag`）。
+**✓ Manjaro 跨平台已驗（2026-07-15，補齊四線最後一條）**——`cmake --preset linux-debug` → `cmake --build --preset linux-debug`：**55 步零警告**乾淨 build（s7 源碼 `~/repo/pas/derived/s7-playground/s7.c` 自動命中平台候選、CURL 8.21 自動命中、家機 `/home/lorkhan/vcpkg` toolchain）。煙霧測試（4 能力）＋10 支示範腳本（5 能力 × 2 語言）全綠、繁中無亂碼。try_3 一字未改、`build/` gitignored。**至此 try_1／2／3／4 四線皆 Manjaro 驗過**。跨平台一次到位靠的是先前地基：`SUFFIX ".exe"` 產物名一致、Linux 分支（`LUA_USE_LINUX`、`find_package(CURL)`、`CMAKE_DL_LIBS`＋`m`、s7 不加 Windows shim）本就備妥、preset `condition` 判平台。
+
+**里程碑 3 ✓ 真後端整條驗（2026-07-15，本機 LM Studio／`google/gemma-4-e4b`，5 能力 × 2 VM 全綠）**——把離線 fixture 驗不出的那層補上：
+- **5 能力 × 2 VM 端到端全綠**：ask 非串流／ask 串流（真 SSE delta 逐段到、`reasoning_content` 思考段正確跳過只收 `content`）／結構化（回原生 table／alist）／工具（`get_weather(東京, celsius)`、arguments 轉原生）／vision（本地 `red.png`→base64 data URI→gemma 多模態**正確認出「紅色」**）。繁中全程無亂碼。
+- **★「是否真送對」用攔截伺服器（Python 標準庫，印出請求 body）定案**——這是 fixture 結構上證不出的關鍵：① 取樣值 `temperature/max_tokens/seed` 確實進請求 body（`optional` 有設才出現）；② 結構化 → `response_format.json_schema`（`strict:true`、schema 內嵌）真的組出；③ 工具 → `tools[].function`（name/description/parameters 全對、中文說明無損）真的組出。
+- **★ 揪到並已修真缺陷＝後端 error JSON 被靜默吞成空字串**（護欄破洞，離線 fixture 從不回錯故驗不出，同前三線「假回應乾淨、真回應才現形」病根）：LM Studio JIT 載入失敗會回 `{"error":{"message":"…SIGABRT"}}`（HTTP 400、無 `choices`），而共用核心原本的 `if (ec || parsed.choices.empty()) return {};` 讓 `ask` **回空字串且不報錯**——呼叫端無法區分「模型回空」與「後端出錯」。**修法（使用者拍板現在修，只動共用核心 `try_3/src/llm.cpp` 一個檔）**：抽 `throw_if_backend_error(status, raw)`（解 `{"error":{"message":…}}` 有就 throw、或 HTTP≥400 帶狀態碼＋body 片段 throw）塞進共用 `post()` 一處 → 四個非串流入口（ask/ask_json/ask_tools/ask_vision）全數跟上；串流路徑另接 `http::stream` 回傳 status＋累積 raw 再攔一次。noexcept 綁定橋把例外收斂成 VM 錯誤（Lua `pcall` 得 false＋訊息、s7 `catch` 得 `llm-error`）。實測：離線 10 支示範不回歸（file:// 回 200 不誤拋）、錯誤路徑兩 VM 皆正確冒出後端訊息、真後端仍正常、try_3 本身建置＋離線 demo 亦全綠。這是共用核心 bug 修正＝「改一次兩線同時跟上」設計的體現（非把 try_3 分叉）。細節見 [common/gotchas](../workflows/common/gotchas.md)「後端 error JSON…」條。
+- **環境註記**：`google/gemma-4-31b`／`qwen/qwen3.5-9b` 在本機 JIT 載入常 SIGABRT（引擎崩潰、間歇），**穩定可用＝`google/gemma-4-e4b`**（且多模態、vision 可用）；真後端驗以它為主力。工具呼叫需 prompt 給足資訊（僅說「東京天氣如何」gemma 會反問單位而不發 tool_call）。
+
+**可選後續（非必要）**：① 三擴充也接串流；② schema／工具定義由腳本側的**表描述**生成（把 try_1/try_2 的 schema 表精神接回來，免手寫 JSON Schema 字串）；④ CLI 薄殼（比照 try_2 cli.lua，讓 `try4.exe` 直接吃 `--flag`）。（③ 真後端整條驗已完成，見里程碑 3。）
 
 ## 建置／執行
 

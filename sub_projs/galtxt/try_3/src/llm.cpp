@@ -8,6 +8,8 @@
 
 #include <cstdlib>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <glaze/glaze.hpp>   // 反射式 JSON↔struct
@@ -46,6 +48,26 @@ struct StreamChunk  { std::vector<StreamChoice> choices; };
 
 constexpr glz::opts kLenient{ .error_on_unknown_keys = false };  // 後端回應欄位多，寬鬆解析
 
+// ── 護欄：後端錯誤不得被靜默吞成空字串 ──
+// 真後端（LM Studio 模型載入失敗、雲端 401/429…）會回 OpenAI 風格 {"error":{"message":…}}
+// ＋HTTP 4xx，其回應**無 choices**。若照舊「choices 空就回 {}」，呼叫端拿到空字串卻以為成功，
+// 無法區分「模型回空」與「後端出錯」——對「笨模型＋護欄」是破洞。故解析前先攔錯、有錯就 throw
+// （noexcept 的綁定橋會收斂成 VM 錯誤：Lua pcall 得 false＋訊息、s7 catch 得 llm-error）。
+struct ErrDetail   { std::string message; std::optional<std::string> type; std::optional<std::string> code; };
+struct ErrEnvelope { std::optional<ErrDetail> error; };
+
+// 檢查 (status, raw) 是否代表後端錯誤：是則 throw runtime_error（帶後端訊息＋狀態碼）。
+// 離線 file:// fixture 回 status=200 且無 error 物件 → 不受影響。
+void throw_if_backend_error(int status, const std::string& raw) {
+    ErrEnvelope env{};
+    if (!glz::read<kLenient>(env, raw) && env.error) {   // 解得動且有 error 物件（message 最有用）
+        throw std::runtime_error("後端錯誤 (HTTP " + std::to_string(status) + "): " + env.error->message);
+    }
+    if (status >= 400) {                                 // 無結構化 error 但 HTTP 失敗：帶狀態碼＋body 片段
+        throw std::runtime_error("後端錯誤 (HTTP " + std::to_string(status) + "): " + raw.substr(0, 300));
+    }
+}
+
 // 用 client 的連線設定，把已組好的 body JSON 包成 http::Request（POST＋標頭＋Bearer）。
 http::Request build_request(const Client& client, std::string_view body_json) {
     http::Request req{
@@ -68,9 +90,11 @@ std::string env_or(const char* key, const char* fallback) {
 }  // namespace ask_impl
 using namespace ask_impl;
 
-// 共用傳輸（非串流）：組請求→送→回原始回應本體。傳輸失敗 throw。
+// 共用傳輸（非串流）：組請求→送→回原始回應本體。傳輸失敗 throw；後端回錯（error JSON／4xx）也 throw。
+// ★ 四個非串流入口（ask／ask_json／ask_tools／ask_vision）全走這裡，故護欄改一處四邊同時跟上。
 std::string post(const Client& client, std::string_view request_json) {
     http::Response resp = http::request(build_request(client, request_json));
+    throw_if_backend_error(resp.status, resp.body);   // 護欄：後端錯誤不靜默吞成空字串
     return std::move(resp.body);
 }
 
@@ -107,7 +131,9 @@ std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) 
     //     跨塊維持一個行緩衝（網路分塊不對齊行邊界），逐行解 data:，累積並餵 on_delta。
     std::string answer;
     std::string line_buf;
-    http::stream(build_request(*this, *body), [&](std::string_view part) -> bool {
+    std::string raw_all;   // 護欄：串流下後端 4xx 錯誤（非 SSE、error JSON）也走 on_data 進這裡，事後攔錯用
+    int status = http::stream(build_request(*this, *body), [&](std::string_view part) -> bool {
+        raw_all.append(part);
         line_buf.append(part);
         size_t nl;
         while ((nl = line_buf.find('\n')) != std::string::npos) {
@@ -127,6 +153,7 @@ std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) 
         }
         return false;                                                   // 這批處理完，繼續收下一塊
     });
+    throw_if_backend_error(status, raw_all);   // 護欄：串流下後端出錯（4xx＋error JSON）不靜默回空
     return answer;
 }
 
