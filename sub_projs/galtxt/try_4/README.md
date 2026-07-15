@@ -42,9 +42,13 @@ try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／L
 - **s7**：借外部 s7-playground 的 `s7.c`（同 try_1，不在本 repo；`S7_DIR` 指定，未給就試平台候選）。編成 static lib `s7_vendored`（`WITH_C_LOADER=0`、不定義 WITH_MAIN；MinGW 借 try_1 的 `shim_include` 補 `<sys/utsname.h>`，僅 Windows 僅此 lib）。
 - **踩到的坑**：① `s7.h` 會 include `<complex.h>`（C++ 下有 `operator""i`），**不能包進 `extern "C"`**——Lua 標頭要包、s7.h 自帶守衛不可包，main.cpp 已分開。② SAC 這次光重連結不夠，得刪 `main.cpp.obj` 逼重編才放行。
 
-**下一步（待接）＝綁定層＋薄腳本**：把借編核心的 C++ 呼叫（`llm::Client::ask` 及三擴充）綁成腳本可呼叫的 API——s7 用 `s7_define_function`、Lua 用 `lua_pushcfunction`——再寫那兩層薄 `.scm`／`.lua`。
+**里程碑 2b ✓ 綁定層落地（非串流 ask 兩 VM 皆通、含錯誤路徑）**——try_4 現在是**雙 VM host**：`try4.exe scripts/demo.scm｜demo.lua` 依副檔名分派。腳本一句 `(llm-ask …)`／`llm.ask(…)` → C++ 綁定 → `bridge_ask`（唯一碰 `llm::Client` 的共用引擎）→ 借編核心 → file:// fixture → 答案回腳本，中文乾淨。錯誤路徑也實測：壞 endpoint → s7 `catch` 接到 `llm-error`、Lua `pcall` 回 false＋訊息，都不炸。
 
-- **⚠ 最需要試水的一段＝跨語言邊界的串流回呼**：把腳本函式包成 C++ `std::function<bool(std::string_view)>`（回 true＝中止，見 try_3 的極性約定）餵進 `ask`；`llm::Client` 的 `std::optional` 取樣欄位怎麼從腳本側設也要定型。
+- **架構＝一個引擎、兩層薄綁定**：`bridge_ask`（[bind_bridge.cpp](src/bind_bridge.cpp)，`noexcept`）是唯一碰 `llm::Client` 之處；`s7_bind.cpp`／`lua_bind.cpp` 只把腳本字串轉一轉、呼叫它、把結果塞回各自 VM。加能力只改引擎，兩個綁定薄薄跟上。
+- **⚠ 已解的關鍵坑＝C++ 例外 ↔ VM 的 longjmp**：`lua_error`／`s7_error` 都走 longjmp，會跳過還活著的非平凡 C++ 區域變數解構子。對策：① `bridge_ask` 設 `noexcept`，例外在踏進 VM 邊界前就收斂成 `bool＋err 字串`；② 綁定函式把 `std::string` 關進內層 scope，先把內容複製給 VM（Lua 堆疊／s7 前的 `char` 陣列），scope 結束解構後才呼 `*_error`。
+- **命名坑**：`namespace bind` 撞 Windows `winsock.h` 的全域 `bind()`（main.cpp 有 include windows.h）→ 改名 `vmbind`。
+
+**下一步（待接）**：① 取樣選項（temperature 等 `std::optional` 欄位）從腳本側傳入；② **串流**（腳本函式包成 C++ `std::function<bool(std::string_view)>`、回 true＝中止，見 try_3 極性約定）——跨語言回呼是最需再試水的一段；③ 三擴充（工具／多媒體／結構化）比照綁上去。
 
 ## 建置／執行
 
@@ -66,5 +70,10 @@ build/try4.exe                       # 跑核心煙霧測試
 | `CMakePresets.json` | mingw／linux 各 debug/release（`condition` 判平台，複製自 try_3）|
 | `vcpkg.json` | 依賴 manifest（glaze）|
 | `.clangd` | clangd 讀 `build/compile_commands.json`；濾掉 P1689 modules 旗標 |
-| `src/main.cpp` | try_4 進入點；目前＝三世界共存煙霧測試（核心四能力＋Lua VM＋s7 VM 各驗一次）|
+| `src/main.cpp` | try_4 進入點；雙 VM host 分派（`.scm`→s7、`.lua`→Lua）＋無參數時的煙霧測試 |
+| `src/bind.hpp` | 綁定介面：`bridge_ask`（共用引擎）＋`run_lua`／`run_s7`（各 VM host）|
+| `src/bind_bridge.cpp` | `bridge_ask`：唯一碰 `llm::Client` 之處（`noexcept`，收斂例外不漏進 VM 的 C 幀）|
+| `src/lua_bind.cpp` | Lua 綁定＋host：註冊 `llm.ask`、綁 `arg` 表、跑 `.lua`（含 longjmp 安全處理）|
+| `src/s7_bind.cpp` | s7 綁定＋host：定義 `llm-ask`、綁 `*argv*`、跑 `.scm`（含 longjmp 安全處理）|
 | `src/lua_linit_clean.c` | Lua 標準庫初始化的原味覆蓋版（取代 try_2 含 cjson/http preload 的 linit.c）|
+| `scripts/demo.scm`／`demo.lua` | 薄層示範：一句 `llm-ask`／`llm.ask` 打離線 fixture（`*fixtures*`／`FIXTURES` 由 host 注入）|

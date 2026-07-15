@@ -89,10 +89,13 @@ if(WIN32)
 endif()
 
 # ════════════════════════════════════════════════════════════════════════════
-# (D) try_4 本體：新 main（目前＝三世界共存煙霧測試）＋借編的 try_3 核心
+# (D) try_4 本體：雙 VM host（main 分派）＋綁定三 TU＋借編的 try_3 核心
 # ════════════════════════════════════════════════════════════════════════════
 add_executable(try4
     src/main.cpp
+    src/bind_bridge.cpp   # 共用引擎：唯一碰 llm::Client 的橋（noexcept 收斂例外）
+    src/lua_bind.cpp      # Lua 綁定＋host：註冊 llm.ask、跑 .lua
+    src/s7_bind.cpp       # s7 綁定＋host：定義 llm-ask、跑 .scm
     ${TRY3_CORE})
 target_include_directories(try4 PRIVATE "${TRY3_DIR}/src")   # main.cpp include 借編核心的 header
 target_link_libraries(try4 PRIVATE glaze::glaze lua_vendored s7_vendored)

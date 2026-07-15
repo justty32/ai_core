@@ -1,18 +1,16 @@
-// main.cpp — galtxt try_4 進入點（第一里程碑：只含 C++ 核心的煙霧測試）。
+// main.cpp — galtxt try_4 進入點：**雙 VM host**（依副檔名跑 .scm／.lua，共用底下 C++ 核心）。
 //
-// try_4＝三線整合：try_1（s7）、try_2（Lua）、try_3（純 C++）合流。C++ 核心扛重活，
-// s7／Lua 之後只當薄薄一層吃 C++ 開出來的 function API。本檔是整合的**第一步**：
-// 先證明「借編 try_3 核心」這條路走得通——用 try_4 自己的 main（非 try_3 的 main），
-// include try_3/src 的介面、呼叫其 llm::Client 及三擴充，跑通離線 fixture。
+// try_4＝三線整合：try_1（s7）、try_2（Lua）、try_3（純 C++）合流。C++ 核心扛重活（借編 try_3），
+// s7／Lua 只當薄薄一層吃 C++ 開出來的 function API（綁定見 bind.hpp／s7_bind.cpp／lua_bind.cpp）。
 //
-//   ✅ 這一步證明的事：try_3 的核心 .cpp（http/llm/llm_tool/llm_media/llm_json）能被
-//      try_4 的 CMakeLists「借編」進來、與新 main 連結成 try4.exe、行為與在 try_3 裡一致。
-//   ⏳ 還沒做的事（下一步）：嵌入 s7／Lua、把下面這些 C++ 呼叫綁成腳本可呼叫的 API，
-//      讓 .scm／.lua 薄腳本也能發問。跨語言邊界（腳本函式當 C++ std::function 的串流回呼）
-//      是最需要試水的一段。
+// 分派（見 run()）：
+//   try4.exe scripts/demo.scm [參數...]   → s7  host（vmbind::run_s7）
+//   try4.exe scripts/demo.lua [參數...]   → Lua host（vmbind::run_lua）
+//   try4.exe（無參數）／--smoke           → 煙霧測試（sanity：核心四能力＋兩 VM 都活著）
 //
-// 離線 fixture 直接借 try_3 的（TRY4_TRY3_DIR 由 CMake 注入指向 ../try_3），不另抄假回應。
-// 跨平台：Windows 用 wmain + -municode + SetConsoleOutputCP(CP_UTF8)（中文 argv／輸出不亂碼），
+// 本檔自己還留著 smoke_*（核心／Lua／s7 各起一次）當 sanity；真正的腳本執行與 llm 綁定在
+// bind 那三個 TU。離線 fixture 借 try_3 的（TRY4_TRY3_DIR 由 CMake 注入指向 ../try_3）。
+// 跨平台：Windows 用 wmain + -municode + SetConsoleOutputCP(CP_UTF8)（中文不亂碼），
 //         Linux/Mac 走標準 main、原生 UTF-8。對齊 try_3 main.cpp。
 
 #include <cstdio>
@@ -28,6 +26,7 @@
 #include "llm_tool.hpp"      // llm::make_tool / ask_tools：工具呼叫
 #include "llm_media.hpp"     // llm::image_from_url / ask_vision：多媒體/vision
 #include "llm_json.hpp"      // llm::ask_as<T>：結構化輸出
+#include "bind.hpp"          // vmbind::run_lua / run_s7：把 C++ 綁給腳本 VM、跑 .lua/.scm
 
 // 兩個 VM 的標頭（借編來源見 CMakeLists (B)(C)）：
 //   Lua 標頭不自帶 C++ 連結標記，須自行 extern "C"（對齊 try_2 host.cpp）。
@@ -162,22 +161,43 @@ static void smoke_s7() {
     s7_free(sc);
 }
 
-static int run(const std::vector<std::string>& /*args*/) {
-    std::printf("== galtxt try_4：三線整合（try_3 C++ 核心當底，s7＋Lua 薄層待接）==\n");
+// ── 無腳本參數時跑的煙霧測試：證核心＋兩 VM 都活著（sanity）──────────────────
+static int run_smoke() {
+    std::printf("== galtxt try_4：三線整合（try_3 C++ 核心當底，s7＋Lua 薄層）==\n");
     std::printf("[core] 借編 try_3/src 的核心，從 try_4 自己的 main 呼叫、跑離線 fixture：\n");
     smoke_core();
 
-    std::printf("[vm ] 兩個腳本 VM 與 C++ 核心共存於同一顆 exe（本步只證 VM 通，綁定層下一步）：\n");
+    std::printf("[vm ] 兩個腳本 VM 與 C++ 核心共存於同一顆 exe：\n");
     smoke_lua();
     smoke_s7();
 
-    // from_env() 也是借來的核心：印出它組出的真後端 endpoint，證明工廠函式連結無誤
-    //（不實際打真後端，那要另開 --real，留待核心煙霧穩定後再加）。
     llm::Client real = llm::from_env();
     std::printf("[core] from_env() 真後端 endpoint＝%s（本步不實打，僅證明連結）\n",
                 real.endpoint.c_str());
-    std::printf("== 核心煙霧測試結束：借編路徑通，下一步接 s7／Lua 綁定 ==\n");
+    std::printf("== sanity 結束。給腳本即跑：try4.exe scripts/demo.scm｜scripts/demo.lua ==\n");
     return 0;
+}
+
+// 副檔名判斷（小工具）：s 是否以 suffix 結尾。
+static bool ends_with(std::string_view s, std::string_view suffix) {
+    return s.size() >= suffix.size() &&
+           s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static int run(const std::vector<std::string>& args) {
+    // 無腳本參數 → 跑煙霧測試（sanity）；或顯式 --smoke。
+    if (args.size() < 2 || args[1] == "--smoke") return run_smoke();
+
+    // 有腳本參數 → 依副檔名分派到對應 VM host（.scm→s7、.lua→Lua）。
+    // 這就是 try_4 當「雙 VM host」的樣子：一顆 exe、兩種薄腳本語言，共用底下同一套 C++ 核心。
+    const std::string& script = args[1];
+    if (ends_with(script, ".scm")) return vmbind::run_s7(args);
+    if (ends_with(script, ".lua")) return vmbind::run_lua(args);
+
+    std::fprintf(stderr,
+        "用法：try4.exe <腳本.scm|腳本.lua> [參數...]｜try4.exe --smoke\n"
+        "  未知副檔名：%s（只認 .scm／.lua）\n", script.c_str());
+    return 1;
 }
 
 #ifdef _WIN32
