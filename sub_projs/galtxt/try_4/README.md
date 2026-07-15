@@ -48,7 +48,12 @@ try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／L
 - **⚠ 已解的關鍵坑＝C++ 例外 ↔ VM 的 longjmp**：`lua_error`／`s7_error` 都走 longjmp，會跳過還活著的非平凡 C++ 區域變數解構子。對策：① `bridge_ask` 設 `noexcept`，例外在踏進 VM 邊界前就收斂成 `bool＋err 字串`；② 綁定函式把 `std::string` 關進內層 scope，先把內容複製給 VM（Lua 堆疊／s7 前的 `char` 陣列），scope 結束解構後才呼 `*_error`。
 - **命名坑**：`namespace bind` 撞 Windows `winsock.h` 的全域 `bind()`（main.cpp 有 include windows.h）→ 改名 `vmbind`。
 
-**下一步（待接）**：① 取樣選項（temperature 等 `std::optional` 欄位）從腳本側傳入；② **串流**（腳本函式包成 C++ `std::function<bool(std::string_view)>`、回 true＝中止，見 try_3 極性約定）——跨語言回呼是最需再試水的一段；③ 三擴充（工具／多媒體／結構化）比照綁上去。
+**里程碑 2c ✓ 選項＋串流綁定（跨語言回呼實測全綠）**——`ask` 的完整表面都通了：
+- **選項（table／`:keyword`）**：Lua `llm.ask{prompt=…, temperature=0.7, stream=true, on_delta=…}`；s7 `(llm-ask "…" :temperature 0.7 :stream #t :on-delta …)`（`s7_define_function_star`）。取樣欄位（model/temperature/top_p/max_tokens/seed）從腳本側傳入，`AskOpts`→`llm::Client` 只映射於 `bridge_ask` 一處；`optional` 有值才覆寫（對齊 try_3 哲學）。簡易形式 `llm.ask("你好" [, endpoint])` 仍可用。
+- **串流回呼（最需試水的一段，已通）**：腳本函式包成 C++ `std::function<bool(std::string_view)>` 餵進 `ask`，在 `client.ask` 的 C++ 幀「之內」逐段回呼進 VM；回 true＝中止（對齊 try_3 極性）。**回呼的 longjmp 用 VM 保護呼叫關住**：Lua 走 `lua_pcall`、s7 走 `s7_call`（自帶 catch），腳本端錯誤不會 longjmp 穿過 C++ 幀。三條邊界路徑實測：逐段框印＋回完整答案、回 true 中途中止、回呼內 `error` 被接住轉成 VM 錯誤（Lua `pcall`／s7 `catch` 都捕得到、不炸）。
+- 示範：[scripts/demo_stream.scm](scripts/demo_stream.scm)／[demo_stream.lua](scripts/demo_stream.lua)。⚠ 取樣數值（temperature 等）離線 fixture 不回顯，**是否真穿到請求得靠真後端驗**（比照 try_3 gotcha）。
+
+**下一步（待接）＝三擴充**：工具呼叫／多媒體／結構化輸出比照綁上去（回傳型別較複雜：工具呼叫回 list、結構化回 struct，s7/Lua 側各要決定怎麼呈現）。
 
 ## 建置／執行
 
@@ -77,3 +82,4 @@ build/try4.exe                       # 跑核心煙霧測試
 | `src/s7_bind.cpp` | s7 綁定＋host：定義 `llm-ask`、綁 `*argv*`、跑 `.scm`（含 longjmp 安全處理）|
 | `src/lua_linit_clean.c` | Lua 標準庫初始化的原味覆蓋版（取代 try_2 含 cjson/http preload 的 linit.c）|
 | `scripts/demo.scm`／`demo.lua` | 薄層示範：一句 `llm-ask`／`llm.ask` 打離線 fixture（`*fixtures*`／`FIXTURES` 由 host 注入）|
+| `scripts/demo_stream.scm`／`demo_stream.lua` | 串流示範：table／`:keyword` 帶 `on_delta` 回呼，逐段框印＋回完整答案 |

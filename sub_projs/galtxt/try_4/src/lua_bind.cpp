@@ -1,7 +1,13 @@
-// lua_bind.cpp — bind.hpp 的 Lua 那一半：開 Lua VM、註冊 llm.ask、跑 .lua 腳本。
+// lua_bind.cpp — bind.hpp 的 Lua 那一半：開 Lua VM、註冊 llm.ask（含選項＋串流）、跑 .lua 腳本。
 //
-// 薄綁定：把 Lua 傳來的字串轉一轉 → 呼叫 bridge_ask（共用引擎）→ 結果塞回 Lua。
+// 薄綁定：把 Lua 傳來的東西轉成 AskOpts → 呼叫 bridge_ask（共用引擎）→ 結果塞回 Lua。
 // 對照 try_2 的 host.cpp（那條把 JSON/HTTP 也塞進 Lua）；try_4 相反——Lua 只呼 C++ 開的 API。
+//
+// llm.ask 兩種呼法：
+//   llm.ask("你好")                        —— 純字串＝prompt（非串流）
+//   llm.ask("你好", "file://…")            —— 第二字串＝endpoint（離線 fixture 用；向下相容）
+//   llm.ask{ prompt="你好", temperature=0.7, stream=true, on_delta=function(p) … end, … }
+//                                          —— table＝完整選項（對齊 try_2 拍板的 table 進出 API）
 
 #include "bind.hpp"
 
@@ -12,30 +18,93 @@ extern "C" {
 }
 
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace vmbind {
 namespace {
 
-// llm.ask(prompt [, endpoint]) → answer 字串。
+// 從 table（堆疊 idx=1）取一個可選數值欄位；有值（是數字）才寫進 out。
+template <class T>
+void opt_number_field(lua_State* L, const char* key, std::optional<T>& out) {
+    lua_getfield(L, 1, key);
+    if (lua_isnumber(L, -1)) out = static_cast<T>(lua_tonumber(L, -1));
+    lua_pop(L, 1);
+}
+
+// llm.ask(...) → answer 字串。
 //
-// ★ C++／Lua 邊界的錯誤處理：lua_error 是 longjmp，會跳過還活著的**非平凡 C++ 區域變數**的解構子。
-//   對策＝把 out/err 關進一個內層 scope：先把要用的內容複製上 Lua 堆疊（Lua 自行管理那份複本），
-//   scope 結束時 std::string 正常解構，**之後**才呼 lua_error——longjmp 當下已無活的非平凡 C++ locals。
+// ★ C++／Lua 邊界的兩個 longjmp 面向都在這裡處理：
+//   (a) 回報錯誤：lua_error 是 longjmp，會跳過活著的非平凡 C++ 區域變數解構子——把 std::string
+//       關進內層 scope，先複製內容上 Lua 堆疊，scope 解構後才 lua_error（見底下）。
+//   (b) 串流回呼：on_delta 會在 client.ask 的 C++ 幀「之內」回呼進 Lua，若腳本函式出錯而 longjmp
+//       穿過那些 C++ 幀即 UB——故回呼一律走 **lua_pcall（保護呼叫）**，把錯誤關在 Lua 自己的
+//       setjmp 裡，轉成「設 cb_failed＋中止串流」，回到 C++ 正常路徑後再由 (a) 的方式拋出。
 int l_llm_ask(lua_State* L) {
-    const char* prompt   = luaL_checkstring(L, 1);       // 非字串會在此 longjmp，但此刻無 C++ locals，安全
-    const char* endpoint = luaL_optstring(L, 2, "");     // 選填；空＝走 from_env
+    AskOpts opts;
+    int cb_ref = LUA_NOREF;   // 串流回呼在 registry 的參照（無回呼＝NOREF）
+
+    if (lua_type(L, 1) == LUA_TTABLE) {
+        // ── table 形式：完整選項 ──
+        lua_getfield(L, 1, "prompt");
+        opts.prompt = luaL_optstring(L, -1, "");
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "endpoint");
+        opts.endpoint = luaL_optstring(L, -1, "");
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "model");
+        if (lua_isstring(L, -1)) opts.model = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        opt_number_field(L, "temperature", opts.temperature);
+        opt_number_field(L, "top_p",       opts.top_p);
+        opt_number_field(L, "max_tokens",  opts.max_tokens);
+        opt_number_field(L, "seed",        opts.seed);
+        lua_getfield(L, 1, "stream");
+        opts.stream = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        // on_delta：是 function 就存進 registry（luaL_ref 會 pop 該值）
+        lua_getfield(L, 1, "on_delta");
+        if (lua_isfunction(L, -1)) cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        else                       lua_pop(L, 1);
+    } else {
+        // ── 簡易形式：llm.ask(prompt [, endpoint]) ──
+        opts.prompt   = luaL_checkstring(L, 1);
+        opts.endpoint = luaL_optstring(L, 2, "");
+    }
+
+    // 串流回呼包成 lambda：用 lua_pcall 保護，錯誤→設 cb_failed＋中止（見上方 (b)）。
+    std::string cb_err;
+    bool cb_failed = false;
+    if (opts.stream && cb_ref != LUA_NOREF) {
+        opts.on_delta = [L, cb_ref, &cb_err, &cb_failed](std::string_view piece) -> bool {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, cb_ref);          // 推回呼函式
+            lua_pushlstring(L, piece.data(), piece.size());     // 推這段 delta
+            if (lua_pcall(L, 1, 1, 0) != LUA_OK) {              // 保護呼叫：錯誤不外洩、不 longjmp 穿 C++
+                const char* m = lua_tostring(L, -1);
+                cb_err = m ? m : "on_delta 回呼出錯";
+                lua_pop(L, 1);
+                cb_failed = true;
+                return true;                                    // 中止串流
+            }
+            bool abort = lua_toboolean(L, -1);                  // 回呼傳回值：true＝中止
+            lua_pop(L, 1);
+            return abort;
+        };
+    }
+
     bool ok;
     {
         std::string out, err;
-        ok = bridge_ask(prompt, endpoint, out, err);
-        // 成功推答案、失敗推錯誤訊息——都趁 out/err 還在，複製進 Lua（lua_pushlstring 會複製）
+        ok = bridge_ask(opts, out, err);
+        if (cb_failed) { ok = false; err = cb_err; }   // 回呼出錯覆蓋為失敗
         if (ok) lua_pushlstring(L, out.data(), out.size());
         else    lua_pushlstring(L, err.data(), err.size());
-    }  // ← out/err 在這裡解構完畢；下面若 longjmp 也不會跳過它們
-    if (ok) return 1;              // 答案在堆疊頂
-    return lua_error(L);           // 用堆疊頂的錯誤字串當錯誤物件丟出（longjmp，此刻無活的非平凡 C++ locals）
+    }  // ← out/err 解構完畢
+
+    if (cb_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, cb_ref);   // 釋放回呼參照
+    if (ok) return 1;
+    return lua_error(L);   // 用堆疊頂錯誤字串當錯誤物件（longjmp，此刻無活的非平凡 C++ locals）
 }
 
 // 把 argv 綁成 Lua 全域 arg 表（Lua 慣例，對齊 try_2 host.cpp）：
@@ -62,7 +131,7 @@ int run_lua(const std::vector<std::string>& args) {
     luaL_openlibs(L);              // ← 靠 lua_linit_clean.c 的 luaL_openselectedlibs（原味版）
     bind_arg(L, args);
 
-    // 註冊全域 llm 表：目前只有 ask。之後三擴充（工具／多媒體／結構化）＋串流都掛在這個表上。
+    // 註冊全域 llm 表：目前 ask（含選項＋串流）。之後三擴充（工具／多媒體／結構化）也掛這個表。
     lua_newtable(L);
     lua_pushcfunction(L, l_llm_ask);
     lua_setfield(L, -2, "ask");
@@ -70,7 +139,6 @@ int run_lua(const std::vector<std::string>& args) {
 
 #ifdef TRY4_TRY3_DIR
     // 離線示範便利：FIXTURES = file://<try_3>/test/fixtures/，讓 demo 腳本不寫死機器路徑就能跑假回應。
-    //（真用途可略：不傳 endpoint 走 from_env，或腳本自帶真 endpoint。）
     {
         std::string f = std::string("file://") + TRY4_TRY3_DIR + "/test/fixtures/";
         lua_pushlstring(L, f.data(), f.size());
