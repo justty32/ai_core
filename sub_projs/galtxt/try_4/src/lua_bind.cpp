@@ -202,6 +202,44 @@ int l_llm_ask_tools(lua_State* L) {
     return lua_error(L);
 }
 
+// llm.ask_vision{prompt=, endpoint=, images={ "https://…", {file=…, mime=…} }} → 答案字串。
+int l_llm_ask_vision(lua_State* L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    bool ok;
+    {
+        std::string prompt, endpoint, err;
+        lua_getfield(L, 1, "prompt");   prompt   = luaL_optstring(L, -1, ""); lua_pop(L, 1);
+        lua_getfield(L, 1, "endpoint"); endpoint = luaL_optstring(L, -1, ""); lua_pop(L, 1);
+
+        std::vector<ImageSpec> images;
+        lua_getfield(L, 1, "images");
+        if (lua_istable(L, -1)) {
+            lua_Integer n = static_cast<lua_Integer>(lua_rawlen(L, -1));
+            for (lua_Integer i = 1; i <= n; ++i) {
+                lua_rawgeti(L, -1, i);
+                ImageSpec im;
+                if (lua_isstring(L, -1)) {                       // 字串＝外部 URL
+                    im.url = lua_tostring(L, -1);
+                } else if (lua_istable(L, -1)) {                 // {url=} 或 {file=, mime=}
+                    lua_getfield(L, -1, "url");  if (lua_isstring(L, -1)) im.url  = lua_tostring(L, -1); lua_pop(L, 1);
+                    lua_getfield(L, -1, "file"); if (lua_isstring(L, -1)) im.file = lua_tostring(L, -1); lua_pop(L, 1);
+                    lua_getfield(L, -1, "mime"); if (lua_isstring(L, -1)) im.mime = lua_tostring(L, -1); lua_pop(L, 1);
+                }
+                if (!im.url.empty() || !im.file.empty()) images.push_back(std::move(im));
+                lua_pop(L, 1);   // pop images[i]
+            }
+        }
+        lua_pop(L, 1);           // pop images
+
+        std::string out;
+        ok = bridge_ask_vision(prompt, endpoint, images, out, err);
+        if (ok) lua_pushlstring(L, out.data(), out.size());
+        else    lua_pushlstring(L, err.data(), err.size());
+    }
+    if (ok) return 1;
+    return lua_error(L);
+}
+
 // 把 argv 綁成 Lua 全域 arg 表（Lua 慣例，對齊 try_2 host.cpp）。
 void bind_arg(lua_State* L, const std::vector<std::string>& args) {
     lua_newtable(L);
@@ -227,9 +265,10 @@ int run_lua(const std::vector<std::string>& args) {
 
     // 全域 llm 表：ask（含選項＋串流）＋ ask_json（結構化）＋ ask_tools（工具呼叫）。
     lua_newtable(L);
-    lua_pushcfunction(L, l_llm_ask);       lua_setfield(L, -2, "ask");
-    lua_pushcfunction(L, l_llm_ask_json);  lua_setfield(L, -2, "ask_json");
-    lua_pushcfunction(L, l_llm_ask_tools); lua_setfield(L, -2, "ask_tools");
+    lua_pushcfunction(L, l_llm_ask);        lua_setfield(L, -2, "ask");
+    lua_pushcfunction(L, l_llm_ask_json);   lua_setfield(L, -2, "ask_json");
+    lua_pushcfunction(L, l_llm_ask_tools);  lua_setfield(L, -2, "ask_tools");
+    lua_pushcfunction(L, l_llm_ask_vision); lua_setfield(L, -2, "ask_vision");
     lua_setglobal(L, "llm");
 
 #ifdef TRY4_TRY3_DIR

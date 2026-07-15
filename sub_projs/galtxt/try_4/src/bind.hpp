@@ -65,6 +65,19 @@ bool bridge_ask_tools(const std::string& prompt, const std::string& endpoint,
                       const std::vector<ToolSpec>& tools,
                       std::vector<ToolCallOut>& calls, std::string& err) noexcept;
 
+// 一張圖（腳本提供）：url 非空＝外部 URL（後端自己抓）；否則 file 非空＝讀本地檔轉 base64 data URI
+// （mime 空則預設 image/png）。回字串答案、不需 JSON→原生轉換，故最單純。
+struct ImageSpec {
+    std::string url;
+    std::string file;
+    std::string mime;
+};
+
+// 多媒體（vision）：帶文字＋若干圖片發問，回模型答覆文字。noexcept。
+bool bridge_ask_vision(const std::string& prompt, const std::string& endpoint,
+                       const std::vector<ImageSpec>& images,
+                       std::string& out, std::string& err) noexcept;
+
 // 各 VM 的 host：args[0]=exe、args[1]=腳本路徑、args[2..]=腳本參數。回 process exit code。
 int run_lua(const std::vector<std::string>& args);
 int run_s7(const std::vector<std::string>& args);

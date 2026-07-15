@@ -218,6 +218,56 @@ s7_pointer s_llm_ask_tools(s7_scheme* sc, s7_pointer args) {
                     s7_list(sc, 1, s7_make_string(sc, errbuf)));
 }
 
+// 讀 Scheme 的 images 引數：每個 entry＝字串（URL）或 list ("url" u)／("file" path [mime])。純讀。
+std::vector<ImageSpec> read_images(s7_scheme* /*sc*/, s7_pointer lst) {
+    std::vector<ImageSpec> out;
+    for (s7_pointer p = lst; s7_is_pair(p); p = s7_cdr(p)) {
+        s7_pointer e = s7_car(p);
+        ImageSpec im;
+        if (s7_is_string(e)) {
+            im.url = s7_string(e);
+        } else if (s7_is_pair(e) && s7_is_string(s7_car(e))) {
+            std::string kind = s7_string(s7_car(e));
+            s7_pointer a = s7_cdr(e);
+            if (kind == "url" && s7_is_pair(a) && s7_is_string(s7_car(a))) {
+                im.url = s7_string(s7_car(a));
+            } else if (kind == "file" && s7_is_pair(a) && s7_is_string(s7_car(a))) {
+                im.file = s7_string(s7_car(a));
+                s7_pointer b = s7_cdr(a);
+                if (s7_is_pair(b) && s7_is_string(s7_car(b))) im.mime = s7_string(s7_car(b));
+            }
+        }
+        if (!im.url.empty() || !im.file.empty()) out.push_back(std::move(im));
+    }
+    return out;
+}
+
+// (llm-ask-vision prompt :images :endpoint) → 答案字串。
+s7_pointer s_llm_ask_vision(s7_scheme* sc, s7_pointer args) {
+    s7_pointer cur = args;
+    auto pop = [&]() -> s7_pointer { s7_pointer v = s7_car(cur); cur = s7_cdr(cur); return v; };
+    s7_pointer v_prompt   = pop();
+    s7_pointer v_images   = pop();
+    s7_pointer v_endpoint = pop();
+
+    if (!s7_is_string(v_prompt))
+        return s7_wrong_type_arg_error(sc, "llm-ask-vision", 1, v_prompt, "a string prompt");
+
+    char errbuf[512];
+    errbuf[0] = '\0';
+    {
+        std::string prompt   = s7_string(v_prompt);
+        std::string endpoint = s7_is_string(v_endpoint) ? s7_string(v_endpoint) : "";
+        std::vector<ImageSpec> images = read_images(sc, v_images);
+        std::string out, err;
+        if (bridge_ask_vision(prompt, endpoint, images, out, err))
+            return s7_make_string_with_length(sc, out.data(), static_cast<s7_int>(out.size()));
+        std::snprintf(errbuf, sizeof errbuf, "%s", err.c_str());
+    }
+    return s7_error(sc, s7_make_symbol(sc, "llm-error"),
+                    s7_list(sc, 1, s7_make_string(sc, errbuf)));
+}
+
 // 把 argv[2..] 綁成 *argv*（字串 list，順序保持）——對照 try_1 s7host.c。
 void bind_argv(s7_scheme* sc, const std::vector<std::string>& args) {
     s7_pointer lst = s7_nil(sc);
@@ -244,6 +294,9 @@ int run_s7(const std::vector<std::string>& args) {
     s7_define_function_star(sc, "llm-ask-tools", s_llm_ask_tools,
         "prompt (tools ()) (endpoint \"\")",
         "(llm-ask-tools prompt :tools (list (list name desc schema) …)) 工具呼叫，回 (alist …)");
+    s7_define_function_star(sc, "llm-ask-vision", s_llm_ask_vision,
+        "prompt (images ()) (endpoint \"\")",
+        "(llm-ask-vision prompt :images (list url (list \"file\" path mime) …)) 多媒體，回答案字串");
 
 #ifdef TRY4_TRY3_DIR
     {

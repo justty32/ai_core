@@ -59,7 +59,11 @@ try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／L
 - **★ 關鍵新件＝JSON→原生轉換器**（呼應「C++ 包辦 JSON、腳本薄」）：try_4 的 VM 沒 JSON parser，故 C++ 用 `glz::generic` 解 JSON 樹、遞迴建成 **Lua table** / **s7 alist**（物件→table/alist、陣列→list、整值保 integer、中文原樣）。Lua 側靠堆疊錨定天然免 GC 保護；**s7 側建構期 `s7_gc_on(sc,false)`**（中間節點只被 C 區域變數持有，GC 開著會被收）。實測：`name=星野 affection=42 lines[…]=…`、`get_weather(city=東京 unit=celsius)` 兩 VM 皆綠。
 - 示範：`scripts/demo_json.{scm,lua}`、`scripts/demo_tool.{scm,lua}`。⚠ 離線 fixture 回罐頭、不看送出的 schema/tools，是否真送對得靠真後端驗。
 
-**下一步（待接）＝多媒體**：`ask_vision`（帶文字＋圖片，回字串——不需 JSON→原生轉換，較單純）。之後可選：串流也接上三擴充、schema 由腳本側的表描述生成（把 try_1/try_2 的 schema 表接回來）。
+**里程碑 2e ✓ 多媒體綁定——三擴充全數接上**：Lua `llm.ask_vision{prompt=, images={"https://…", {file=…, mime=…}}}`／s7 `(llm-ask-vision … :images (list url (list "file" path mime) …))`。圖片可外部 URL（後端自己抓）或本地檔（C++ 讀檔轉 base64 data URI）；回答案字串（不需 JSON→原生轉換）。離線走 fake fixture 兩 VM 皆綠。
+
+**至此 try_4 的 `ask` 完整表面＋三擴充（工具／結構化／多媒體）全綁上兩個 VM，共 10 支示範腳本（5 能力 × 2 語言）離線全綠。** 三線整合的核心目標達成：C++ 核心一套、s7／Lua 兩層薄殼吃同一套 function API。
+
+**可選後續（非必要）**：① 三擴充也接串流；② schema／工具定義由腳本側的**表描述**生成（把 try_1/try_2 的 schema 表精神接回來，免手寫 JSON Schema 字串）；③ 真後端整條驗（取樣數值、schema/tools 是否真送對——離線 fixture 驗不出）；④ CLI 薄殼（比照 try_2 cli.lua，讓 `try4.exe` 直接吃 `--flag`）。
 
 ## 建置／執行
 
@@ -91,3 +95,4 @@ build/try4.exe                       # 跑核心煙霧測試
 | `scripts/demo_stream.scm`／`demo_stream.lua` | 串流示範：table／`:keyword` 帶 `on_delta` 回呼，逐段框印＋回完整答案 |
 | `scripts/demo_json.scm`／`demo_json.lua` | 結構化輸出示範：給 JSON Schema、拿原生 table／alist |
 | `scripts/demo_tool.scm`／`demo_tool.lua` | 工具呼叫示範：給工具集、拿 `tool_calls`（arguments 為原生結構）|
+| `scripts/demo_vision.scm`／`demo_vision.lua` | 多媒體示範：帶文字＋圖片（URL／本地檔）發問，回字串 |

@@ -18,6 +18,7 @@
 #include "llm.hpp"        // 借編 try_3/src 的 llm::Client（from_env／ask／OnDelta）
 #include "llm_tool.hpp"   // ask_tools／Tool／ToolCall
 #include "llm_json.hpp"   // ask_json_raw（結構化輸出的非模板入口）
+#include "llm_media.hpp"  // ask_vision／image_from_url／image_from_file
 
 namespace vmbind {
 
@@ -82,6 +83,30 @@ bool bridge_ask_tools(const std::string& prompt, const std::string& endpoint,
             llm_tools.push_back(llm::Tool{ t.name, t.description, t.schema });
         for (const auto& tc : llm::ask_tools(c, prompt, llm_tools))
             calls.push_back(ToolCallOut{ tc.name, tc.arguments });   // arguments 仍是 JSON 字串
+        return true;
+    } catch (const std::exception& e) {
+        err = e.what();
+        return false;
+    } catch (...) {
+        err = "未知錯誤（非 std::exception）";
+        return false;
+    }
+}
+
+bool bridge_ask_vision(const std::string& prompt, const std::string& endpoint,
+                       const std::vector<ImageSpec>& images,
+                       std::string& out, std::string& err) noexcept {
+    try {
+        llm::Client c = make_client(endpoint);
+        std::vector<llm::Image> imgs;   // ImageSpec（腳本側）→ llm::Image（核心側）
+        imgs.reserve(images.size());
+        for (const auto& im : images) {
+            if (!im.url.empty())
+                imgs.push_back(llm::image_from_url(im.url));
+            else if (!im.file.empty())
+                imgs.push_back(llm::image_from_file(im.file, im.mime.empty() ? "image/png" : im.mime));
+        }
+        out = llm::ask_vision(c, prompt, imgs);
         return true;
     } catch (const std::exception& e) {
         err = e.what();
