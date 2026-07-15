@@ -111,7 +111,7 @@ static void demo_http_stream() {
         int status = http::stream(req, [&](std::string_view part) {
             ++chunks;
             bytes += part.size();
-            return true;   // 回 false 可中止
+            return false;   // 回 true 可中止
         });
         std::printf("[http] stream status=%d chunks=%d bytes=%zu\n", status, chunks, bytes);
     } catch (const std::exception& e) {
@@ -136,7 +136,7 @@ static void demo_llm() {
         std::string whole = streamer.ask("你好", true, [](std::string_view piece) {
             // string_view 非 null 結尾，printf 用 %.*s（帶長度）；每段 [] 框起看得出分段
             std::printf("[%.*s]", static_cast<int>(piece.size()), piece.data());
-            return true;
+            return false;
         });
         std::printf("　合＝%s\n", whole.c_str());
     } catch (const std::exception& e) {
@@ -247,7 +247,7 @@ static void demo_real() {
             [](std::string_view piece) {
                 std::printf("%.*s", static_cast<int>(piece.size()), piece.data());
                 std::fflush(stdout);   // 逐段即時吐出，不等緩衝
-                return true;
+                return false;
             });
         std::printf("\n[real] 串流合＝%s\n", whole.c_str());
     } catch (const std::exception& e) {

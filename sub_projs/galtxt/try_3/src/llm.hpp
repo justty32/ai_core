@@ -16,7 +16,7 @@
 
 namespace llm {
 
-// 串流回呼：每收到一段內容 delta 呼一次；回 false 可中止串流。
+// 串流回呼：每收到一段內容 delta 呼一次；回 true 可中止串流（false＝繼續）。
 // 用 string_view：delta 只在回呼期間有效（記憶體屬串流緩衝），傳視圖＝零複製零配置，
 // 且與 http::OnData 一致。回呼若要留存內容，自行複製成 std::string。
 using OnDelta = std::function<bool(std::string_view)>;
@@ -44,7 +44,7 @@ public:
     std::optional<int>   seed;              // 隨機種子：固定可重現輸出
 
     // prompt＝使用者提問。
-    // stream=true 時，內容逐段經 on_delta 餵出（回 false 可中止）；
+    // stream=true 時，內容逐段經 on_delta 餵出（回 true 可中止）；
     // 兩種模式都回「完整組合後的模型答覆文字」。
     // ★ 預設參數必須靠後：on_delta 也給預設（nullptr），才能讓 ask(prompt) 只帶一參。
     std::string ask(std::string_view prompt,

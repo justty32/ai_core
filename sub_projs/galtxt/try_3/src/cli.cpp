@@ -181,7 +181,7 @@ int run(const std::vector<std::string>& args) {
             client.ask(prompt, true, [](std::string_view piece) {
                 std::printf("%.*s", static_cast<int>(piece.size()), piece.data());
                 std::fflush(stdout);   // 逐段即時吐出，不等緩衝
-                return true;
+                return false;
             });
             std::printf("\n");
         } else {

@@ -28,7 +28,7 @@ struct Response {
     std::string body;
 };
 
-// 每收到一塊 raw bytes 呼一次；回 false 表示中止傳輸。
+// 每收到一塊 raw bytes 呼一次；回 true 表示中止傳輸（false＝繼續）。
 using OnData = std::function<bool(std::string_view)>;
 
 Response request(const Request& req);                    // 非串流：累積整包 body（失敗 throw）

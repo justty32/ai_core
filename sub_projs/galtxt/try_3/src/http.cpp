@@ -29,13 +29,15 @@ struct Sink {
     std::string buf;                    // 非串流時累積本體
     bool aborted = false;
 
-    // 交付一塊收到的 bytes。回傳是否應繼續（false＝中止）。
+    // 交付一塊收到的 bytes。回傳是否應繼續（deliver 內部慣例：true＝繼續）。
+    // ★ 外部回呼 OnData 的極性相反（回 true＝中止），只在下面呼叫 (*cb) 那一點翻譯；
+    //   內部管線（本函式回傳、各平台迴圈的 if(!deliver) break、curl 的 ?n:0）維持不變。
     bool deliver(const char* p, size_t n) {
         if (aborted) return false;
         if (streaming) {
-            bool cont = (*cb)(std::string_view(p, n));
-            if (!cont) aborted = true;
-            return cont;
+            bool abort = (*cb)(std::string_view(p, n));   // 回呼：true＝中止、false＝繼續
+            if (abort) aborted = true;
+            return !abort;                                 // 翻回 deliver 內部的「true＝繼續」
         }
         buf.append(p, n);
         return true;

@@ -116,16 +116,16 @@ std::string Client::ask(std::string_view prompt, bool stream, OnDelta on_delta) 
             if (!line.empty() && line.back() == '\r') line.pop_back();   // 去掉 CRLF 的 \r
             if (line.rfind("data: ", 0) != 0) continue;                  // 只認 data: 行
             std::string data = line.substr(6);
-            if (data == "[DONE]") return false;                          // 串流結束，收工
+            if (data == "[DONE]") return true;                           // 串流結束，收工（true＝中止傳輸）
             StreamChunk chunk{};
             if (glz::read<kLenient>(chunk, data)) continue;              // 解不動這筆就跳過
             if (chunk.choices.empty()) continue;
             const std::string& piece = chunk.choices[0].delta.content;
             if (piece.empty()) continue;
             answer += piece;
-            if (on_delta && !on_delta(piece)) return false;             // 呼叫端喊停
+            if (on_delta && on_delta(piece)) return true;               // 呼叫端喊停（on_delta 回 true＝中止）
         }
-        return true;
+        return false;                                                   // 這批處理完，繼續收下一塊
     });
     return answer;
 }
