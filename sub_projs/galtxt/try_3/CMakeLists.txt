@@ -23,6 +23,7 @@ find_package(glaze CONFIG REQUIRED)
 
 # 來源：main＋demo（計算/字串示範）＋http（native HTTP 傳輸）＋llm（llm::Client，struct＋反射 ask 接口）
 #       ＋llm_tool（工具呼叫）＋llm_media（多媒體/vision）＋llm_json（結構化輸出）
+#       ＋cli（由 llm::Client 欄位反射生成的 --flag CLI）
 add_executable(try3
     src/main.cpp
     src/demo.cpp
@@ -30,7 +31,8 @@ add_executable(try3
     src/llm.cpp
     src/llm_tool.cpp
     src/llm_media.cpp
-    src/llm_json.cpp)
+    src/llm_json.cpp
+    src/cli.cpp)
 
 target_link_libraries(try3 PRIVATE glaze::glaze)
 

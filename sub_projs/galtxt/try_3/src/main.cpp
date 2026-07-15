@@ -17,6 +17,7 @@
 
 #include <glaze/glaze.hpp>   // 反射式 JSON↔struct（vcpkg 裝的，header-only、超快）
 
+#include "cli.hpp"           // cli::run：由 llm::Client 欄位反射生成的 --flag CLI
 #include "demo.hpp"          // sum_to / greet
 #include "http.hpp"          // native HTTP 傳輸：request / stream（file:// 離線可跑）
 #include "llm.hpp"           // llm::Client：struct＋反射 ask 接口
@@ -297,6 +298,12 @@ static int run(const std::vector<std::string>& args_in) {
         std::printf("[real] --real 模式：打真後端，略過離線 fixture demo\n");
         demo_real();
         return 0;
+    }
+
+    // ★ CLI 模式：只要出現任何 --旗標／-h（--real 已在上面摘掉），就走反射生成的 CLI，
+    //   把命令列整包交給 cli::run。沒有旗標時才落到下面的純位置參數 demo（N／名字）。
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        if (!args[i].empty() && args[i][0] == '-') return cli::run(args);
     }
 
     // args[0]＝執行檔；args[1..]＝參數。第一個參數當作累加上限 N（預設 10），第二個當名字。
