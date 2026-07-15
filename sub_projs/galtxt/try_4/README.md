@@ -53,7 +53,13 @@ try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／L
 - **串流回呼（最需試水的一段，已通）**：腳本函式包成 C++ `std::function<bool(std::string_view)>` 餵進 `ask`，在 `client.ask` 的 C++ 幀「之內」逐段回呼進 VM；回 true＝中止（對齊 try_3 極性）。**回呼的 longjmp 用 VM 保護呼叫關住**：Lua 走 `lua_pcall`、s7 走 `s7_call`（自帶 catch），腳本端錯誤不會 longjmp 穿過 C++ 幀。三條邊界路徑實測：逐段框印＋回完整答案、回 true 中途中止、回呼內 `error` 被接住轉成 VM 錯誤（Lua `pcall`／s7 `catch` 都捕得到、不炸）。
 - 示範：[scripts/demo_stream.scm](scripts/demo_stream.scm)／[demo_stream.lua](scripts/demo_stream.lua)。⚠ 取樣數值（temperature 等）離線 fixture 不回顯，**是否真穿到請求得靠真後端驗**（比照 try_3 gotcha）。
 
-**下一步（待接）＝三擴充**：工具呼叫／多媒體／結構化輸出比照綁上去（回傳型別較複雜：工具呼叫回 list、結構化回 struct，s7/Lua 側各要決定怎麼呈現）。
+**里程碑 2d ✓ 工具呼叫＋結構化輸出綁定（JSON→原生結果，兩 VM 皆通）**——擴充接上兩個：
+- **結構化輸出**：Lua `llm.ask_json{prompt=, schema=<JSON Schema 字串>, …}`／s7 `(llm-ask-json … :schema …)`。schema 以字串提供（腳本沒有 C++ struct 可反射，走 runtime schema，對照 try_1/try_2 的 schema 表精神）；回應由 C++ 解成**原生結構**回腳本。
+- **工具呼叫**：Lua `llm.ask_tools{prompt=, tools={{name=,description=,schema=}…}}`／s7 `(llm-ask-tools … :tools (list (list name desc schema) …))`。回模型要求的 `tool_calls`，其 `arguments`（模型產生的 JSON）也由 C++ 解成原生結構。
+- **★ 關鍵新件＝JSON→原生轉換器**（呼應「C++ 包辦 JSON、腳本薄」）：try_4 的 VM 沒 JSON parser，故 C++ 用 `glz::generic` 解 JSON 樹、遞迴建成 **Lua table** / **s7 alist**（物件→table/alist、陣列→list、整值保 integer、中文原樣）。Lua 側靠堆疊錨定天然免 GC 保護；**s7 側建構期 `s7_gc_on(sc,false)`**（中間節點只被 C 區域變數持有，GC 開著會被收）。實測：`name=星野 affection=42 lines[…]=…`、`get_weather(city=東京 unit=celsius)` 兩 VM 皆綠。
+- 示範：`scripts/demo_json.{scm,lua}`、`scripts/demo_tool.{scm,lua}`。⚠ 離線 fixture 回罐頭、不看送出的 schema/tools，是否真送對得靠真後端驗。
+
+**下一步（待接）＝多媒體**：`ask_vision`（帶文字＋圖片，回字串——不需 JSON→原生轉換，較單純）。之後可選：串流也接上三擴充、schema 由腳本側的表描述生成（把 try_1/try_2 的 schema 表接回來）。
 
 ## 建置／執行
 
@@ -78,8 +84,10 @@ build/try4.exe                       # 跑核心煙霧測試
 | `src/main.cpp` | try_4 進入點；雙 VM host 分派（`.scm`→s7、`.lua`→Lua）＋無參數時的煙霧測試 |
 | `src/bind.hpp` | 綁定介面：`bridge_ask`（共用引擎）＋`run_lua`／`run_s7`（各 VM host）|
 | `src/bind_bridge.cpp` | `bridge_ask`：唯一碰 `llm::Client` 之處（`noexcept`，收斂例外不漏進 VM 的 C 幀）|
-| `src/lua_bind.cpp` | Lua 綁定＋host：註冊 `llm.ask`、綁 `arg` 表、跑 `.lua`（含 longjmp 安全處理）|
-| `src/s7_bind.cpp` | s7 綁定＋host：定義 `llm-ask`、綁 `*argv*`、跑 `.scm`（含 longjmp 安全處理）|
+| `src/lua_bind.cpp` | Lua 綁定＋host：`llm.{ask,ask_json,ask_tools}`、JSON→table 轉換、綁 `arg` 表、跑 `.lua`（含 longjmp 安全）|
+| `src/s7_bind.cpp` | s7 綁定＋host：`llm-ask{,-json,-tools}`、JSON→alist 轉換、綁 `*argv*`、跑 `.scm`（含 longjmp 安全＋GC 保護）|
 | `src/lua_linit_clean.c` | Lua 標準庫初始化的原味覆蓋版（取代 try_2 含 cjson/http preload 的 linit.c）|
 | `scripts/demo.scm`／`demo.lua` | 薄層示範：一句 `llm-ask`／`llm.ask` 打離線 fixture（`*fixtures*`／`FIXTURES` 由 host 注入）|
 | `scripts/demo_stream.scm`／`demo_stream.lua` | 串流示範：table／`:keyword` 帶 `on_delta` 回呼，逐段框印＋回完整答案 |
+| `scripts/demo_json.scm`／`demo_json.lua` | 結構化輸出示範：給 JSON Schema、拿原生 table／alist |
+| `scripts/demo_tool.scm`／`demo_tool.lua` | 工具呼叫示範：給工具集、拿 `tool_calls`（arguments 為原生結構）|

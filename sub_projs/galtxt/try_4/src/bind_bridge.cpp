@@ -13,10 +13,22 @@
 #include "bind.hpp"
 
 #include <exception>
+#include <vector>
 
-#include "llm.hpp"   // 借編 try_3/src 的 llm::Client（from_env／ask／OnDelta）
+#include "llm.hpp"        // 借編 try_3/src 的 llm::Client（from_env／ask／OnDelta）
+#include "llm_tool.hpp"   // ask_tools／Tool／ToolCall
+#include "llm_json.hpp"   // ask_json_raw（結構化輸出的非模板入口）
 
 namespace vmbind {
+
+namespace {
+// 小工具：依 endpoint 覆寫 from_env 的 Client（擴充也共用「空＝走預設」的規則）。
+llm::Client make_client(const std::string& endpoint) {
+    llm::Client c = llm::from_env();
+    if (!endpoint.empty()) c.endpoint = endpoint;
+    return c;
+}
+}  // namespace
 
 bool bridge_ask(const AskOpts& o, std::string& out, std::string& err) noexcept {
     try {
@@ -32,6 +44,44 @@ bool bridge_ask(const AskOpts& o, std::string& out, std::string& err) noexcept {
         // 非串流：一次收完。兩種都回「完整組合後的答案」。
         out = o.stream ? c.ask(o.prompt, true, o.on_delta)
                        : c.ask(o.prompt);
+        return true;
+    } catch (const std::exception& e) {
+        err = e.what();
+        return false;
+    } catch (...) {
+        err = "未知錯誤（非 std::exception）";
+        return false;
+    }
+}
+
+bool bridge_ask_json(const std::string& prompt, const std::string& endpoint,
+                     const std::string& schema_name, const std::string& schema_json,
+                     std::string& out_json, std::string& err) noexcept {
+    try {
+        llm::Client c = make_client(endpoint);
+        // 非模板入口：schema 由腳本以字串給（不經 schema_of<T>），回被約束的 JSON 字串。
+        out_json = llm::ask_json_raw(c, prompt, schema_name, schema_json);
+        return true;
+    } catch (const std::exception& e) {
+        err = e.what();
+        return false;
+    } catch (...) {
+        err = "未知錯誤（非 std::exception）";
+        return false;
+    }
+}
+
+bool bridge_ask_tools(const std::string& prompt, const std::string& endpoint,
+                      const std::vector<ToolSpec>& tools,
+                      std::vector<ToolCallOut>& calls, std::string& err) noexcept {
+    try {
+        llm::Client c = make_client(endpoint);
+        std::vector<llm::Tool> llm_tools;   // ToolSpec（腳本側）→ llm::Tool（核心側）
+        llm_tools.reserve(tools.size());
+        for (const auto& t : tools)
+            llm_tools.push_back(llm::Tool{ t.name, t.description, t.schema });
+        for (const auto& tc : llm::ask_tools(c, prompt, llm_tools))
+            calls.push_back(ToolCallOut{ tc.name, tc.arguments });   // arguments 仍是 JSON 字串
         return true;
     } catch (const std::exception& e) {
         err = e.what();

@@ -38,6 +38,33 @@ struct AskOpts {
 // 回 true＝成功（答案在 out）；false＝失敗（訊息在 err）。noexcept：絕不讓例外漏到 VM 的 C 幀。
 bool bridge_ask(const AskOpts& opts, std::string& out, std::string& err) noexcept;
 
+// ── 擴充：工具呼叫／結構化輸出（都非串流；schema 由腳本以 JSON 字串提供＝資料驅動，
+//    對照 try_3 的 struct 反射真相源——腳本沒有 C++ struct 可反射，故走 runtime schema 字串）──
+
+// 一個工具規格（腳本提供）：函式名、給模型看的說明、參數 JSON Schema 字串。
+struct ToolSpec {
+    std::string name;
+    std::string description;
+    std::string schema;        // 參數的 JSON Schema（字串）
+};
+
+// 模型要求呼叫的一次工具：函式名＋arguments（模型產生的 JSON 字串，交綁定層轉原生）。
+struct ToolCallOut {
+    std::string name;
+    std::string arguments;     // JSON 字串
+};
+
+// 結構化輸出：把 schema_json 塞進 response_format 送出，回「被約束成符合 schema 的 JSON 字串」
+// （交綁定層解成原生 table／alist）。noexcept 同 bridge_ask。
+bool bridge_ask_json(const std::string& prompt, const std::string& endpoint,
+                     const std::string& schema_name, const std::string& schema_json,
+                     std::string& out_json, std::string& err) noexcept;
+
+// 工具呼叫：帶工具集發問，回模型要求的 tool_calls（arguments 仍是 JSON 字串）。noexcept。
+bool bridge_ask_tools(const std::string& prompt, const std::string& endpoint,
+                      const std::vector<ToolSpec>& tools,
+                      std::vector<ToolCallOut>& calls, std::string& err) noexcept;
+
 // 各 VM 的 host：args[0]=exe、args[1]=腳本路徑、args[2..]=腳本參數。回 process exit code。
 int run_lua(const std::vector<std::string>& args);
 int run_s7(const std::vector<std::string>& args);
