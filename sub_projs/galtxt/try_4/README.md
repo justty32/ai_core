@@ -1,0 +1,70 @@
+# galtxt try_4 — 三線整合（try_3 C++ 核心當底，s7＋Lua 薄層）
+
+← [SESSION-LOG](../SESSION-LOG.md)｜[INDEX](../INDEX.md)｜姊妹線 [try_1（s7）](../try_1/README.md)・[try_2（Lua）](../try_2/README.md)・[try_3（純 C++）](../try_3/README.md)
+
+**這條線把前三條合流**：try_1（s7 Scheme）、try_2（內嵌 Lua）、try_3（純 C++）各自證明了一塊，try_4 讓它們協作——
+
+- **C++ 核心扛重活**：傳輸（WinHTTP／libcurl）、glaze 編譯期反射（struct＝唯一真相源）、schema 生成、`ask` 及三擴充（工具／多媒體／結構化輸出）。這一整塊**直接借 try_3 的核心**。
+- **s7 與 Lua 只當薄薄一層**：吃 C++ 開出來的 function API，負責 REPL／同像性／改一行就跑的即時實驗手感。腳本不自己處理 JSON／HTTP／schema——那些留給 C++。
+
+各取所長：C++ 的靜態反射＋原生效能，配腳本的動態靈活。
+
+## ★ 核心思想：「用 try_3 當底」＝編譯層面，不是原地改 try_3
+
+try_4 **不複製** try_3 的 `src/`，而是在自己的 [CMakeLists.txt](CMakeLists.txt) 裡把 try_3 的核心 `.cpp`**借編**進來：
+
+```
+add_executable(try4
+    src/main.cpp                       # try_4 自己的殼
+    ../try_3/src/http.cpp              # ↓ 借 try_3 的核心（除 main/cli/demo）
+    ../try_3/src/llm.cpp
+    ../try_3/src/llm_tool.cpp
+    ../try_3/src/llm_media.cpp
+    ../try_3/src/llm_json.cpp)
+target_include_directories(try4 PRIVATE ../try_3/src)   # main 好 include 那些 header
+```
+
+為什麼這樣：
+
+- **try_3 保持純基準線**：它「純原生、不嵌任何 VM」的身分是三線對照的價值所在，一字不改別變異掉。
+- **核心不分叉**：改一次 `llm.cpp`，try_3 與 try_4 兩邊同時跟上（同一份檔），不會漂成兩套。
+- **借編靠 `""` include 的搜尋規則**：`../try_3/src/llm.cpp` 內 `#include "http.hpp"` 以「含入檔所在目錄」為第一搜尋路徑，自動命中 `../try_3/src/http.hpp`，不必為核心之間的相依另設 include 路徑；只有 try_4 自己的 `main.cpp` 要 include 那些 header，才靠上面那行 `target_include_directories`。
+
+try_4 只自備 try_3 沒有、或整合才需要的東西：新 `main`、s7／Lua 的嵌入初始化、把 C++ 函式綁成腳本 API、那兩層薄腳本。
+
+## 現況（開發中）
+
+**里程碑 1 ✓ 借編路徑已通（純 C++ 核心煙霧測試綠）**——`src/main.cpp` 用 try_4 自己的 main（非 try_3 的），include 借編的核心介面、呼叫 `llm::Client` 及三擴充，跑 try_3 的離線 fixture（`TRY4_TRY3_DIR` 由 CMake 注入指向 `../try_3`，連假回應都借、不另抄）。四種能力各驗一次全綠、中文無亂碼、`from_env()` 連結無誤。
+
+**里程碑 2a ✓ 兩個 VM 已嵌入並起動（三世界共存煙霧綠）**——`try4.exe` 現把 **C++ 核心＋Lua VM＋s7 VM** 連進同一顆 exe，各自 eval 得動、中文乾淨（`[lua] 6*7=42、Lua 說：你好`／`[s7] (+ 1 2 3)=6、s7 說：你好`）。VM 來源已定＝**vendored 比照前線**，借編手法：
+
+- **Lua 5.5**：借編 `../try_2/vendor/lua/*.c`，**只覆蓋它家改過的 `linit.c`**（try_2 在其中 preload 了 `cjson`/`http`；try_4 分工相反、JSON/HTTP 歸 C++，故換原味 linit＝[`src/lua_linit_clean.c`](src/lua_linit_clean.c)）。編成 static lib `lua_vendored`。
+- **s7**：借外部 s7-playground 的 `s7.c`（同 try_1，不在本 repo；`S7_DIR` 指定，未給就試平台候選）。編成 static lib `s7_vendored`（`WITH_C_LOADER=0`、不定義 WITH_MAIN；MinGW 借 try_1 的 `shim_include` 補 `<sys/utsname.h>`，僅 Windows 僅此 lib）。
+- **踩到的坑**：① `s7.h` 會 include `<complex.h>`（C++ 下有 `operator""i`），**不能包進 `extern "C"`**——Lua 標頭要包、s7.h 自帶守衛不可包，main.cpp 已分開。② SAC 這次光重連結不夠，得刪 `main.cpp.obj` 逼重編才放行。
+
+**下一步（待接）＝綁定層＋薄腳本**：把借編核心的 C++ 呼叫（`llm::Client::ask` 及三擴充）綁成腳本可呼叫的 API——s7 用 `s7_define_function`、Lua 用 `lua_pushcfunction`——再寫那兩層薄 `.scm`／`.lua`。
+
+- **⚠ 最需要試水的一段＝跨語言邊界的串流回呼**：把腳本函式包成 C++ `std::function<bool(std::string_view)>`（回 true＝中止，見 try_3 的極性約定）餵進 `ask`；`llm::Client` 的 `std::optional` 取樣欄位怎麼從腳本側設也要定型。
+
+## 建置／執行
+
+與 try_3 同一套 preset（[CMakePresets.json](CMakePresets.json)，`condition` 判平台，Windows 看 mingw、Linux 看 linux）：
+
+```
+cmake --preset mingw-debug          # 首次 configure（Linux 用 linux-debug）
+cmake --build --preset mingw-debug  # → build/try4.exe
+build/try4.exe                       # 跑核心煙霧測試
+```
+
+⚠ **Windows 新編 exe 偶被 SAC／Device Guard 擋**（`Permission denied`／被原則封鎖）——**重新連結一次即解**（雜湊變新就放行）：`rm -f build/try4.exe && cmake --build --preset mingw-debug`。已記 [common/gotchas](../workflows/common/gotchas.md)。
+
+## 檔案
+
+| 路徑 | 內容 |
+|------|------|
+| `CMakeLists.txt` | 借編 try_3 核心＋Lua/s7 各成 static lib＋編 try_4 的 main；glaze／winhttp(curl) 連結 |
+| `CMakePresets.json` | mingw／linux 各 debug/release（`condition` 判平台，複製自 try_3）|
+| `vcpkg.json` | 依賴 manifest（glaze）|
+| `.clangd` | clangd 讀 `build/compile_commands.json`；濾掉 P1689 modules 旗標 |
+| `src/main.cpp` | try_4 進入點；目前＝三世界共存煙霧測試（核心四能力＋Lua VM＋s7 VM 各驗一次）|
+| `src/lua_linit_clean.c` | Lua 標準庫初始化的原味覆蓋版（取代 try_2 含 cjson/http preload 的 linit.c）|
