@@ -121,7 +121,7 @@ llm 用一句話介紹你自己 --endpoint http://localhost:1234/v1/chat/complet
 ## 離線自測
 
 ```bash
-bash test/cli_smoke.sh    # 離線黑箱煙霧測試（17/17）：驅動 build/llm 打 file:// fixtures
+bash test/cli_smoke.sh    # 離線黑箱煙霧測試（19/19）：驅動 build/llm 打 file:// fixtures
 ```
 
 `--endpoint file://<絕對路徑>` 就是反射欄位，`cli_smoke.sh` 在執行期用 `$ROOT` 組出 `file://` 路徑餵進去，驗輸出正確（含串流／結構化）、config 三層來源、退出碼 0/1/2 三段分流。

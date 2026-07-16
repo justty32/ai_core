@@ -90,5 +90,5 @@
 
 ## 測試對應
 
-- **唯一測試**：`test/cli_smoke.sh`（離線黑箱，17/17）——**端到端**驅動 `build/llm` 打 `test/fixtures/{fake,fake_stream,fake_tool,fake_json}/` 的 `file://` 假回應。無單元測試檔，故任何一層改動都靠這支 smoke 從 CLI 端驗（見 [testing](../../testing.md)）。
+- **唯一測試**：`test/cli_smoke.sh`（離線黑箱，19/19）——**端到端**驅動 `build/llm` 打 `test/fixtures/{fake,fake_stream,fake_tool,fake_json}/` 的 `file://` 假回應。無單元測試檔，故任何一層改動都靠這支 smoke 從 CLI 端驗（見 [testing](../../testing.md)）。
 - **真後端行為**（錯誤路徑／reasoning `max_tokens`／schema `required`）離線驗不出，需使用者實跑（[WAIT_USER](../../../WAIT_USER.md)、[gotchas/backend](../gotchas/backend.md)）。

@@ -14,7 +14,7 @@
 | [`bindings/`](bindings/README.md) | **七語言綁定 + 常駐開發環境**（C ABI 下游消費端）：C／C++／Lua／Fennel／s7／Python／Common Lisp 各語言原始碼＋example（含 JSON 解析＋shell-out CLI）。[`install-dev.sh`](install-dev.sh) 一鍵裝成常駐前綴 `~/repo/dev`（include/lib/bin/pkgconfig）。API 對齊 galtxt/try_4（`ask`＋`on_delta`）；不進主建置 |
 | [`install-dev.sh`](install-dev.sh) / [`cmake/`](cmake/) | 把 cllm 裝成常駐可 include/link 前綴（`cmake --install`＋pkg-config `cllm.pc`）並搭好各語言環境；可重現 |
 | `archived/` | 舊 L0 封存（`git mv` 保史、內容一字未改）：`llm.{hpp,cpp}`／三擴充（`llm_tool`／`llm_media`／`llm_json`）／`llm_schema.hpp`／舊反射 `cli`／`demo`／舊 `main`。重構時融進 C ABI 實作、不再對外提供獨立函數 |
-| `test/` | `cli_smoke.sh`（離線黑箱煙霧測試，17/17）＋`fixtures/{fake,fake_stream,fake_tool,fake_json}/`（版控的假回應，`file://` 餵進 CLI）|
+| `test/` | `cli_smoke.sh`（離線黑箱煙霧測試，19/19）＋`fixtures/{fake,fake_stream,fake_tool,fake_json}/`（版控的假回應，`file://` 餵進 CLI）|
 | `CMakeLists.txt` / `CMakePresets.json` / `vcpkg.json` | 建置：兩交付物 target（`cllm` SHARED＝`libcllm.so`、`llm` executable）＋兩組 preset（`mingw-*`／`linux-*`）＋vcpkg manifest（glaze）|
 | `.clangd` / `.vscode/` | 編輯器整合（clangd 讀 `build/compile_commands.json`；`.vscode/` 為 Windows VSCode 專用）|
 | `build/` | CMake 產出（**gitignored**：`libcllm.so`／`llm`／`compile_commands.json`／`vcpkg_installed/`）|

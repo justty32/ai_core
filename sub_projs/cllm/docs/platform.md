@@ -48,11 +48,11 @@ int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes *
 cmake --preset linux-debug          # configure：glaze:x64-linux vcpkg 自動裝、約 1.4 秒；系統 CURL 直接命中
 cmake --build --preset linux-debug  # 7 個編譯單元全過（.so 5：cabi.cpp/cabi_request/response/stream＋http；
                                      #   CLI 2：cli.cpp＋main.cpp），link 出 build/libcllm.so ＋ build/llm
-bash test/cli_smoke.sh              # 離線黑箱煙霧測試 17/17 綠：輸出正確（含串流／結構化）、config 三層來源、
+bash test/cli_smoke.sh              # 離線黑箱煙霧測試 19/19 綠：輸出正確（含串流／結構化）、config 三層來源、
                                      #   退出碼 0/1/2 三段分流；中文輸出（繁中台詞）原樣 UTF-8、無亂碼
 ```
 
-從乾淨 `rm -rf build` 重跑一次 configure＋build＋煙霧測試，結果一致（`.so`＋`llm` 都在、17/17 綠）。`linux-release`（`-O2`）也建置成功。
+從乾淨 `rm -rf build` 重跑一次 configure＋build＋煙霧測試，結果一致（`.so`＋`llm` 都在、19/19 綠）。`linux-release`（`-O2`）也建置成功。
 
 **產物名**：`.so` 兩邊都叫 `libcllm.so`。`llm` 執行檔在 Linux **不加副檔名**（`build/llm`）、Windows 是 `build/llm.exe`——CLI 是 unix filter，Linux 側刻意讓它就叫 `llm`。（對照：舊 demo exe 曾為「指令跨平台一致」硬掛 `set_target_properties(... SUFFIX ".exe")` 讓 Linux 也叫 `try3.exe`；那顆 exe 連同該約定已封存，新的 `llm` target 不再沿用。）
 
