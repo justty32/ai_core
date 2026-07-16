@@ -1,0 +1,11 @@
+{
+"rules": [
+{
+"primary-output": "CMakeFiles/try4.dir/src/bind_bridge.cpp.o",
+"requires": [
+]
+}
+],
+"version": 0,
+"revision": 0
+}

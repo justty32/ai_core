@@ -1,9 +1,0 @@
-{
-  // galtxt try_2 — Lua IntelliSense 設定（擴充套件：Lua，發布者 sumneko，ID: sumneko.lua）
-  // 除錯用 Local Lua Debugger（見 launch.json）；本檔只管靜態分析／自動完成。
-  "Lua.runtime.version": "Lua 5.4",              // sumneko 尚無 5.5 選項，5.4 最接近（本專案 Lua 5.5）
-  "Lua.diagnostics.globals": ["arg"],            // host.exe/lua.exe 綁的命令列全域，避免被誤報 undefined-global
-  "Lua.workspace.checkThirdParty": false,
-  "Lua.telemetry.enable": false,
-  "files.encoding": "utf8"                        // 檔案存 UTF-8（中文 prompt/註解）
-}

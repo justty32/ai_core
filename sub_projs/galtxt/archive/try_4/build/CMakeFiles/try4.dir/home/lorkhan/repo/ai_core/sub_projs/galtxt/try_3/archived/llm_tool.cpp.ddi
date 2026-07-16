@@ -1,0 +1,11 @@
+{
+"rules": [
+{
+"primary-output": "CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o",
+"requires": [
+]
+}
+],
+"version": 0,
+"revision": 0
+}

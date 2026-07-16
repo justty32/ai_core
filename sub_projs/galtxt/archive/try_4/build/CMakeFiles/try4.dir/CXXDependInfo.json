@@ -1,0 +1,74 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "GNU",
+	"compiler-id" : "GNU",
+	"compiler-simulate-id" : "",
+	"config" : "Debug",
+	"cxx-modules" : {},
+	"database-info" : null,
+	"dir-cur-bld" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+	"dir-cur-src" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4",
+	"dir-top-bld" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+	"dir-top-src" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : 
+	[
+		"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src",
+		"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived",
+		"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua",
+		"/home/lorkhan/repo/pas/derived/s7-playground",
+		"vcpkg_installed/x64-linux/include"
+	],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir",
+	"sources" : 
+	{
+		"CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp"
+		},
+		"CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp"
+		},
+		"CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp"
+		},
+		"CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp"
+		},
+		"CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp"
+		},
+		"CMakeFiles/try4.dir/src/bind_bridge.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/bind_bridge.cpp"
+		},
+		"CMakeFiles/try4.dir/src/lua_bind.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/lua_bind.cpp"
+		},
+		"CMakeFiles/try4.dir/src/main.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/main.cpp"
+		},
+		"CMakeFiles/try4.dir/src/s7_bind.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/s7_bind.cpp"
+		}
+	}
+}

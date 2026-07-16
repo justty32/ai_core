@@ -1,1 +1,0 @@
-{"id":"chatcmpl-fake-lua","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"```lua\n{\n  name = \"星野\",\n  affection = 12,\n  lines = { \"哼，才不是為你做的呢！\", \"……笨蛋主人。\" },\n}\n```"},"finish_reason":"stop"}],"usage":{"prompt_tokens":30,"completion_tokens":40,"total_tokens":70}}

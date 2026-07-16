@@ -1,0 +1,23 @@
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-linux
+Multi-Arch: same
+Abi: 6eff6d2b3a8930f1b7f4ff15d04de25f50dbcf110ac7a9c6099a142d6739392c
+Status: install ok installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-linux
+Multi-Arch: same
+Abi: c6226e86f820797e569f804395a761da0ab9bcf00e7eb31354471467f87e4409
+Status: install ok installed
+
+Package: glaze
+Version: 7.4.0
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-linux
+Multi-Arch: same
+Abi: d25edc4ccb0aa48491ccf78a0895cd3cd2b62bcac120aa88ac61da07b3bece10
+Description: One of the fastest JSON libraries in the world. Glaze reads and writes from C++ memory, simplifying interfaces and offering incredible performance.
+Status: install ok installed
+

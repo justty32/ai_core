@@ -1,0 +1,5 @@
+/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir
+/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/s7_vendored.dir
+/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir
+/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/edit_cache.dir
+/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/rebuild_cache.dir

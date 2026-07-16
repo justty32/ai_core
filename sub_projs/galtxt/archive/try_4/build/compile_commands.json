@@ -1,0 +1,254 @@
+[
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lapi.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lapi.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lapi.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lapi.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lauxlib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lauxlib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lauxlib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lauxlib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lbaselib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lbaselib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lbaselib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lbaselib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcode.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcode.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcode.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcode.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcorolib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcorolib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcorolib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lcorolib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lctype.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lctype.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lctype.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lctype.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldblib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldblib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldblib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldblib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldebug.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldebug.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldebug.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldebug.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldo.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldo.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldo.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldo.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldump.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldump.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldump.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ldump.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lfunc.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lfunc.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lfunc.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lfunc.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lgc.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lgc.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lgc.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lgc.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/liolib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/liolib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/liolib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/liolib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/llex.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/llex.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/llex.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/llex.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmathlib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmathlib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmathlib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmathlib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmem.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmem.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmem.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lmem.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loadlib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loadlib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loadlib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loadlib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lobject.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lobject.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lobject.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lobject.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lopcodes.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lopcodes.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lopcodes.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lopcodes.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loslib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loslib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loslib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/loslib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lparser.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lparser.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lparser.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lparser.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstate.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstate.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstate.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstate.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstring.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstring.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstring.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstring.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstrlib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstrlib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstrlib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lstrlib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltable.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltable.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltable.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltable.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltablib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltablib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltablib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltablib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltm.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltm.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltm.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/ltm.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lundump.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lundump.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lundump.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lundump.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lutf8lib.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lutf8lib.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lutf8lib.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lutf8lib.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lvm.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lvm.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lvm.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lvm.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lzio.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lzio.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lzio.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_2/vendor/lua/lzio.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DLUA_USE_LINUX -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -g -std=gnu11 -o CMakeFiles/lua_vendored.dir/src/lua_linit_clean.c.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/lua_linit_clean.c",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/lua_linit_clean.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/lua_vendored.dir/src/lua_linit_clean.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/cc -DWITH_C_LOADER=0 -I/home/lorkhan/repo/pas/derived/s7-playground -g -std=gnu11 -o CMakeFiles/s7_vendored.dir/home/lorkhan/repo/pas/derived/s7-playground/s7.c.o -c /home/lorkhan/repo/pas/derived/s7-playground/s7.c",
+  "file": "/home/lorkhan/repo/pas/derived/s7-playground/s7.c",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/s7_vendored.dir/home/lorkhan/repo/pas/derived/s7-playground/s7.c.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/src/main.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/src/main.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/main.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/main.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/src/bind_bridge.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/src/bind_bridge.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/bind_bridge.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/bind_bridge.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/src/bind_bridge.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/src/lua_bind.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/src/lua_bind.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/lua_bind.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/lua_bind.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/src/lua_bind.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/src/s7_bind.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/src/s7_bind.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/s7_bind.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/src/s7_bind.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/src/s7_bind.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp.o"
+},
+{
+  "directory": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build",
+  "command": "/usr/bin/g++ -DTRY4_TRY3_DIR=\\\"/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3\\\" -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/src -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_3/archived -I/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/../try_2/vendor/lua -I/home/lorkhan/repo/pas/derived/s7-playground -isystem /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/vcpkg_installed/x64-linux/include -g -std=c++23 -g -O0 -Wno-missing-braces -fmodules-ts -fmodule-mapper=CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp.o.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp.o -c /home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp",
+  "file": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp",
+  "output": "/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_4/build/CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp.o"
+}
+]

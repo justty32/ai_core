@@ -1,8 +1,0 @@
-{
-  "name": "try-4",
-  "version-string": "0.0.1",
-  "description": "galtxt try_4 — 三線整合：try_3 純 C++ 核心當底，嵌 s7＋Lua 薄層",
-  "dependencies": [
-    "glaze"
-  ]
-}

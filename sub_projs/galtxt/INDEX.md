@@ -6,14 +6,14 @@
 
 ## Repo 佈局
 
-工作流骨架 + **已封存的玩具實驗場**（`archive/`）。LLM 接口探索三線（`try_1` s7／`try_2` Lua／`try_4` 三線整合）已**封存**、退出現役維護鏈（durable 細節在各自 README ＋ git log）；純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
+工作流骨架 ＋ **語料庫**（`corpus/`，進行中）。LLM 接口探索三線（`try_1` s7／`try_2` Lua／`try_4` 三線整合）已探索完、退出現役維護鏈並**從工作樹移除**（durable 細節留 git log ＋ [common/gotchas](workflows/common/gotchas.md)）；純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
 
 | 路徑 | 內容 |
 |------|------|
 | `AGENTS.md` / `CLAUDE.md` / `WORKFLOWS.md` / `INDEX.md` / `DEV-GUIDE.md` | 頂層路由 / 轉址 / 派發 / 地圖 / 結構整理參考 |
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
-| [`archive/`](archive/README.md) | **已封存**的玩具實驗場（退出現役維護鏈）：`try_1`（s7 Scheme 版 LLM 接口）／`try_2`（C++ 內嵌 Lua 5.5 版）／`try_4`（三線整合：借編 try_3 核心＋s7/Lua 薄層）。各自 README 保留 durable 細節。|
+| [`corpus/`](corpus/背景設定.md) | **語料庫**（進行中）：galgame 台詞語料——`背景設定.md` 世界種子＋6 個主題合併檔（台詞）＋`地點`/`人物`/`事件` 參考。|
 | ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 
 ## 開發工作流

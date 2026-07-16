@@ -1,0 +1,19 @@
+ninja_dyndep_version = 1.0
+build CMakeFiles/try4.dir/src/main.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/src/bind_bridge.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/src/lua_bind.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/src/s7_bind.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/src/http.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_tool.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_media.cpp.o: dyndep
+
+build CMakeFiles/try4.dir/home/lorkhan/repo/ai_core/sub_projs/galtxt/try_3/archived/llm_json.cpp.o: dyndep
+

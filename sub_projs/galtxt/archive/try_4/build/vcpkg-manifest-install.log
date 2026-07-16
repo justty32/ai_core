@@ -1,0 +1,13 @@
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+The following packages are already installed:
+    glaze:x64-linux@7.4.0
+  * vcpkg-cmake:x64-linux@2024-04-23
+  * vcpkg-cmake-config:x64-linux@2024-05-23
+glaze provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(glaze CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE glaze::glaze)
+
+All requested installations completed successfully in: 15.7 us

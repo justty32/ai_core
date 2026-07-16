@@ -1,5 +1,0 @@
-# 建置產物（CMake 全落 build/）
-build/
-*.exe
-*.o
-*.obj
