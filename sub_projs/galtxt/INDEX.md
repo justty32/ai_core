@@ -6,17 +6,15 @@
 
 ## Repo 佈局
 
-工作流骨架 + **玩具實驗場**（`try_1` / `try_2` 並存互為對照；`try_4` 合流線）。刻意不套框架、先跑通再往上抽。純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
+工作流骨架 + **已封存的玩具實驗場**（`archive/`）。LLM 接口探索三線（`try_1` s7／`try_2` Lua／`try_4` 三線整合）已**封存**、退出現役維護鏈（durable 細節在各自 README ＋ git log）；純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
 
 | 路徑 | 內容 |
 |------|------|
 | `AGENTS.md` / `CLAUDE.md` / `WORKFLOWS.md` / `INDEX.md` / `DEV-GUIDE.md` | 頂層路由 / 轉址 / 派發 / 地圖 / 結構整理參考 |
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
-| [`try_1/`](try_1/README.md) | 玩具實驗場①：**s7 Scheme** 版 LLM 接口（`llm.scm`＋schema 生成簽章＋argv host `s7host.exe`）|
-| [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`cli.lua`＋native `cjson.c` JSON codec；schema 生成 `--flag` CLI）|
+| [`archive/`](archive/README.md) | **已封存**的玩具實驗場（退出現役維護鏈）：`try_1`（s7 Scheme 版 LLM 接口）／`try_2`（C++ 內嵌 Lua 5.5 版）／`try_4`（三線整合：借編 try_3 核心＋s7/Lua 薄層）。各自 README 保留 durable 細節。|
 | ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
-| [`try_4/`](try_4/README.md) | 玩具實驗場④：**三線整合**——CMake **借編** try_3 核心 `.cpp`（try_3 一字不改保基準線），C++ 扛重活、s7＋Lua 當薄層吃 C++ function API（開發中：里程碑 1 核心煙霧測試綠；s7／Lua 嵌入待接）|
 
 ## 開發工作流
 
