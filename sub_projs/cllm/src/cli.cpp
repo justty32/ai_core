@@ -1,30 +1,24 @@
-// cli.cpp — cli.hpp 的實作：反射驅動旗標 ＋ config 檔 ＋ 走 cabi.hpp 發問的 unix filter。
+// cli.cpp — cli::run 的 orchestrator：把命令列組成一次 llm::abi::Client::ask 的發問。
 //
-// 流程：
-//   (1) client_flags()：反射 llm::abi::Client 的欄位 → 每欄一個 {旗標, 欄位名, 型別提示}。
-//       同一份餵「合法旗標表」與「--help 用法」——用法也是從 struct 生的（沿用舊 cli 作法）。
-//   (2) 解析 argv：固定旗標（--stream/--image/--schema/--config/--help）特判；反射旗標吃下一個
-//       argv 收進 raw_values[欄位名]；不帶 `-` 的當位置參數（拼成 prompt）。未知旗標／缺值即報錯。
-//   (3) 組 Client：Client{} 預設 → 載 config 檔（glaze 反射整份覆寫）→ 反射把 raw_values coerce 覆寫。
+// 流程（各步驟的機制拆在旁邊的 TU）：
+//   (1) 解析 argv：固定旗標（--stream/--image/--schema/--config/--help/--）特判；反射旗標
+//       （cli_flags::client_flags 的合法表）吃下一個 argv 收進 raw_values；其餘當位置參數拼 prompt。
+//   (2) 定 prompt：有位置參數就拼；否則且 stdin 非終端才整段讀（互動終端不讀，避免卡住）。
+//   (3) 組 Client：內建預設 → config 檔（cli_config::load_into）→ 反射把 raw_values coerce 覆寫。
 //   (4) 組 Request（prompt＋stream＋--schema 檔＋--image 檔）→ client.ask()，output 走 handlers。
 //
-// 為什麼配 idx++ 就能拿到欄位名：glz::for_each_field 用 fold-over-逗號運算子依序呼叫 callable
-//   （由左到右求值），故第 k 次收到的欄位對應 reflect::keys[k]（同舊 cli）。
+// 反射旗標的機制（型別分派／--help）在 cli_flags.*；config/檔案在 cli_config.*；共用常數在 cli_internal.hpp。
 
 #include "cli.hpp"
 
 #include <atomic>
 #include <csignal>
 #include <cstdio>
-#include <exception>
-#include <fstream>
 #include <iostream>
 #include <map>
-#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <vector>
 
 #ifdef _WIN32
@@ -33,21 +27,14 @@
 #include <unistd.h> // isatty / fileno
 #endif
 
-#include <glaze/glaze.hpp> // reflect<T>::keys / for_each_field / read_json
-#include "cabi.hpp"        // C++ 薄鏡像：llm::abi::Client / Request / Handlers / Context / Status
+#include <glaze/glaze.hpp>  // for_each_field / reflect（coerce 反射旗標進 Client）
+#include "cabi.hpp"         // 薄鏡像：Client / Request / Handlers / Context / Status
+#include "cli_config.hpp"   // read_file / mime_of / load_into
+#include "cli_flags.hpp"    // client_flags / print_usage / assign_field / kebab_flag
+#include "cli_internal.hpp" // kExit* 退出碼
 
 namespace cli {
 namespace {
-
-// ── 退出碼（見 cli.hpp 檔頭）─────────────────────────────────────────────────
-constexpr int kExitOk = 0;      // 成功
-constexpr int kExitUsage = 1;   // 用法錯：未知旗標／缺 prompt／檔案讀不到／config 壞
-constexpr int kExitRequest = 2; // 請求失敗：傳輸／後端
-constexpr int kExitCancel = 130;// SIGINT 取消（128+SIGINT）
-
-// ★ config 檔路徑的環境變數：只「指路」、不存設定值。前綴取執行檔名 llm、加 _CLI_ 收窄以避免撞
-//   泛用的 LLM_（見 cli.hpp）。要改名只動這一行＋default_config_path()。
-constexpr const char *kConfigEnvVar = "LLM_CLI_CONFIG";
 
 // stdin 是否為互動終端。是＝別阻塞去讀（沒給 prompt 就直接報錯，不卡住）；
 // 否（被導管/檔案餵入）＝照舊整段讀。
@@ -57,163 +44,6 @@ bool stdin_is_tty() {
 #else
   return isatty(fileno(stdin)) != 0;
 #endif
-}
-
-// ── 型別小工具：認 std::optional、取其 value_type（同舊 cli）───────────────────
-template <class> constexpr bool is_optional_v = false;
-template <class U> constexpr bool is_optional_v<std::optional<U>> = true;
-template <class T> struct value_type_of { using type = T; };
-template <class U> struct value_type_of<std::optional<U>> { using type = U; };
-template <class T> using value_type_of_t = typename value_type_of<T>::type;
-
-// 欄位名（api_key）→ 旗標（--api-key）：底線換連字號。
-std::string kebab_flag(std::string_view name) {
-  std::string s = "--";
-  for (char c : name)
-    s += (c == '_') ? '-' : c;
-  return s;
-}
-
-// 給 --help 的型別提示（從欄位型別反射出來，非手寫）。
-template <class T> const char *type_hint() {
-  using V = value_type_of_t<T>;
-  const bool opt = is_optional_v<T>;
-  if constexpr (std::is_same_v<V, std::string>)
-    return opt ? "字串（選填）" : "字串";
-  else if constexpr (std::is_same_v<V, float>)
-    return "小數";
-  else if constexpr (std::is_same_v<V, int>)
-    return "整數";
-  else if constexpr (std::is_same_v<V, long>)
-    return "整數（毫秒）";
-  else
-    return "?";
-}
-
-// 把命令列字串 raw 轉成純量 U（string/float/int/long），型別不合就 throw（帶旗標名）。
-template <class U> U parse_scalar(const std::string &flag, const std::string &raw) {
-  if constexpr (std::is_same_v<U, std::string>) {
-    return raw;
-  } else {
-    try {
-      if constexpr (std::is_same_v<U, float>)
-        return std::stof(raw);
-      else if constexpr (std::is_same_v<U, int>)
-        return std::stoi(raw);
-      else if constexpr (std::is_same_v<U, long>)
-        return std::stol(raw);
-    } catch (const std::exception &) {
-      throw std::runtime_error(flag + " 需要數值，得到：" + raw);
-    }
-    throw std::runtime_error(flag + "：不支援的欄位型別"); // 抵達不了；擺著讓非 void 分支完整
-  }
-}
-
-// 把 raw 塞進反射拿到的欄位 field（optional 就填其 value_type 並包起來）。
-template <class F> void assign_field(F &field, const std::string &flag, const std::string &raw) {
-  using T = std::remove_reference_t<F>;
-  if constexpr (is_optional_v<T>)
-    field = parse_scalar<value_type_of_t<T>>(flag, raw);
-  else
-    field = parse_scalar<T>(flag, raw);
-}
-
-// 一個反射出來的旗標：命令列旗標、對應的 Client 欄位名、型別提示。
-struct FlagInfo {
-  std::string flag, field, hint;
-};
-
-// ★ 反射 llm::abi::Client 的欄位 → 每欄一個 FlagInfo。空 probe 走 for_each_field，配 idx++
-//   對到 reflect::keys[idx]（順序有保證，見檔頭）。解析與 --help 都吃這份。
-std::vector<FlagInfo> client_flags() {
-  std::vector<FlagInfo> out;
-  llm::abi::Client probe{};
-  std::size_t idx = 0;
-  glz::for_each_field(probe, [&](auto &&f) {
-    using T = std::remove_cvref_t<decltype(f)>;
-    std::string_view name = glz::reflect<llm::abi::Client>::keys[idx++];
-    out.push_back(FlagInfo{kebab_flag(name), std::string(name), type_hint<T>()});
-  });
-  return out;
-}
-
-// 反射給不出「數值上下限／範例」這種語意——用一張以欄位名為鍵的標註表補上（--help 專用）。
-// 範圍是 OpenAI 慣例值（實際上下限依後端而定）；沒列到的欄位退回只印型別提示。
-const char *field_annot(std::string_view name) {
-  if (name == "temperature")       return "，範圍 0.0–2.0，例 0.7（越大越發散）";
-  if (name == "top_p")             return "，範圍 0.0–1.0，例 0.9（與 temperature 二擇一）";
-  if (name == "presence_penalty")  return "，範圍 -2.0–2.0，例 0.0";
-  if (name == "frequency_penalty") return "，範圍 -2.0–2.0，例 0.0";
-  if (name == "max_tokens")        return "，≥1，例 512（⚠ reasoning 模型建議不設）";
-  if (name == "seed")              return "，例 42（固定可重現）";
-  if (name == "timeout_ms")        return "，≥0（0＝不設限），例 120000";
-  if (name == "endpoint")          return "，例 http://localhost:1234/v1/chat/completions";
-  if (name == "model")             return "，例 local-model（雲端填真實 model id）";
-  if (name == "api_key")           return "，雲端 API 必給";
-  return "";
-}
-
-void print_usage() {
-  std::fprintf(stderr,
-      "用法：llm [旗標...] [prompt...]        # 旗標與 prompt 可交錯；沒給 prompt 且用導管餵入才讀 stdin\n"
-      "  範例：llm 用一句話介紹你自己\n"
-      "        llm --stream 你好                # 旗標在前，prompt 在後\n"
-      "        llm --stream -- --開頭的-prompt   # -- 之後一律當 prompt（unix 分隔符）\n"
-      "        echo \"數到五\" | llm --stream\n"
-      "\n固定旗標：\n"
-      "  --stream               串流逐段吐 stdout（布林，無值）\n"
-      "  --image <檔>           夾帶輸入媒體（可重複；mime 由副檔名推）\n"
-      "  --schema <檔>          JSON Schema 檔，要求結構化輸出\n"
-      "  --config <檔>          設定檔（扁平 JSON，對應下列連線／取樣欄位）\n"
-      "  --                     分隔符：其後所有參數一律當 prompt\n"
-      "  --help, -h             顯示本說明\n"
-      "\n連線／取樣旗標（由 llm::abi::Client 欄位反射生成，未給即不送、交後端默認）：\n");
-  for (const auto &fi : client_flags())
-    std::fprintf(stderr, "  %-22s %s%s\n", fi.flag.c_str(), fi.hint.c_str(),
-                 field_annot(fi.field));
-  std::fprintf(stderr,
-      "\n（數值範圍為 OpenAI 慣例，實際上下限依後端而定。）\n"
-      "\n設定來源（後者覆寫前者）：內建預設 → config 檔 → 命令列旗標。\n"
-      "config 檔路徑：--config <檔> ＞ 環境變數 %s ＞ ~/.config/llm/config.json。\n"
-      "  （env 只用來指定 config 檔路徑，不存任何設定值。）\n"
-      "離線自測：--endpoint file://<絕對路徑> 指向 test/fixtures 的假回應。\n",
-      kConfigEnvVar);
-}
-
-// 讀整個檔到 out（二進位）。失敗回 false 並把原因寫進 err。
-bool read_file(const std::string &path, std::string &out, std::string &err) {
-  std::ifstream f(path, std::ios::binary);
-  if (!f) {
-    err = "讀不到檔案：" + path;
-    return false;
-  }
-  std::ostringstream ss;
-  ss << f.rdbuf();
-  out = ss.str();
-  return true;
-}
-
-// 由副檔名猜 mime（夠 CLI 用；認不得就退成 octet-stream，交後端／data URI 自處理）。
-std::string mime_of(const std::string &path) {
-  auto dot = path.find_last_of('.');
-  std::string ext = (dot == std::string::npos) ? "" : path.substr(dot + 1);
-  for (char &c : ext)
-    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-  if (ext == "png") return "image/png";
-  if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
-  if (ext == "gif") return "image/gif";
-  if (ext == "webp") return "image/webp";
-  if (ext == "wav") return "audio/wav";
-  if (ext == "mp3") return "audio/mpeg";
-  return "application/octet-stream";
-}
-
-// ~/.config/llm/config.json 的家目錄探測（沒 HOME 就回空）。
-std::string default_config_path() {
-  const char *home = std::getenv("HOME");
-  if (!home || !*home)
-    return {};
-  return std::string(home) + "/.config/llm/config.json";
 }
 
 // ── SIGINT → 取消在途請求（POSIX）。handler 只做 atomic 存（見 Context::cancel），async-signal 安全。
@@ -230,10 +60,10 @@ extern "C" void on_sigint(int) {
 int run(const std::vector<std::string> &args) {
   // 合法反射旗標表：--flag → Client 欄位名
   std::map<std::string, std::string> flag_to_field;
-  for (const auto &fi : client_flags())
+  for (const auto &fi : flags::client_flags())
     flag_to_field[fi.flag] = fi.field;
 
-  // ── (2) 解析 argv（args[0]＝執行檔，從 1 起）──
+  // ── (1) 解析 argv（args[0]＝執行檔，從 1 起）──
   std::map<std::string, std::string> raw_values; // 反射欄位名 → 原始字串
   std::vector<std::string> prompt_parts;         // 位置參數 → 拼成 prompt
   std::vector<std::string> image_paths;          // --image（可重複）
@@ -256,7 +86,7 @@ int run(const std::vector<std::string> &args) {
     if (no_more_flags) { prompt_parts.push_back(a); continue; } // "--" 之後全是 prompt
     if (a == "--") { no_more_flags = true; continue; }          // 分隔符本身不進 prompt
     if (a == "--help" || a == "-h") {
-      print_usage();
+      flags::print_usage();
       return kExitOk;
     }
     if (a == "--stream") {
@@ -291,13 +121,13 @@ int run(const std::vector<std::string> &args) {
     }
     if (a.size() >= 1 && a[0] == '-' && a != "-") { // 「-」單獨當位置參數（stdin 慣例），其餘 - 開頭＝未知旗標
       std::fprintf(stderr, "未知旗標：%s\n", a.c_str());
-      print_usage();
+      flags::print_usage();
       return kExitUsage;
     }
     prompt_parts.push_back(a); // 位置參數
   }
 
-  // ── prompt：有位置參數就拼（空格）；否則從 stdin 整段讀 ──
+  // ── (2) prompt：有位置參數就拼（空格）；否則且 stdin 非終端才整段讀 ──
   std::string prompt;
   if (!prompt_parts.empty()) {
     for (std::size_t k = 0; k < prompt_parts.size(); ++k) {
@@ -315,40 +145,14 @@ int run(const std::vector<std::string> &args) {
   // 互動終端且沒給位置參數 → prompt 仍空 → 落到下方報「缺 prompt」，不卡在讀取。
   if (prompt.empty()) {
     std::fprintf(stderr, "缺少 prompt：給位置參數或從 stdin 餵入\n");
-    print_usage();
+    flags::print_usage();
     return kExitUsage;
   }
 
-  // ── (3) 組 Client：預設 → config 檔（glaze 反射整份覆寫）→ 反射旗標 coerce 覆寫 ──
+  // ── (3) 組 Client：內建預設 → config 檔 → 反射旗標 coerce 覆寫 ──
   llm::abi::Client client;
-
-  // config 檔路徑：--config ＞ env LLM_CLI_CONFIG ＞ ~/.config/llm/config.json。
-  //   前二者是「明指」→ 讀不到就報錯；後者是「探測」→ 不存在就靜默略過（但存在卻壞＝報錯）。
-  std::string cfg_path;
-  bool cfg_named = false; // 明指（flag/env）＝必須成功載入
-  if (has_config) {
-    cfg_path = config_path;
-    cfg_named = true;
-  } else if (const char *env = std::getenv(kConfigEnvVar); env && *env) {
-    cfg_path = env;
-    cfg_named = true;
-  } else {
-    cfg_path = default_config_path();
-  }
-  if (!cfg_path.empty()) {
-    std::string body, err;
-    if (read_file(cfg_path, body, err)) {
-      if (auto ec = glz::read_json(client, body)) {
-        std::fprintf(stderr, "config JSON 解析失敗（%s）：%s\n", cfg_path.c_str(),
-                     glz::format_error(ec, body).c_str());
-        return kExitUsage;
-      }
-    } else if (cfg_named) {
-      std::fprintf(stderr, "%s\n", err.c_str()); // 明指卻讀不到＝用法錯
-      return kExitUsage;
-    }
-    // 探測路徑讀不到＝沒設定檔，靜默用預設
-  }
+  if (int ec = config::load_into(client, has_config, config_path); ec != kExitOk)
+    return ec;
 
   // 反射把 raw_values coerce 進對應欄位（覆寫 config）
   bool coerce_err = false;
@@ -359,7 +163,7 @@ int run(const std::vector<std::string> &args) {
     if (it == raw_values.end())
       return;
     try {
-      assign_field(f, kebab_flag(key), it->second);
+      flags::assign_field(f, flags::kebab_flag(key), it->second);
     } catch (const std::exception &e) {
       std::fprintf(stderr, "%s\n", e.what());
       coerce_err = true;
@@ -374,7 +178,7 @@ int run(const std::vector<std::string> &args) {
   req.stream = stream;
   if (has_schema) {
     std::string body, err;
-    if (!read_file(schema_path, body, err)) {
+    if (!config::read_file(schema_path, body, err)) {
       std::fprintf(stderr, "%s\n", err.c_str());
       return kExitUsage;
     }
@@ -382,11 +186,11 @@ int run(const std::vector<std::string> &args) {
   }
   for (const auto &p : image_paths) {
     std::string bytes, err;
-    if (!read_file(p, bytes, err)) {
+    if (!config::read_file(p, bytes, err)) {
       std::fprintf(stderr, "%s\n", err.c_str());
       return kExitUsage;
     }
-    req.media.push_back(llm::abi::MediaIn{.url = "", .mime = mime_of(p), .bytes = std::move(bytes)});
+    req.media.push_back(llm::abi::MediaIn{.url = "", .mime = config::mime_of(p), .bytes = std::move(bytes)});
   }
 
   // ── 出口 handlers：文字吐 stdout（串流逐段即時 flush；非串流一次整段）；錯誤吐 stderr ──

@@ -9,21 +9,15 @@
 ## 分層總圖
 
 ```
-       純 C 客戶端                    llm CLI（unix filter）
-           │                                 │
-           ▼                                 ▼
-  ┌──────────────────┐            ┌────────────────────────┐
-  │ cabi.h（C ABI）  │◀───鏡像────│ cabi.hpp（llm::abi）    │
-  │  extern "C"      │            │  C++ 面，一比一對應      │
-  └────────┬─────────┘            └────────────────────────┘
-           │  唯一入口 llm_ask
-           ▼
-  ┌─────────────────────────────────────────────────────┐
-  │ C ABI 實作（cabi_impl，按關注點拆檔）                  │
-  │  cabi.cpp ─ request ─ response ─ stream               │
-  └────────────────────────┬────────────────────────────┘
-                           ▼
-                   http.{hpp,cpp}（傳輸管子：WinHTTP／libcurl／file://）
+純 C 客戶端 ─┐                          llm CLI（unix filter）─┐
+             ▼                                                ▼
+  cabi.h（C ABI, extern "C"） ◀──鏡像── cabi.hpp（llm::abi, C++ 面）
+             │ 唯一入口 llm_ask
+             ▼
+  C ABI 實作 cabi_impl（按關注點拆）：cabi.cpp／request／response／stream
+             │
+             ▼
+  http.{hpp,cpp}（傳輸管子：WinHTTP／libcurl／file://）
 ```
 
 ## 領域地圖（檔 → 職責 → 關鍵符號）
@@ -66,11 +60,15 @@
 
 ### ⑤ `llm` CLI（unix filter；消費 ③ 的 `llm::abi::Client`）
 
+CLI 依三關注點拆檔（cli.cpp 只當 orchestrator）：
+
 | 檔 | 職責 | 關鍵符號 |
 |---|---|---|
-| `src/cli.hpp` | CLI 介面（用法／退出碼見檔頭）| `cli::run(args) → int` |
-| `src/cli.cpp` | 反射生成旗標（`glz::for_each_field`＋`reflect::keys`）＋config 三層來源＋組 Request→ask；退出碼 0/1/2/130 | `cli::run`、`read_file`、`default_config_path`、`kConfigEnvVar`（`LLM_CLI_CONFIG`）、`kExit*` |
-| `src/main.cpp` | 進入點（Windows `wmain`＋`-municode` 取寬字元 argv；POSIX 標準 `main`）| `main`／`wmain` |
+| `src/cli.hpp`／`cli_internal.hpp` | 對外介面＋共用常數（退出碼／`kConfigEnvVar`）| `cli::run(args)→int`、`kExit*` |
+| `src/cli.cpp` | orchestrator：argv 解析→定 prompt（stdin/tty）→組 Client/Request→ask→退出碼＋SIGINT | `cli::run`、`stdin_is_tty` |
+| `src/cli_flags.{hpp,cpp}` | 反射 `Client` 欄位→旗標＋`--help`（型別分派模板在 `.hpp`）| `flags::client_flags`／`print_usage`／`assign_field`／`kebab_flag` |
+| `src/cli_config.{hpp,cpp}` | config 三層來源前二層＋檔案/mime 小工具 | `config::load_into`／`read_file`／`mime_of`／`default_config_path` |
+| `src/main.cpp` | 進入點（Windows `wmain`＋`-municode`；POSIX `main`）| `main`／`wmain` |
 
 ### ⑥ 已封存（`archived/`，`git mv` 保史、不在維護鏈）
 

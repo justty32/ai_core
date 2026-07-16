@@ -66,7 +66,11 @@ endif()
 #   src/cli.cpp   反射生成旗標＋config 檔＋組 Request→ask（用法／退出碼見 src/cli.hpp 檔頭）
 #   src/main.cpp  進入點（Windows wmain 取寬字元命令列；POSIX 標準 main）
 # glaze：cli.cpp 靠它反射 llm::abi::Client 的欄位生旗標、並反射解析 config JSON。
-add_executable(llm src/cli.cpp src/main.cpp)
+add_executable(llm
+    src/cli.cpp          # orchestrator：run() 串流程
+    src/cli_flags.cpp    # 反射 Client 欄位 → 旗標 + --help
+    src/cli_config.cpp   # config 檔三層來源 + 檔案/mime 小工具
+    src/main.cpp)        # 進入點（wmain/main）
 target_link_libraries(llm PRIVATE cllm glaze::glaze)
 target_compile_options(llm PRIVATE
     $<$<CONFIG:Debug>:-g;-O0>
