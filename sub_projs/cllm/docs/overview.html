@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cllm — 一頁看懂</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e2e6ec;
+    --in:#2563eb; --in-bg:#eaf1ff; --out:#16a34a; --out-bg:#e9f8ef;
+    --ctl:#d97706; --ctl-bg:#fdf1de; --err:#dc2626; --err-bg:#fdeaea;
+    --core:#7c3aed; --core-bg:#f1eafe; --code:#0f172a; --code-bg:#f1f3f7;
+    --shadow:0 1px 2px rgba(10,20,40,.06),0 4px 16px rgba(10,20,40,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1216; --panel:#171b21; --ink:#e6e9ef; --muted:#9aa4b2; --line:#272d36;
+      --in:#6ea0ff; --in-bg:#16243f; --out:#5cd68a; --out-bg:#13301f;
+      --ctl:#f0b25a; --ctl-bg:#3a2c14; --err:#f4776b; --err-bg:#3a1a1a;
+      --core:#b592f6; --core-bg:#251a3d; --code:#c9d3e0; --code-bg:#11151b;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1216; --panel:#171b21; --ink:#e6e9ef; --muted:#9aa4b2; --line:#272d36;
+    --in:#6ea0ff; --in-bg:#16243f; --out:#5cd68a; --out-bg:#13301f;
+    --ctl:#f0b25a; --ctl-bg:#3a2c14; --err:#f4776b; --err-bg:#3a1a1a;
+    --core:#b592f6; --core-bg:#251a3d; --code:#c9d3e0; --code-bg:#11151b;
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e2e6ec;
+    --in:#2563eb; --in-bg:#eaf1ff; --out:#16a34a; --out-bg:#e9f8ef;
+    --ctl:#d97706; --ctl-bg:#fdf1de; --err:#dc2626; --err-bg:#fdeaea;
+    --core:#7c3aed; --core-bg:#f1eafe; --code:#0f172a; --code-bg:#f1f3f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",system-ui,sans-serif;}
+  code,pre,.mono{font-family:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 20px 80px;}
+  header.hero{margin-bottom:28px;}
+  .hero h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em;}
+  .hero .tag{color:var(--muted);font-size:15px;margin:0;}
+  .hero .pill{display:inline-block;margin-top:14px;padding:6px 12px;border-radius:999px;
+    background:var(--core-bg);color:var(--core);font-size:13px;font-weight:600;border:1px solid var(--line);}
+  h2.sec{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin:38px 0 14px;display:flex;align-items:center;gap:8px;}
+  h2.sec::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--core);}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px;box-shadow:var(--shadow);}
+  /* layers */
+  .layers{display:flex;flex-direction:column;gap:8px;}
+  .layer{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;
+    padding:12px 16px;border-radius:11px;border:1px solid var(--line);background:var(--panel);}
+  .layer .lname{font-weight:700;font-size:14px;}
+  .layer .ldesc{color:var(--muted);font-size:13.5px;}
+  .layer .lname code{font-size:13px;background:var(--code-bg);padding:1px 6px;border-radius:5px;}
+  .l1{border-left:4px solid var(--out);} .l2{border-left:4px solid var(--in);}
+  .l3{border-left:4px solid var(--core);} .l4{border-left:4px solid var(--muted);}
+  .larrow{text-align:center;color:var(--muted);font-size:12px;margin:-2px 0;}
+  /* flow */
+  .flow{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;}
+  @media (max-width:720px){.flow{grid-template-columns:1fr;}}
+  .col h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;color:var(--muted);}
+  .chip{display:block;padding:9px 12px;border-radius:9px;margin-bottom:7px;font-size:13.5px;
+    border:1px solid var(--line);}
+  .chip b{font-family:ui-monospace,monospace;font-weight:700;}
+  .chip .d{color:var(--muted);font-size:12px;display:block;}
+  .chip.in{background:var(--in-bg);border-color:color-mix(in srgb,var(--in) 30%,transparent);}
+  .chip.in b{color:var(--in);}
+  .chip.out{background:var(--out-bg);border-color:color-mix(in srgb,var(--out) 30%,transparent);}
+  .chip.out b{color:var(--out);}
+  .chip.err{background:var(--err-bg);border-color:color-mix(in srgb,var(--err) 30%,transparent);}
+  .chip.err b{color:var(--err);}
+  .core-box{background:var(--core-bg);border:1.5px solid var(--core);border-radius:13px;
+    padding:18px 16px;text-align:center;min-width:150px;}
+  .core-box .fn{font-family:ui-monospace,monospace;font-weight:800;font-size:18px;color:var(--core);}
+  .core-box .sub{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.45;}
+  .core-box .ctx{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);
+    font-size:11.5px;color:var(--ctl);}
+  .core-box .ctx b{font-family:ui-monospace,monospace;}
+  /* phase */
+  .phase{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .ph{padding:6px 11px;border-radius:8px;font-size:12.5px;font-family:ui-monospace,monospace;
+    border:1px solid var(--line);background:var(--panel);}
+  .ph.mid{background:var(--in-bg);color:var(--in);border-color:transparent;}
+  .ph.ok{background:var(--out-bg);color:var(--out);border-color:transparent;font-weight:700;}
+  .ph.bad{background:var(--err-bg);color:var(--err);border-color:transparent;}
+  .ph.ctl{background:var(--ctl-bg);color:var(--ctl);border-color:transparent;}
+  .sep{color:var(--muted);padding:0 2px;}
+  /* table */
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .tbl th,.tbl td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .tbl th{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+  .tbl td code{background:var(--code-bg);padding:1px 6px;border-radius:5px;font-size:12.5px;}
+  .tbl tr:last-child td{border-bottom:none;}
+  .scroll{overflow-x:auto;}
+  /* router cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:15px 16px;transition:.15s;box-shadow:var(--shadow);}
+  a.card:hover{border-color:var(--core);transform:translateY(-2px);}
+  a.card .who{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  a.card .to{font-weight:700;font-size:14.5px;color:var(--core);}
+  a.card .to::after{content:" →";opacity:.6;}
+  a.card .fx{font-size:12.5px;color:var(--muted);margin-top:5px;}
+  /* gotchas */
+  .warns{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;}
+  .warn{background:var(--ctl-bg);border:1px solid color-mix(in srgb,var(--ctl) 30%,transparent);
+    border-radius:10px;padding:12px 14px;font-size:13px;}
+  .warn b{color:var(--ctl);}
+  .warn code{font-family:ui-monospace,monospace;font-size:12px;}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:12.5px;}
+  .toggle{position:fixed;top:16px;right:16px;background:var(--panel);border:1px solid var(--line);
+    color:var(--muted);border-radius:9px;padding:7px 11px;font-size:12px;cursor:pointer;box-shadow:var(--shadow);}
+</style>
+</head>
+<body>
+<button class="toggle" id="tg" aria-label="切換主題">◐ 主題</button>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>cllm — 一頁看懂</h1>
+    <p class="tag">把 LLM 收成一支對外 C ABI 共享庫 <code>libcllm.so</code>（<code>extern&nbsp;"C"</code>）＋建在其上的 <code>llm</code> unix filter CLI。純 C++23，CMake+Ninja+vcpkg+glaze。</p>
+    <span class="pill">核心心法：唯一入口 <code>llm_ask</code>，一次吃全部、輸出走 handlers</span>
+  </header>
+
+  <h2 class="sec">三層交付物（由上而下依賴）</h2>
+  <div class="panel">
+    <div class="layers">
+      <div class="layer l1"><div class="lname"><code>llm</code> CLI</div><div class="ldesc">unix filter：prompt 走位置參數／stdin，答案吐 stdout。旗標＝反射 <code>Client</code> 欄位自動生成。<b>不寫程式碼就能用。</b></div></div>
+      <div class="larrow">▼ 消費</div>
+      <div class="layer l2"><div class="lname"><code>cabi.hpp</code><br>C++ 薄鏡像</div><div class="ldesc"><code>llm::abi::Client / Request / Handlers</code>。header-only，把 C 的麻煩換成 <code>std::string</code>／<code>optional</code>／<code>function</code>。</div></div>
+      <div class="larrow">▼ 連結 libcllm</div>
+      <div class="layer l3"><div class="lname"><code>libcllm.so</code><br>對外 C ABI</div><div class="ldesc">扁平 struct ＋唯一入口 <code>llm_ask</code>。純 C 客戶端 <code>#include "cabi.h"</code>、<code>-lcllm</code> 即用。<b>穩定介面。</b></div></div>
+      <div class="larrow">▼ 內部地基</div>
+      <div class="layer l4"><div class="lname"><code>http</code> + glaze</div><div class="ldesc">native HTTP 傳輸（Win=WinHTTP／Linux=libcurl，共用 <code>file://</code> 離線 fixture）＋ glaze 編譯期反射 JSON↔struct。</div></div>
+    </div>
+  </div>
+
+  <h2 class="sec">llm_ask 的資料流</h2>
+  <div class="panel">
+    <div class="flow">
+      <div class="col">
+        <h3>輸入 · 六塊正交欄位</h3>
+        <span class="chip in"><b>prompt</b><span class="d">必填；沒給則讀 stdin（CLI）</span></span>
+        <span class="chip in"><b>schema</b><span class="d">結構化輸出（JSON Schema）</span></span>
+        <span class="chip in"><b>tools</b><span class="d">工具定義陣列</span></span>
+        <span class="chip in"><b>media</b><span class="d">輸入圖／音（url 或 bytes）</span></span>
+        <span class="chip in"><b>modalities</b><span class="d">想要的輸出模態＋參數</span></span>
+        <span class="chip in"><b>stream</b><span class="d">逐段 vs 整段</span></span>
+      </div>
+      <div class="core-box">
+        <div class="fn">llm_ask()</div>
+        <div class="sub">組成<b>一個</b> OpenAI 請求<br>阻塞；同 thread 回呼</div>
+        <div class="ctx">可選 <b>ctx</b>：另 thread<br><b>cancel()</b> / <b>phase()</b></div>
+      </div>
+      <div class="col">
+        <h3>輸出 · 四個 handler</h3>
+        <span class="chip out"><b>on_text</b><span class="d">文字：串流逐段／整段</span></span>
+        <span class="chip out"><b>on_tool</b><span class="d">工具呼叫（永遠拼完整才交）</span></span>
+        <span class="chip out"><b>on_media</b><span class="d">產出媒體（如 audio）</span></span>
+        <span class="chip err"><b>on_error</b><span class="d">傳輸／後端錯誤，一次</span></span>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:12.5px;margin:14px 0 0;text-align:center;">
+      為什麼是「一個入口」而非四個函數：舊路四條彼此不可組合（要「串流的結構化輸出＋帶圖」就沒轍）；整合搬進唯一一處 <code style="font-family:ui-monospace,monospace">build_body</code>，四塊隨意組合。
+    </p>
+  </div>
+
+  <h2 class="sec">phase 生命週期（ctx 可觀測）</h2>
+  <div class="panel">
+    <div class="phase">
+      <span class="ph">IDLE</span><span class="sep">→</span>
+      <span class="ph mid">WAIT</span><span class="sep">→</span>
+      <span class="ph mid">STREAM</span><span class="sep">→</span>
+      <span class="ph ok">DONE</span>
+      <span class="sep" style="margin:0 8px">｜或收在｜</span>
+      <span class="ph bad">ERROR</span>
+      <span class="ph ctl">CANCELLED</span>
+    </div>
+    <p style="color:var(--muted);font-size:12.5px;margin:12px 0 0;">
+      <code style="font-family:ui-monospace,monospace">CONNECT</code>／<code style="font-family:ui-monospace,monospace">UPLOAD</code> 本版未細分（保留給未來自持 curl）。回傳碼：<b style="color:var(--out)">LLM_OK=0</b>、<b style="color:var(--err)">LLM_ERROR=1</b>、<b style="color:var(--ctl)">LLM_CANCELLED=-1</b>（取消<0、出錯>0、成功0）。⚠ 取消：非串流阻塞、只在派送前檢查得到；串流每塊都檢查、能乾淨中止。
+    </p>
+  </div>
+
+  <h2 class="sec">同一個東西，三種面孔</h2>
+  <div class="panel scroll">
+    <table class="tbl">
+      <thead><tr><th>概念</th><th>C ABI（<code>cabi.h</code>）</th><th>C++（<code>llm::abi</code>）</th><th>CLI 旗標</th></tr></thead>
+      <tbody>
+        <tr><td>設定 + 入口</td><td><code>llm_client_t</code> + <code>llm_ask</code></td><td><code>Client</code> + <code>.ask()</code></td><td><code>--endpoint</code>…（反射生成）</td></tr>
+        <tr><td>取樣「有沒有設」</td><td><code>field_mask</code>（位旗標）</td><td><code>std::optional&lt;T&gt;</code></td><td>給了才送</td></tr>
+        <tr><td>請求輸入</td><td><code>llm_request_t</code></td><td><code>Request</code></td><td>位置參數 + 旗標</td></tr>
+        <tr><td>結構化輸出</td><td><code>llm_schema_t</code></td><td><code>Schema</code></td><td><code>--schema &lt;檔&gt;</code></td></tr>
+        <tr><td>輸入媒體</td><td><code>llm_media_in_t</code></td><td><code>MediaIn</code></td><td><code>--image &lt;檔&gt;</code>（可重複）</td></tr>
+        <tr><td>出口回呼</td><td><code>llm_handlers_t</code> + <code>void*&nbsp;user</code></td><td><code>Handlers</code>（<code>std::function</code>）</td><td>stdout / stderr</td></tr>
+        <tr><td>字串</td><td><code>const&nbsp;char*</code></td><td><code>std::string</code></td><td>—</td></tr>
+        <tr><td>非同步控制</td><td><code>llm_context_t</code> + <code>llm_cancel</code></td><td><code>Context</code> + <code>.cancel()</code></td><td><code>Ctrl-C</code> → exit 130</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec">我想… → 讀哪份</h2>
+  <div class="cards">
+    <a class="card" href="c-abi-reference.md"><div class="who">寫純 C，連 libcllm.so</div><div class="to">C ABI 參考</div><div class="fx">總覽＋<code>llm_ask</code>＋記憶體約定 · 再分輸入／輸出兩份</div></a>
+    <a class="card" href="cpp-mirror-reference.md"><div class="who">寫 C++，用 llm::abi</div><div class="to">C++ 鏡像參考</div><div class="fx">Client／Request／Handlers＋型別對照＋範例</div></a>
+    <a class="card" href="cli-manual.md"><div class="who">不寫程式碼，用 llm 指令</div><div class="to">CLI 手冊</div><div class="fx">旗標／config 三層來源／退出碼／接真後端</div></a>
+    <a class="card" href="../README.md"><div class="who">建置／跨平台／除錯</div><div class="to">README</div><div class="fx">敘事型技術入口（vcpkg／WinHTTP／nvim／VSCode）</div></a>
+  </div>
+
+  <h2 class="sec">最容易踩的坑</h2>
+  <div class="warns">
+    <div class="warn"><b>reasoning 模型別亂設 max_tokens</b>：思考鏈與答案共用同一份預算，設太小（如 600）→ <code>content</code> 變空字串。打 reasoning 時乾脆不設。</div>
+    <div class="warn"><b>schema 的 required 坑</b>：沒列進 <code>required</code> 的欄位就是選填，後端常漏吐。<code>required</code> 是寫 schema 那方的責任。</div>
+    <div class="warn"><b>model 欄位</b>：本地後端可省（用已載入模型）；<b>OpenAI 雲端必填</b>，且 <code>api_key</code> 必給。</div>
+    <div class="warn"><b>離線 fixture 從不回錯</b>：<code>file://</code> 永遠 200、欄位齊全。後端錯誤語意驗不出，得靠真後端。</div>
+  </div>
+
+  <footer>
+    這頁是 <code>src/cabi*.h</code>／<code>cabi*.hpp</code>／<code>cli.cpp</code> 的視覺導覽，非真相源——欄位語意以頭檔與各 .md 參考為準。改動 struct／旗標時記得同步。｜回 <a href="README.md" style="color:var(--core)">docs 索引</a>
+  </footer>
+
+</div>
+<script>
+  // 主題切換：跟隨系統，可手動覆寫（stamp data-theme 讓對應 CSS 勝出）
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('tg');
+    btn.addEventListener('click',function(){
+      var cur=root.getAttribute('data-theme');
+      var sysDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+      var next=cur? (cur==='dark'?'light':'dark') : (sysDark?'light':'dark');
+      root.setAttribute('data-theme',next);
+    });
+  })();
+</script>
+</body>
+</html>

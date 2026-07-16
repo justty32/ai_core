@@ -10,7 +10,7 @@
 |--------------|--------|-------------------|
 | 「我想開發／修改功能」「加旗標／加 vcpkg 依賴」「**修 bug**」 | **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md) |
 | 「跑測試／驗證」「建置」 | **testing** | [workflows/testing.md](workflows/testing.md) |
-| 「**記／查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
+| 「**記／查踩坑**」 | **gotchas** | [workflows/common/gotchas/README.md](workflows/common/gotchas/README.md) |
 | 「上手／查用法／C ABI／CLI／接真後端」 | **（非工作流）** | [README.md](README.md) |
 
 > 常見工作流菜單，**需要哪個才加哪列**（入口檔在第一次用到時才建，從單檔開始長——見 [DEV-GUIDE](DEV-GUIDE.md) 四級成長軌跡）：refactor（重構／拆檔）、investigation（調查／可行性）、spec（把 idea 討論成方案）、plan（把方案展開成計畫）、dev-env（開發環境、換機、打包出貨）。

@@ -22,4 +22,4 @@ bash test/cli_smoke.sh              # 離線黑箱煙霧測試（驅動 build/ll
 ## 測試分類
 
 - **離線黑箱（`test/cli_smoke.sh`，Claude 可跑）**：全走 `--endpoint file://` 指 `test/fixtures/{fake,fake_stream,fake_tool,fake_json}/chat/completions`，不連網——驗輸出正確（含串流／結構化）、config 三層來源、退出碼 0/1/2 三段分流、繁中 UTF-8 無亂碼。fixture 路徑執行期用 `$ROOT` 組，不綁機器路徑。
-- **真後端（使用者做）**：離線 fixture **只投影成功、從不投影失敗**——錯誤路徑／reasoning 模型 `max_tokens`／schema `required` 等只有打真的本機 LM Studio（或雲端 API）才驗得出。把 `llm` 的 `--endpoint` 指向真後端實跑；驗證需求記 [WAIT_USER](../WAIT_USER.md)，坑見 [common/gotchas](common/gotchas.md)「真後端」段。
+- **真後端（使用者做）**：離線 fixture **只投影成功、從不投影失敗**——錯誤路徑／reasoning 模型 `max_tokens`／schema `required` 等只有打真的本機 LM Studio（或雲端 API）才驗得出。把 `llm` 的 `--endpoint` 指向真後端實跑；驗證需求記 [WAIT_USER](../WAIT_USER.md)，坑見 [common/gotchas/backend](common/gotchas/backend.md)。

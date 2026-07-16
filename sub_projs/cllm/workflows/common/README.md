@@ -8,6 +8,6 @@
 |------|------|
 | [conventions.md](conventions.md) | **程式碼慣例 + 導航 index 維護鏈**（碰原始碼的工作流共用）|
 | [code-map/CODE_MAP.md](code-map/CODE_MAP.md) | **原始碼導航**：`src/` 每檔的領域／關鍵符號、常見任務先讀哪些檔、測試對應（修改前先讀）|
-| [gotchas.md](gotchas.md) | 跨工作流共通踩坑（glaze／匿名 namespace COMDAT／vcpkg／clangd／SAC／真後端）|
+| [gotchas/](gotchas/README.md) | 跨工作流共通踩坑（按主題分檔）：[build](gotchas/build.md)（glaze／COMDAT／vcpkg／clangd）／[windows](gotchas/windows.md)（碼頁／SAC）／[backend](gotchas/backend.md)（真後端／fixture）|
 
 > **archive**：過時的共通文檔封存進 `common/archive/`。本入口檔若膨脹，照[結構整理原則](../../DEV-GUIDE.md)拆。

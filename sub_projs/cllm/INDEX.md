@@ -9,6 +9,7 @@
 | 路徑 | 內容 |
 |------|------|
 | [`README.md`](README.md) | **技術入口／完整使用文檔**：建置、C ABI（`llm_ask` 統一入口）、`llm` CLI、vcpkg/glaze 依賴、native HTTP、接真後端、跨平台、VSCode/nvim 除錯 |
+| [`docs/`](docs/README.md) | **正式 API 參考 + 主題文檔**：API＝[C ABI](docs/c-abi-reference.md)（[輸入](docs/c-abi-input.md)／[輸出](docs/c-abi-output.md)）＋[C++ 鏡像](docs/cpp-mirror-reference.md)＋[CLI 手冊](docs/cli-manual.md)＋[`overview.html`](docs/overview.html) 視覺總覽；主題＝[setup](docs/setup.md)（建置/依賴）／[platform](docs/platform.md)（傳輸/跨平台）／[debugging](docs/debugging.md)（除錯/LSP）。真相源是頭檔，README 是敘事入口、docs 是 reference |
 | `src/` | 現行原始碼：`http.{hpp,cpp}`（native HTTP 傳輸）＋`cabi.h`＋`cabi_{client,request,response,context}.h`（對外 C ABI 傘檔＋功能頭）＋`cabi.cpp`／`cabi_request.cpp`／`cabi_response.cpp`／`cabi_stream.cpp`（C ABI 實作，按關注點拆檔）＋`cabi_internal.hpp`（實作共用內部頭）＋`cabi.hpp`＋`cabi_{context,request,response}.hpp`（C++ 薄鏡像 `llm::abi`）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）|
 | `archived/` | 舊 L0 封存（`git mv` 保史、內容一字未改）：`llm.{hpp,cpp}`／三擴充（`llm_tool`／`llm_media`／`llm_json`）／`llm_schema.hpp`／舊反射 `cli`／`demo`／舊 `main`。重構時融進 C ABI 實作、不再對外提供獨立函數 |
 | `test/` | `cli_smoke.sh`（離線黑箱煙霧測試，17/17）＋`fixtures/{fake,fake_stream,fake_tool,fake_json}/`（版控的假回應，`file://` 餵進 CLI）|
@@ -27,7 +28,7 @@
 
 | 路徑 | 內容 |
 |------|------|
-| [common/README](workflows/common/README.md) | 跨工作流共通：[CODE_MAP](workflows/common/code-map/CODE_MAP.md) 原始碼導航（修改前先讀）＋ [conventions](workflows/common/conventions.md) 程式碼慣例 ＋ [gotchas](workflows/common/gotchas.md) 踩坑（glaze／匿名 namespace COMDAT／vcpkg／clangd／SAC／真後端）|
+| [common/README](workflows/common/README.md) | 跨工作流共通：[CODE_MAP](workflows/common/code-map/CODE_MAP.md) 原始碼導航（修改前先讀）＋ [conventions](workflows/common/conventions.md) 程式碼慣例 ＋ [gotchas/](workflows/common/gotchas/README.md) 踩坑（按主題分：build／windows／backend）|
 
 ## 活狀態（只列還沒完成的）
 

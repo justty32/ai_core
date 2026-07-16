@@ -10,4 +10,4 @@
 
 ## 待使用者項
 
-- **真後端行為驗證需本機 LM Studio（或雲端 API）**：離線 `file://` fixture 只投影「成功」、從不投影「失敗」，錯誤路徑／reasoning 模型的 `max_tokens` 行為／schema `required` 等只有打真後端才驗得出（見 [gotchas](workflows/common/gotchas.md)「真後端」段）。要驗證新接口對真後端的行為，需使用者這邊掛好後端、把 `--endpoint` 指過去實跑。
+- **真後端行為驗證需本機 LM Studio（或雲端 API）**：離線 `file://` fixture 只投影「成功」、從不投影「失敗」，錯誤路徑／reasoning 模型的 `max_tokens` 行為／schema `required` 等只有打真後端才驗得出（見 [gotchas/backend](workflows/common/gotchas/backend.md)）。要驗證新接口對真後端的行為，需使用者這邊掛好後端、把 `--endpoint` 指過去實跑。

@@ -9,7 +9,7 @@
 - **struct＝唯一真相源**：請求／回應都是 struct，glaze 編譯期反射自動 JSON↔struct，**零 schema 表**。往上長接口（JSON 對映／CLI 旗標／型別解析／驗證）**全從欄位反射生成**，不搬動態語言那套 schema 表（那是缺靜態反射時的補償拐杖）。
 - **對外只露 C ABI**：內部 struct 是實作細節、**不外洩**；對外只有 `src/cabi.h` 那套 `extern "C"` 扁平結構＋唯一入口 `llm_ask`。C++ 面走薄鏡像 `cabi.hpp`（`llm::abi`）一比一對應、header-only。**反射糖（`ask<T>`／`make_tool<Args>`）刻意不放鏡像層**，留給使用者自己在上面包。
 - **實作按關注點拆檔**：`cabi.cpp`（出口＋`make_request`）／`cabi_request.cpp`（`build_body`＝唯一請求真相源）／`cabi_response.cpp`（解回應＋錯誤護欄）／`cabi_stream.cpp`（SSE）／`http.cpp`（傳輸管子）。分工表在 `src/cabi_internal.hpp`。
-- **★ 各 impl `.cpp` 用唯一具名子 namespace**（`req_impl`／`resp_impl`／`stream_impl`），**絕不用匿名 namespace**——否則 glaze 的 `quoted_key_v` COMDAT section 會跨 TU 撞名給錯 JSON 鍵（見 [gotchas](gotchas.md)）。
+- **★ 各 impl `.cpp` 用唯一具名子 namespace**（`req_impl`／`resp_impl`／`stream_impl`），**絕不用匿名 namespace**——否則 glaze 的 `quoted_key_v` COMDAT section 會跨 TU 撞名給錯 JSON 鍵（見 [gotchas/build](gotchas/build.md)）。
 - **介面/實作分離**：系統標頭（`windows.h`／`winhttp.h`／`curl.h`）**只在 `.cpp` include，不外洩到 header**——取用端不被 `windows.h` 汙染。
 - **跨平台碼以 `#ifdef _WIN32` 包乾淨**；Windows 走 WinHTTP＋`wmain`＋`-municode`，POSIX 走 libcurl＋標準 `main`。
 - **單檔行數門檻 300 行**（與 [DEV-GUIDE](../../DEV-GUIDE.md) 觸發 A 一致）：超標觸發檢視、按職責拆。
