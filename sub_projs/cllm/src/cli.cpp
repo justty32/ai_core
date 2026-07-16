@@ -27,6 +27,12 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef _WIN32
+#include <io.h> // _isatty / _fileno
+#else
+#include <unistd.h> // isatty / fileno
+#endif
+
 #include <glaze/glaze.hpp> // reflect<T>::keys / for_each_field / read_json
 #include "cabi.hpp"        // C++ 薄鏡像：llm::abi::Client / Request / Handlers / Context / Status
 
@@ -42,6 +48,16 @@ constexpr int kExitCancel = 130;// SIGINT 取消（128+SIGINT）
 // ★ config 檔路徑的環境變數：只「指路」、不存設定值。前綴取執行檔名 llm、加 _CLI_ 收窄以避免撞
 //   泛用的 LLM_（見 cli.hpp）。要改名只動這一行＋default_config_path()。
 constexpr const char *kConfigEnvVar = "LLM_CLI_CONFIG";
+
+// stdin 是否為互動終端。是＝別阻塞去讀（沒給 prompt 就直接報錯，不卡住）；
+// 否（被導管/檔案餵入）＝照舊整段讀。
+bool stdin_is_tty() {
+#ifdef _WIN32
+  return _isatty(_fileno(stdin)) != 0;
+#else
+  return isatty(fileno(stdin)) != 0;
+#endif
+}
 
 // ── 型別小工具：認 std::optional、取其 value_type（同舊 cli）───────────────────
 template <class> constexpr bool is_optional_v = false;
@@ -123,15 +139,17 @@ std::vector<FlagInfo> client_flags() {
 
 void print_usage() {
   std::fprintf(stderr,
-      "用法：llm [旗標...] [prompt...]        # 沒給 prompt 就從 stdin 整段讀\n"
+      "用法：llm [旗標...] [prompt...]        # 旗標與 prompt 可交錯；沒給 prompt 且用導管餵入才讀 stdin\n"
       "  範例：llm 用一句話介紹你自己\n"
+      "        llm --stream 你好                # 旗標在前，prompt 在後\n"
+      "        llm --stream -- --開頭的-prompt   # -- 之後一律當 prompt（unix 分隔符）\n"
       "        echo \"數到五\" | llm --stream\n"
-      "        llm 這張圖是什麼 --image ./cat.jpg\n"
       "\n固定旗標：\n"
       "  --stream               串流逐段吐 stdout（布林，無值）\n"
       "  --image <檔>           夾帶輸入媒體（可重複；mime 由副檔名推）\n"
       "  --schema <檔>          JSON Schema 檔，要求結構化輸出\n"
       "  --config <檔>          設定檔（扁平 JSON，對應下列連線／取樣欄位）\n"
+      "  --                     分隔符：其後所有參數一律當 prompt\n"
       "  --help, -h             顯示本說明\n"
       "\n連線／取樣旗標（由 llm::abi::Client 欄位反射生成，未給即不送、交後端默認）：\n");
   for (const auto &fi : client_flags())
@@ -203,6 +221,7 @@ int run(const std::vector<std::string> &args) {
   std::vector<std::string> image_paths;          // --image（可重複）
   std::string schema_path, config_path;
   bool has_schema = false, has_config = false, stream = false;
+  bool no_more_flags = false; // 見到 "--" 後，其餘 argv 一律當 prompt（unix 慣例）
 
   // 需要吃下一個 argv 的取值小工具：缺值即報錯。
   auto need_value = [&](std::size_t &i, const std::string &flag, std::string &dst) -> bool {
@@ -216,6 +235,8 @@ int run(const std::vector<std::string> &args) {
 
   for (std::size_t i = 1; i < args.size(); ++i) {
     const std::string &a = args[i];
+    if (no_more_flags) { prompt_parts.push_back(a); continue; } // "--" 之後全是 prompt
+    if (a == "--") { no_more_flags = true; continue; }          // 分隔符本身不進 prompt
     if (a == "--help" || a == "-h") {
       print_usage();
       return kExitOk;
@@ -266,13 +287,14 @@ int run(const std::vector<std::string> &args) {
         prompt += ' ';
       prompt += prompt_parts[k];
     }
-  } else {
+  } else if (!stdin_is_tty()) {
     std::ostringstream ss;
-    ss << std::cin.rdbuf();
+    ss << std::cin.rdbuf(); // 只在 stdin 被導管/檔案餵入時整段讀（互動終端不讀，避免卡住）
     prompt = ss.str();
     while (!prompt.empty() && (prompt.back() == '\n' || prompt.back() == '\r'))
       prompt.pop_back(); // 去掉尾端換行，避免多餘空白進 prompt
   }
+  // 互動終端且沒給位置參數 → prompt 仍空 → 落到下方報「缺 prompt」，不卡在讀取。
   if (prompt.empty()) {
     std::fprintf(stderr, "缺少 prompt：給位置參數或從 stdin 餵入\n");
     print_usage();

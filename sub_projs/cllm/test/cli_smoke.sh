@@ -62,6 +62,10 @@ expect_out "才不是為你回答的" "--stream 串流逐段" \
     -- "$BIN" 數到五 --stream --endpoint "$FX/fake_stream/chat/completions"
 expect_out "才不是為你回答的" "沒位置參數 → 讀 stdin" \
     -- sh -c "echo 從管線 | '$BIN' --endpoint '$FX/fake/chat/completions'"
+expect_out "才不是為你回答的" "旗標在前 + prompt（--stream 你好）" \
+    -- "$BIN" --stream --endpoint "$FX/fake_stream/chat/completions" 你好
+expect_out "才不是為你回答的" "-- 分隔符（旗標在前 -- prompt）" \
+    -- "$BIN" --stream --endpoint "$FX/fake_stream/chat/completions" -- 你好
 printf '{"type":"object"}' > "$TMP/sc.json"
 expect_out '"name":"星野"' "--schema 結構化輸出" \
     -- "$BIN" 給我角色 --schema "$TMP/sc.json" --endpoint "$FX/fake_json/chat/completions"
