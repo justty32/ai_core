@@ -45,6 +45,16 @@ mkdir -p "$PREFIX/lib/python" "$PREFIX/lib/lisp"
 cp "$HERE/bindings/python/llm.py" "$PREFIX/lib/python/llm.py"
 cp "$HERE/bindings/lisp/cllm.lisp" "$PREFIX/lib/lisp/cllm.lisp"
 
+echo "== [4b] Go 模組（cgo；整個 module 複製，含 example）=="
+if command -v go >/dev/null 2>&1; then
+  rm -rf "$PREFIX/lib/go/cllm"
+  mkdir -p "$PREFIX/lib/go"
+  cp -r "$HERE/bindings/go" "$PREFIX/lib/go/cllm"
+  ( cd "$PREFIX/lib/go/cllm" && go build ./... ) && echo "  → lib/go/cllm（go build 過）"
+else
+  echo "  ⚠ 無 go → 跳過（裝了 go 後重跑）"
+fi
+
 echo "== [5/7] examples + 離線 fixtures =="
 mkdir -p "$PREFIX/share/cllm/examples"
 rm -rf "$PREFIX/share/cllm/fixtures"
@@ -91,6 +101,7 @@ cat > "$PREFIX/share/cllm/README.md" <<'EOF'
 | s7   | `llm-s7 script.scm`（`llm-ask` 已內建）；JSON=jq（shell-out） | examples/s7 |
 | Python | `import llm`（純 ctypes）；JSON=stdlib `json` | examples/python |
 | Common Lisp | `(load (uiop:getenv "CLLM_LISP"))`→`cllm:ask`；JSON=`shasht`（quicklisp） | examples/lisp |
+| Go | `import "cllm"`（cgo；`replace cllm => lib/go/cllm`）；JSON=stdlib `encoding/json` | lib/go/cllm/example |
 | Shell | `llm 你好`（unix filter；`llm --help`）；JSON=`jq` | examples/shell |
 
 所有語言 API 一致：`ask(prompt[, endpoint], …)` + `on_delta` 串流回呼，回完整答案字串。
