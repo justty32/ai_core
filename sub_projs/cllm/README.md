@@ -10,11 +10,11 @@
 
 > 📖 本 README 是**敘事型技術入口**。要查逐型別／逐欄位／逐旗標的**正式 API 參考** → [`docs/`](docs/README.md)，或先看 [`docs/overview.html`](docs/overview.html) **一頁看懂**。
 
-> ★ **2026-07 收斂成兩個對外交付物**（早期那批可獨立呼叫的 L0 C++ 入口＋demo exe 已封存進 `archived/`）：
+> ★ **2026-07 收斂成兩個對外交付物**（早期那批可獨立呼叫的 L0 C++ 入口＋demo exe 已刪除，史蹟在 git log 的 `archived/`）：
 > 1. **`libcllm.so` —— 對外 C ABI**（`src/cabi.*`，`extern "C"`）：唯一入口 `llm_ask` 統一吃 prompt＋schema＋tools＋media＋modalities＋stream。純 C 客戶端 include `cabi.h`、連 `-lcllm` 即用；另附 header-only 的 C++ 薄鏡像 `cabi.hpp`（`llm::abi`）。
 > 2. **`llm` —— unix filter CLI**（`src/cli.*`＋`src/main.cpp`）：走 `cabi.hpp` 消費 `libcllm`。
 
-現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。`archived/`＝舊 L0（`git mv` 保史、內容一字未改，重構時融進 C ABI 實作、不再對外提供獨立函數）。
+現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。（舊 L0 `archived/` 已於 2026-07-16 刪除——內容早已融進 C ABI 實作，查史用 `git log -- sub_projs/cllm/archived`。）
 
 離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（19/19 綠）。
 

@@ -13,7 +13,6 @@
 | `src/` | 現行原始碼：`http.{hpp,cpp}`（native HTTP 傳輸）＋`cabi.h`＋`cabi_{client,request,response,context}.h`（對外 C ABI 傘檔＋功能頭）＋`cabi.cpp`／`cabi_request.cpp`／`cabi_response.cpp`／`cabi_stream.cpp`（C ABI 實作，按關注點拆檔）＋`cabi_internal.hpp`（實作共用內部頭）＋`cabi.hpp`＋`cabi_{context,request,response}.hpp`（C++ 薄鏡像 `llm::abi`）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）|
 | [`bindings/`](bindings/README.md) | **八語言綁定 + 常駐開發環境**（C ABI 下游消費端）：C／C++／Lua／Fennel／s7／Python／Common Lisp／Go 各語言原始碼＋example（含 JSON 解析＋shell-out CLI）；Lisp 家族另有 `image/`（產映像／CLI/lib／執行期修改）。[`install-dev.sh`](install-dev.sh) 一鍵裝成常駐前綴 `~/repo/dev`。API 對齊 galtxt/try_4（`ask`＋`on_delta`）；不進主建置 |
 | [`install-dev.sh`](install-dev.sh) / [`cmake/`](cmake/) | 把 cllm 裝成常駐可 include/link 前綴（`cmake --install`＋pkg-config `cllm.pc`）並搭好各語言環境；可重現 |
-| `archived/` | 舊 L0 封存（`git mv` 保史、內容一字未改）：`llm.{hpp,cpp}`／三擴充（`llm_tool`／`llm_media`／`llm_json`）／`llm_schema.hpp`／舊反射 `cli`／`demo`／舊 `main`。重構時融進 C ABI 實作、不再對外提供獨立函數 |
 | `test/` | `cli_smoke.sh`（離線黑箱煙霧測試，19/19）＋`fixtures/{fake,fake_stream,fake_tool,fake_json}/`（版控的假回應，`file://` 餵進 CLI）|
 | `CMakeLists.txt` / `CMakePresets.json` / `vcpkg.json` | 建置：兩交付物 target（`cllm` SHARED＝`libcllm.so`、`llm` executable）＋兩組 preset（`mingw-*`／`linux-*`）＋vcpkg manifest（glaze）|
 | `.clangd` / `.vscode/` | 編輯器整合（clangd 讀 `build/compile_commands.json`；`.vscode/` 為 Windows VSCode 專用）|
