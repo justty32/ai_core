@@ -1,5 +1,5 @@
 #pragma once
-// cabi_internal.hpp — galtxt try_3 C ABI 實作的「內部」共用宣告（非對外介面）。
+// cabi_internal.hpp — cllm C ABI 實作的「內部」共用宣告（非對外介面）。
 //
 // cabi.cpp 曾把 request／response／stream／orchestrator 全塞一檔（太肥）。拆成關注點各一檔後，
 // 彼此共用的東西集中在這裡：context 原子存取（inline）＋跨檔函數宣告。

@@ -6,7 +6,7 @@
 
 ## Repo 佈局
 
-工作流骨架 + 四個**玩具實驗場**（`try_1` / `try_2` / `try_3` 三條並存互為對照；`try_4` 把前三條合流）。刻意不套框架、先跑通再往上抽。
+工作流骨架 + **玩具實驗場**（`try_1` / `try_2` 並存互為對照；`try_4` 合流線）。刻意不套框架、先跑通再往上抽。純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
 
 | 路徑 | 內容 |
 |------|------|
@@ -15,7 +15,7 @@
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | [`try_1/`](try_1/README.md) | 玩具實驗場①：**s7 Scheme** 版 LLM 接口（`llm.scm`＋schema 生成簽章＋argv host `s7host.exe`）|
 | [`try_2/`](try_2/README.md) | 玩具實驗場②：**C++ 內嵌 Lua 5.5** 版（`host.exe`＋`llm.lua`/`cli.lua`＋native `cjson.c` JSON codec；schema 生成 `--flag` CLI）|
-| [`try_3/`](try_3/README.md) | 玩具實驗場③：**純 C++（傳統 header）**（CMake + Ninja + vcpkg + MinGW + VSCode/gdb；不嵌腳本 VM；早期用 C++20 modules，已回歸 header）。已長：glaze 反射 JSON、native HTTP（`http`）、**LLM 接口**（`llm::Client` ask＋工具呼叫`llm_tool`／多媒體`llm_media`／結構化輸出`llm_json`，全走「struct＝唯一真相源」反射、file:// 離線 fixture）＋反射生成 `--flag` CLI |
+| ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 | [`try_4/`](try_4/README.md) | 玩具實驗場④：**三線整合**——CMake **借編** try_3 核心 `.cpp`（try_3 一字不改保基準線），C++ 扛重活、s7＋Lua 當薄層吃 C++ function API（開發中：里程碑 1 核心煙霧測試綠；s7／Lua 嵌入待接）|
 
 ## 開發工作流

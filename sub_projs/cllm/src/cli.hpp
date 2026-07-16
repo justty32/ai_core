@@ -1,10 +1,10 @@
 #pragma once
-// cli.hpp — galtxt try_3 的 `llm` CLI（unix filter）介面。
+// cli.hpp — cllm 的 `llm` CLI（unix filter）介面。
 //
-// 這是對外 C ABI（libgaltxt.so）之上的第二個交付物：一支 unix 風格的過濾器執行檔。
+// 這是對外 C ABI（libcllm.so）之上的第二個交付物：一支 unix 風格的過濾器執行檔。
 //   · prompt 走位置參數；沒給就從 stdin 整段讀（`llm 你好` 或 `echo 你好 | llm`）。
 //   · 答案吐 stdout；診斷／錯誤吐 stderr；退出碼分三段（見下）。
-//   · 消費路徑＝C++ 薄鏡像 cabi.hpp（llm::abi::Client），連結 libgaltxt。
+//   · 消費路徑＝C++ 薄鏡像 cabi.hpp（llm::abi::Client），連結 libcllm。
 //
 // ★ 旗標分兩類：
 //   (1) 固定旗標（手寫）：--stream／--image <檔>（可重複）／--schema <檔>／--config <檔>／--help。

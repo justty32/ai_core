@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cli_smoke.sh — galtxt try_3 `llm` CLI 的離線黑箱煙霧測試。
+# cli_smoke.sh — cllm `llm` CLI 的離線黑箱煙霧測試。
 #
 # 為什麼是 shell 腳本：CLI 是個執行檔，最誠實的測法就是「真的去跑它、驗 stdout／退出碼」，
 #   而非在同一個行程內單元測。全程走 file:// 假回應（test/fixtures/），不連網、不吃真後端。

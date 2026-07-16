@@ -1,4 +1,4 @@
-// http.hpp — galtxt try_3：native（C++）HTTP 傳輸的介面（傳統 header）。
+// http.hpp — cllm：native（C++）HTTP 傳輸的介面（傳統 header）。
 //
 // 對照 try_2 的 native/http.c（C＋Lua 綁定），這裡是**純 C++**——拋開 Lua C API，
 // API 縫乾淨：struct 進出、傳輸失敗 throw std::runtime_error、串流回呼用 std::function。

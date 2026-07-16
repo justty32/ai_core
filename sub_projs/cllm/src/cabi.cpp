@@ -1,6 +1,6 @@
 // cabi.cpp — C ABI 出口（llm_ask／llm_cancel／llm_phase）＋連線設定→http::Request。
 //
-// 這是整個 galtxt try_3 的對外面：對外就一支 llm_ask，一次吃 prompt＋schema＋tools＋media＋
+// 這是整個 cllm 的對外面：對外就一支 llm_ask，一次吃 prompt＋schema＋tools＋media＋
 // modalities＋stream，把四種能力併進「同一包 OpenAI 請求 JSON」再送出。組裝／解析／串流的重活
 // 分在 cabi_request.cpp／cabi_response.cpp／cabi_stream.cpp（見 cabi_internal.hpp 的分工表），
 // 本檔只留「膠水＋出口」：make_request（連線設定→http::Request）與三個 extern "C" 函數。

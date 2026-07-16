@@ -1,5 +1,5 @@
 {
-  // galtxt try_3 — 建議安裝的 VSCode 擴充（開這個資料夾時 VSCode 會提示安裝）。
+  // cllm — 建議安裝的 VSCode 擴充（開這個資料夾時 VSCode 會提示安裝）。
   // 換機器（Windows ⇄ Linux）時最容易漏的就是這個——沒裝 cpptools 就沒有 cppdbg，
   // F5 直接跳「找不到偵錯類型」，看起來像設定壞了。
   "recommendations": [

@@ -81,7 +81,7 @@ int do_http(const http::Request& req, Sink& sink) {
     if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &uc))
         throw std::runtime_error("http: URL 解析失敗：" + req.url);
 
-    HINTERNET hS = WinHttpOpen(L"galtxt-try3/0.1", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+    HINTERNET hS = WinHttpOpen(L"cllm/0.1", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hS) throw std::runtime_error("http: WinHttpOpen 失敗");
     if (req.timeout_ms > 0)

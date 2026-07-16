@@ -1,5 +1,5 @@
 {
-  // galtxt try_3 — C++ 除錯設定（gdb / MinGW）
+  // cllm — C++ 除錯設定（gdb / MinGW）
   // 需先裝擴充套件：C/C++（發布者 Microsoft，ID: ms-vscode.cpptools）——提供 cppdbg 除錯器。
   //   （CMake Tools ms-vscode.cmake-tools 選裝：裝了能在側欄切 preset／建置，不裝也能用本設定。）
   //

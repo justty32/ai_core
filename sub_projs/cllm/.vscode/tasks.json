@@ -1,5 +1,5 @@
 {
-  // galtxt try_3 — 建置任務（Ctrl+Shift+B 跑預設 build；Terminal > Run Task 選其他）
+  // cllm — 建置任務（Ctrl+Shift+B 跑預設 build；Terminal > Run Task 選其他）
   // 全走 cmake CLI，讀 CMakePresets.json；工具鏈路徑已在 preset 釘死，不需 PATH 有 mingw。
   //
   // ★ 跨平台：preset 名稱兩台機器不同（Windows＝`mingw-*`、Linux＝`linux-*`，見 CMakePresets.json

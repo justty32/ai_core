@@ -1,6 +1,6 @@
 #ifndef GALTXT_CABI_H
 #define GALTXT_CABI_H
-/* cabi.h — galtxt try_3 對外 C ABI 的「總覽傘檔」。純 C 可 include。
+/* cabi.h — cllm 對外 C ABI 的「總覽傘檔」。純 C 可 include。
  *
  * 按功能拆成數個子檔，這裡全數 include——客戶端只要 #include "cabi.h" 就拿到整個 ABI：
  *   · cabi_client.h    連線 + 取樣設定（llm_client_t、LLM_FIELD_*）
@@ -10,7 +10,7 @@
  * 本傘檔自身再補上跨這些型的入口：llm_status_t ＋ llm_ask。
  *
  * 落地說明：各子檔已是標準 C 的 `extern "C"` 守衛（C 沒有 namespace，符號不能被 C++ mangle 才能
- * 跨語言連結），size_t 走 <stddef.h>。設計取捨與逐條判斷見同資料夾的 advice.hpp（設計提案原稿）。
+ * 跨語言連結），size_t 走 <stddef.h>。
  * 唯一入口 llm_ask 一次吃 prompt＋schema＋tools＋media＋modalities＋stream，出口走 handlers；
  * 實作在 cabi_*.cpp（C++，用 glaze 組請求、接 http 傳輸管子）。
  *

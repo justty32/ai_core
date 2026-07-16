@@ -1,5 +1,5 @@
 {
-  // galtxt try_3 — VSCode 工作區設定（C++ / CMake / UTF-8）
+  // cllm — VSCode 工作區設定（C++ / CMake / UTF-8）
   // 除錯用 C/C++ 擴充（cppdbg，見 launch.json）；IntelliSense 見 c_cpp_properties.json。
   //
   // ⚠ 這裡**刻意不放** `C_Cpp.default.compilerPath` / `C_Cpp.default.intelliSenseMode`：

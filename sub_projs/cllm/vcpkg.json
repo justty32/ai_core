@@ -1,0 +1,8 @@
+{
+  "name": "cllm",
+  "version-string": "0.0.1",
+  "description": "cllm — 對外 C ABI libcllm.so ＋ llm unix filter CLI（純 C++、glaze 反射）",
+  "dependencies": [
+    "glaze"
+  ]
+}

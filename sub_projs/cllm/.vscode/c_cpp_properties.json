@@ -1,5 +1,5 @@
 {
-  // galtxt try_3 — IntelliSense 設定（C/C++ 擴充 ms-vscode.cpptools）
+  // cllm — IntelliSense 設定（C/C++ 擴充 ms-vscode.cpptools）
   //
   // 真正的編譯旗標一律來自 `build/compile_commands.json`（CMake 匯出，見 CMakeLists 的
   // CMAKE_EXPORT_COMPILE_COMMANDS）——底下的 compilerPath/standard 只是「資料庫沒涵蓋到的檔案」

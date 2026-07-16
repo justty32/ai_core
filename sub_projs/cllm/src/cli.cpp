@@ -282,7 +282,7 @@ int run(const std::vector<std::string> &args) {
   // ── (3) 組 Client：預設 → config 檔（glaze 反射整份覆寫）→ 反射旗標 coerce 覆寫 ──
   llm::abi::Client client;
 
-  // config 檔路徑：--config ＞ env GALTXT_LLM_CONFIG ＞ ~/.config/galtxt/llm.json。
+  // config 檔路徑：--config ＞ env LLM_CLI_CONFIG ＞ ~/.config/llm/config.json。
   //   前二者是「明指」→ 讀不到就報錯；後者是「探測」→ 不存在就靜默略過（但存在卻壞＝報錯）。
   std::string cfg_path;
   bool cfg_named = false; // 明指（flag/env）＝必須成功載入

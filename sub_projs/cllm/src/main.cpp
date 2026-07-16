@@ -1,4 +1,4 @@
-// main.cpp — galtxt try_3 的 `llm` CLI 進入點。
+// main.cpp — cllm 的 `llm` CLI 進入點。
 //
 // 只做兩件事：把命令列湊成 UTF-8 的 std::vector<std::string>、交給 cli::run。
 //
