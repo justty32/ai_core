@@ -86,7 +86,7 @@
 | 動後端錯誤護欄 | `cabi_response.cpp` 的 `guard_backend_error`（＋ `cabi.cpp`／`cabi_stream.cpp` 的攔截點）|
 | 加 CLI 固定旗標 | `cli.cpp`（反射旗標自動、固定旗標手寫）|
 | 改傳輸/加平台 | `http.cpp`（`#ifdef` 分支）；介面動到才碰 `http.hpp` |
-| 動對外 C 結構/簽章 | **先全域 grep 受影響的 CLI／客戶端**（鐵律 3），改 `cabi_*.h`＋鏡像 `cabi_*.hpp` 同 commit |
+| 動對外 C 結構/簽章 | **先全域 grep 受影響的 CLI／客戶端／`bindings/`（lua・s7）**（鐵律 3），改 `cabi_*.h`＋鏡像 `cabi_*.hpp` 同 commit |
 
 ## 測試對應
 

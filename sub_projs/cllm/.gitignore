@@ -3,3 +3,8 @@ build/
 *.exe
 *.o
 *.obj
+
+# bindings 的建置產物（build.sh 就地產出，不進版控）
+bindings/lua/llm.so
+bindings/s7/llm-s7
+*.so
