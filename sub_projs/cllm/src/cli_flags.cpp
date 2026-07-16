@@ -52,16 +52,22 @@ const char *field_annot(std::string_view name) {
 
 void print_usage() {
   std::fprintf(stderr,
-      "用法：llm [旗標...] [prompt...]        # 旗標與 prompt 可交錯；沒給 prompt 且用導管餵入才讀 stdin\n"
+      "用法：llm [旗標...] [prompt...]        # 旗標與 prompt 可交錯\n"
+      "  prompt 來源：位置參數＋導管 stdin 可合體——「-」＝stdin 插入點；沒寫「-」而兩者都有\n"
+      "  ＝prompt＋空行＋stdin（指令在前、資料在後）；只給其一＝用那一個。\n"
       "  範例：llm 用一句話介紹你自己\n"
-      "        llm --stream 你好                # 旗標在前，prompt 在後\n"
-      "        llm --stream -- --開頭的-prompt   # -- 之後一律當 prompt（unix 分隔符）\n"
-      "        echo \"數到五\" | llm --stream\n"
+      "        cat report.txt | llm 總結這份       # prompt＋stdin 合體\n"
+      "        git diff | llm 把 - 寫成 commit 訊息 # 「-」明指 stdin 插入點\n"
+      "        llm --stream -- --開頭的-prompt      # -- 之後一律當 prompt（unix 分隔符）\n"
       "\n固定旗標：\n"
       "  --stream               串流逐段吐 stdout（布林，無值）\n"
       "  --image <檔>           夾帶輸入媒體（可重複；mime 由副檔名推）\n"
       "  --schema <檔>          JSON Schema 檔，要求結構化輸出\n"
       "  --config <檔>          設定檔（扁平 JSON，對應下列連線／取樣欄位）\n"
+      "  --tool <檔>            工具定義檔（可重複）：{\"name\",\"description\",\"parameters\"}；\n"
+      "                         模型的 tool_calls 以一行一則 JSON 吐 stdout（jq 友善）\n"
+      "  --modality <名[=檔]>   要求輸出模態（可重複）：如 audio 或 audio=cfg.json（模態參數 JSON）\n"
+      "  --media-out <目錄>     產出媒體落檔目錄（llm-media-N.<ext>，路徑逐行吐 stdout）；沒給＝丟棄\n"
       "  --                     分隔符：其後所有參數一律當 prompt\n"
       "  --help, -h             顯示本說明\n"
       "\n連線／取樣旗標（由 llm::abi::Client 欄位反射生成，未給即不送、交後端默認）：\n");

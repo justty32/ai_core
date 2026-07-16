@@ -7,6 +7,8 @@
 
 namespace llm::abi {
 class Client;
+struct ToolDef;
+struct MediaOut;
 } // namespace llm::abi
 
 namespace cli::config {
@@ -16,6 +18,18 @@ bool read_file(const std::string &path, std::string &out, std::string &err);
 
 // 由副檔名猜 mime（夠 CLI 用；認不得就退成 octet-stream，交後端／data URI 自處理）。
 std::string mime_of(const std::string &path);
+
+// mime_of 的反向：由 mime 猜副檔名（產出媒體落檔用；認不得退成 bin）。
+std::string ext_of(const std::string &mime);
+
+// 讀 --tool 的工具定義檔（JSON：{"name","description","parameters"}；description 選填、
+// 容忍多餘鍵）進 out。失敗回 false 並把原因寫進 err。
+bool load_tool_def(const std::string &path, llm::abi::ToolDef &out, std::string &err);
+
+// 把產出媒體落檔到 dir/llm-media-<n>.<ext_of(mime)>（二進位、覆寫同名）。
+// 成功把完整路徑寫進 path_out；失敗回 false 並把原因寫進 err。
+bool save_media(const std::string &dir, int n, const llm::abi::MediaOut &media,
+                std::string &path_out, std::string &err);
 
 // ~/.config/llm/config.json 的家目錄探測（沒 HOME 就回空）。
 std::string default_config_path();

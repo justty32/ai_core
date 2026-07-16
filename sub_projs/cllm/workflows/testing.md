@@ -14,7 +14,7 @@ cmake --build --preset linux-debug  # 建置 → build/libcllm.so ＋ build/llm
 bash test/cli_smoke.sh              # 離線黑箱煙霧測試（驅動 build/llm 打 file:// fixtures）
 ```
 
-- **快速驗證（Claude 自己跑、鐵律要求的那套）**：`cmake --build --preset linux-debug && bash test/cli_smoke.sh`（**19/19 綠**）。
+- **快速驗證（Claude 自己跑、鐵律要求的那套）**：`cmake --build --preset linux-debug && bash test/cli_smoke.sh`（**31/31 綠**）。
 - **完整驗證（乾淨重建）**：`rm -rf build && cmake --preset linux-debug && cmake --build --preset linux-debug && bash test/cli_smoke.sh`。
 - **Windows**：把 `linux-` 換成 `mingw-`；產物為 `build/llm.exe`（`.so` 兩邊都叫 `libcllm.so`）。
 - **Release**：把 `-debug` 換成 `-release`（`-O2`）。

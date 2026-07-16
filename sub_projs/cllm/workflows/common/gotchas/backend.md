@@ -14,4 +14,4 @@
 
 ## 測試資料
 
-- **離線 fixture 別被 `.gitignore` 蓋掉＝測試在新 clone 上根本跑不了**：fixture 是**測試資料、不是 build 產物，該進版控**。本專案 `test/fixtures/` 一開始就做對（`cli_smoke.sh` 全走 `file://`、不連網、19/19）。
+- **離線 fixture 別被 `.gitignore` 蓋掉＝測試在新 clone 上根本跑不了**：fixture 是**測試資料、不是 build 產物，該進版控**。本專案 `test/fixtures/` 一開始就做對（`cli_smoke.sh` 全走 `file://`、不連網、31/31）。

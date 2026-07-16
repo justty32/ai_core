@@ -9,7 +9,7 @@
 ```
 修改（增量）
   → cmake --build --preset linux-debug（建置綠燈）
-  → bash test/cli_smoke.sh（離線黑箱 19/19 綠）
+  → bash test/cli_smoke.sh（離線黑箱 31/31 綠）
   → 若動了真後端行為（錯誤路徑／schema／reasoning）→ 交使用者對真後端驗（記 WAIT_USER）→ 回報 → 修 → 重複
   → 全數通過後：對齊 README/cabi_internal.hpp（code map）→ commit
 ```

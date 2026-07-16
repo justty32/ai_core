@@ -62,6 +62,10 @@ expect_out "才不是為你回答的" "--stream 串流逐段" \
     -- "$BIN" 數到五 --stream --endpoint "$FX/fake_stream/chat/completions"
 expect_out "才不是為你回答的" "沒位置參數 → 讀 stdin" \
     -- sh -c "echo 從管線 | '$BIN' --endpoint '$FX/fake/chat/completions'"
+expect_out "才不是為你回答的" "prompt＋stdin 合體（指令在前、資料在後）" \
+    -- sh -c "echo 附加資料 | '$BIN' 總結這份 --endpoint '$FX/fake/chat/completions'"
+expect_out "才不是為你回答的" "「-」＝stdin 插入點" \
+    -- sh -c "echo 內容 | '$BIN' 把 - 翻成英文 --endpoint '$FX/fake/chat/completions'"
 expect_out "才不是為你回答的" "旗標在前 + prompt（--stream 你好）" \
     -- "$BIN" --stream --endpoint "$FX/fake_stream/chat/completions" 你好
 expect_out "才不是為你回答的" "-- 分隔符（旗標在前 -- prompt）" \
@@ -69,6 +73,24 @@ expect_out "才不是為你回答的" "-- 分隔符（旗標在前 -- prompt）"
 printf '{"type":"object"}' > "$TMP/sc.json"
 expect_out '"name":"星野"' "--schema 結構化輸出" \
     -- "$BIN" 給我角色 --schema "$TMP/sc.json" --endpoint "$FX/fake_json/chat/completions"
+
+# ── (1b) tools / modalities：--tool 吐 JSON 行、--media-out 落檔 ──
+echo "-- tools / modalities --"
+printf '{"name":"get_weather","description":"查天氣","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}' > "$TMP/tool.json"
+expect_out '"tool":"get_weather"' "--tool → tool_calls 一行 JSON 吐 stdout" \
+    -- "$BIN" 東京天氣 --tool "$TMP/tool.json" --endpoint "$FX/fake_tool/chat/completions"
+expect_out '"city":"東京"' "--tool → arguments 原樣內嵌" \
+    -- "$BIN" 東京天氣 --tool "$TMP/tool.json" --endpoint "$FX/fake_tool/chat/completions"
+printf '{"voice":"alloy"}' > "$TMP/audio.json"
+expect_out "llm-media-1.wav" "--modality＋--media-out → 媒體落檔、路徑吐 stdout" \
+    -- "$BIN" 說你好 --modality "audio=$TMP/audio.json" --media-out "$TMP" --endpoint "$FX/fake_media/chat/completions"
+if [ "$(cat "$TMP/llm-media-1.wav" 2>/dev/null)" = "hello-wav-bytes" ]; then
+    printf '  [PASS] 落檔內容正確（base64 已解碼）\n'; pass=$((pass+1))
+else
+    printf '  [FAIL] 落檔內容不對：<%s>\n' "$(cat "$TMP/llm-media-1.wav" 2>/dev/null)" >&2; fail=$((fail+1))
+fi
+expect_exit 0 "媒體但沒給 --media-out → 明說丟棄、不炸" \
+    -- "$BIN" 說你好 --endpoint "$FX/fake_media/chat/completions"
 
 # ── (2) 設定來源：config 檔 + env 指路 + 旗標覆寫 ──
 echo "-- 設定來源 --"
@@ -87,10 +109,15 @@ expect_exit 0 "--help" -- "$BIN" --help
 expect_exit 1 "未知旗標" -- "$BIN" 你好 --bogus
 expect_exit 1 "旗標缺值（--image）" -- "$BIN" 你好 --image
 expect_exit 1 "缺 prompt（stdin 空）" -- sh -c "'$BIN' </dev/null"
+expect_exit 1 "「-」但 stdin 空（拼完仍空）" -- sh -c "'$BIN' - </dev/null"
 expect_exit 1 "--config 讀不到" -- "$BIN" 你好 --config /no/such.json
 expect_exit 1 "--schema 檔讀不到" -- "$BIN" 你好 --schema /no/such.json
 printf '{bad json' > "$TMP/bad.json"
 expect_exit 1 "config JSON 壞" -- "$BIN" 你好 --config "$TMP/bad.json"
+expect_exit 1 "--tool 檔讀不到" -- "$BIN" 你好 --tool /no/such.json
+expect_exit 1 "--tool JSON 壞" -- "$BIN" 你好 --tool "$TMP/bad.json"
+expect_exit 1 "--modality 設定檔讀不到" -- "$BIN" 你好 --modality audio=/no/such.json
+expect_exit 1 "--media-out 不是目錄" -- "$BIN" 你好 --media-out /no/such/dir
 expect_exit 1 "數值旗標型別錯（--temperature abc）" \
     -- "$BIN" 你好 --temperature abc --endpoint "$FX/fake/chat/completions"
 expect_exit 2 "請求失敗（連不上真 endpoint）" \

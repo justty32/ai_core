@@ -65,9 +65,10 @@ CLI 依三關注點拆檔（cli.cpp 只當 orchestrator）：
 | 檔 | 職責 | 關鍵符號 |
 |---|---|---|
 | `src/cli.hpp`／`cli_internal.hpp` | 對外介面＋共用常數（退出碼／`kConfigEnvVar`）| `cli::run(args)→int`、`kExit*` |
-| `src/cli.cpp` | orchestrator：argv 解析→定 prompt（stdin/tty）→組 Client/Request→ask→退出碼＋SIGINT | `cli::run`、`stdin_is_tty` |
+| `src/cli.cpp` | orchestrator：argv 解析→定 prompt（位置參數×stdin 合體、「-」插入點）→組 Client/Request（含 tool/modality 檔）→ask→退出碼＋SIGINT | `cli::run`、`stdin_is_tty` |
 | `src/cli_flags.{hpp,cpp}` | 反射 `Client` 欄位→旗標＋`--help`（型別分派模板在 `.hpp`）| `flags::client_flags`／`print_usage`／`assign_field`／`kebab_flag` |
-| `src/cli_config.{hpp,cpp}` | config 三層來源前二層＋檔案/mime 小工具 | `config::load_into`／`read_file`／`mime_of`／`default_config_path` |
+| `src/cli_config.{hpp,cpp}` | config 三層來源前二層＋檔案/mime/工具定義/媒體落檔小工具 | `config::load_into`／`read_file`／`mime_of`／`ext_of`／`load_tool_def`／`save_media` |
+| `src/cli_output.{hpp,cpp}` | 出口面四路回呼：文字 stdout／tool_calls 一行一則 JSON／媒體落檔（路徑吐 stdout）／錯誤 stderr | `output::Sink`（`handlers()`＋`wrote_text`/`media_err` 狀態旗標）|
 | `src/main.cpp` | 進入點（Windows `wmain`＋`-municode`；POSIX `main`）| `main`／`wmain` |
 
 ### ⑥ 已封存（`archived/`，`git mv` 保史、不在維護鏈）
@@ -88,5 +89,5 @@ CLI 依三關注點拆檔（cli.cpp 只當 orchestrator）：
 
 ## 測試對應
 
-- **唯一測試**：`test/cli_smoke.sh`（離線黑箱，19/19）——**端到端**驅動 `build/llm` 打 `test/fixtures/{fake,fake_stream,fake_tool,fake_json}/` 的 `file://` 假回應。無單元測試檔，故任何一層改動都靠這支 smoke 從 CLI 端驗（見 [testing](../../testing.md)）。
+- **唯一測試**：`test/cli_smoke.sh`（離線黑箱，31/31）——**端到端**驅動 `build/llm` 打 `test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/` 的 `file://` 假回應。無單元測試檔，故任何一層改動都靠這支 smoke 從 CLI 端驗（見 [testing](../../testing.md)）。
 - **真後端行為**（錯誤路徑／reasoning `max_tokens`／schema `required`）離線驗不出，需使用者實跑（[WAIT_USER](../../../WAIT_USER.md)、[gotchas/backend](../gotchas/backend.md)）。

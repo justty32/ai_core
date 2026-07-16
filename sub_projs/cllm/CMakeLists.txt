@@ -11,7 +11,7 @@
 #       src/cabi.h、連 -lcllm 即可用。唯一入口 llm_ask 統一吃 prompt＋schema＋tools＋media＋
 #       modalities＋stream；請求組裝的唯一真相源在 src/cabi.cpp。曾散在 L0 的獨立 C++ 入口
 #       （ask／ask_tools／ask_vision／ask_json）已封存進 archived/，不再對外提供。
-#   (2) build/llm —— unix filter 執行檔（src/main.cpp＋src/cli.cpp）。走 C++ 鏡像 cabi.hpp
+#   (2) build/llm —— unix filter 執行檔（src/main.cpp＋src/cli*.cpp）。走 C++ 鏡像 cabi.hpp
 #       消費 libcllm：prompt 走位置參數／stdin，答案吐 stdout，退出碼 0/1/2/130。見 src/cli.hpp。
 
 cmake_minimum_required(VERSION 3.28)
@@ -69,7 +69,8 @@ endif()
 add_executable(llm
     src/cli.cpp          # orchestrator：run() 串流程
     src/cli_flags.cpp    # 反射 Client 欄位 → 旗標 + --help
-    src/cli_config.cpp   # config 檔三層來源 + 檔案/mime 小工具
+    src/cli_config.cpp   # config 檔三層來源 + 檔案/mime/工具定義/媒體落檔小工具
+    src/cli_output.cpp   # 出口 handlers：stdout／tool_calls JSON 行／媒體落檔／stderr
     src/main.cpp)        # 進入點（wmain/main）
 target_link_libraries(llm PRIVATE cllm glaze::glaze)
 target_compile_options(llm PRIVATE

@@ -1,4 +1,4 @@
-// cli_config.cpp — cli_config.hpp 的實作：config 檔三層來源的前二層 + 檔案/mime 小工具。
+// cli_config.cpp — cli_config.hpp 的實作：config 檔三層來源的前二層 + 檔案/mime/工具定義/媒體落檔小工具。
 
 #include "cli_config.hpp"
 
@@ -40,6 +40,56 @@ std::string mime_of(const std::string &path) {
   return "application/octet-stream";
 }
 
+std::string ext_of(const std::string &mime) {
+  if (mime == "image/png") return "png";
+  if (mime == "image/jpeg") return "jpg";
+  if (mime == "image/gif") return "gif";
+  if (mime == "image/webp") return "webp";
+  if (mime == "audio/wav") return "wav";
+  if (mime == "audio/mpeg") return "mp3";
+  return "bin";
+}
+
+namespace tool_impl { // 具名子 namespace（本專案不用匿名 namespace 放反射型，見 gotchas）
+// --tool 定義檔的形狀：parameters 用 raw_json 原樣收（它是「參數的 JSON Schema」，不重組）。
+struct ToolDefFile {
+  std::string name;
+  std::string description{};
+  glz::raw_json parameters{};
+};
+inline constexpr glz::opts kLenient{.error_on_unknown_keys = false}; // 容忍多餘鍵（向前相容）
+} // namespace tool_impl
+
+bool load_tool_def(const std::string &path, llm::abi::ToolDef &out, std::string &err) {
+  std::string body;
+  if (!read_file(path, body, err))
+    return false;
+  tool_impl::ToolDefFile def;
+  if (auto ec = glz::read<tool_impl::kLenient>(def, body)) {
+    err = "工具定義 JSON 解析失敗（" + path + "）：" + glz::format_error(ec, body);
+    return false;
+  }
+  if (def.name.empty() || def.parameters.str.empty()) {
+    err = "工具定義缺 name 或 parameters（" + path + "）";
+    return false;
+  }
+  out = llm::abi::ToolDef{.name = std::move(def.name),
+                          .description = std::move(def.description),
+                          .parameters = std::move(def.parameters.str)};
+  return true;
+}
+
+bool save_media(const std::string &dir, int n, const llm::abi::MediaOut &media,
+                std::string &path_out, std::string &err) {
+  path_out = dir + "/llm-media-" + std::to_string(n) + "." + ext_of(media.mime);
+  std::ofstream f(path_out, std::ios::binary | std::ios::trunc);
+  if (!f || !f.write(media.bytes.data(), static_cast<std::streamsize>(media.bytes.size()))) {
+    err = "媒體落檔失敗：" + path_out;
+    return false;
+  }
+  return true;
+}
+
 std::string default_config_path() {
   const char *home = std::getenv("HOME");
   if (!home || !*home)
@@ -70,8 +120,9 @@ int load_into(llm::abi::Client &client, bool has_config, const std::string &conf
                    glz::format_error(ec, body).c_str());
       return kExitUsage;
     }
-  } else if (cfg_named) {
-    std::fprintf(stderr, "%s\n", err.c_str()); // 明指卻讀不到＝用法錯
+  } else if (cfg_named) { // 明指卻讀不到＝用法錯（點名是誰指的路）
+    std::fprintf(stderr, "%s（%s 指定的 config 檔）\n", err.c_str(),
+                 has_config ? "--config" : kConfigEnvVar);
     return kExitUsage;
   }
   // 探測路徑讀不到＝沒設定檔，靜默用預設
