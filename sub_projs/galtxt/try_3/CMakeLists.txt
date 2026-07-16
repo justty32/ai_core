@@ -1,64 +1,78 @@
-# CMakeLists.txt — galtxt try_3（純 C++、傳統 header）
+# CMakeLists.txt — galtxt try_3：對外 C ABI 共享庫 libgaltxt.so ＋ `llm` CLI 執行檔
 #
-# 與 try_2 的手寫 build.sh 走不同建置路線：這條用 CMake（配 CMakePresets.json 釘死工具鏈）
-# ＋Ninja＋vcpkg toolchain。（早期曾用 C++20 modules，已回歸傳統 header；Ninja 保留，非模組亦適用。）
+# 建置路線：CMake（配 CMakePresets.json 釘死工具鏈）＋Ninja＋vcpkg toolchain。
 #
 # 用（命令列）：
-#   cmake --preset mingw-debug          # 首次 configure（讀 CMakePresets.json）
-#   cmake --build --preset mingw-debug  # 建置 → build/try3.exe
-# VSCode：Ctrl+Shift+B 建置、F5 除錯（見 .vscode/）。
+#   cmake --preset linux-debug          # 首次 configure（讀 CMakePresets.json）
+#   cmake --build --preset linux-debug  # 建置 → build/libgaltxt.so ＋ build/llm
+#
+# 兩個交付物：
+#   (1) build/libgaltxt.so —— 對外 C ABI（src/cabi.h，extern "C"）。純 C 客戶端 include
+#       src/cabi.h、連 -lgaltxt 即可用。唯一入口 llm_ask 統一吃 prompt＋schema＋tools＋media＋
+#       modalities＋stream；請求組裝的唯一真相源在 src/cabi.cpp。曾散在 L0 的獨立 C++ 入口
+#       （ask／ask_tools／ask_vision／ask_json）已封存進 archived/，不再對外提供。
+#   (2) build/llm —— unix filter 執行檔（src/main.cpp＋src/cli.cpp）。走 C++ 鏡像 cabi.hpp
+#       消費 libgaltxt：prompt 走位置參數／stdin，答案吐 stdout，退出碼 0/1/2/130。見 src/cli.hpp。
 
 cmake_minimum_required(VERSION 3.28)
-project(try_3 LANGUAGES CXX)
+project(galtxt_try3 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)             # glaze 需 C++23（g++16 支援）
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 匯出 compile_commands.json：給 cpptools / clangd 讀正確的編譯旗標（IntelliSense 準）
+# 匯出 compile_commands.json：給 clangd 讀正確的編譯旗標（IntelliSense 準）
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # vcpkg 依賴（manifest 模式，見 vcpkg.json）：glaze＝反射式 JSON↔struct、header-only、超快
 find_package(glaze CONFIG REQUIRED)
 
-# 來源：main＋demo（計算/字串示範）＋http（native HTTP 傳輸）＋llm（llm::Client，struct＋反射 ask 接口）
-#       ＋llm_tool（工具呼叫）＋llm_media（多媒體/vision）＋llm_json（結構化輸出）
-#       ＋cli（由 llm::Client 欄位反射生成的 --flag CLI）
-add_executable(try3
-    src/main.cpp
-    src/demo.cpp
-    src/http.cpp
-    src/llm.cpp
-    src/llm_tool.cpp
-    src/llm_media.cpp
-    src/llm_json.cpp
-    src/cli.cpp)
+# ── [L1] 對外 C ABI 共享庫：libgaltxt.so ──
+# 對外介面 src/cabi.h（傘檔，按功能拆成 cabi_client/request/response/context.h）。
+# 實作按關注點拆檔（見 src/cabi_internal.hpp 的分工表）：
+#   cabi.cpp          出口 llm_ask/llm_cancel/llm_phase ＋ make_request（連線設定→http::Request）
+#   cabi_request.cpp  build_body（組 OpenAI 請求 JSON）
+#   cabi_response.cpp dispatch_nonstream／guard_backend_error（解析非串流回應＋錯誤護欄）
+#   cabi_stream.cpp   do_stream（串流 SSE 路徑）
+#   http.cpp          傳輸管子（WinHTTP／libcurl；file:// 離線特例）
+add_library(galtxt SHARED
+    src/cabi.cpp
+    src/cabi_request.cpp
+    src/cabi_response.cpp
+    src/cabi_stream.cpp
+    src/http.cpp)
 
-target_link_libraries(try3 PRIVATE glaze::glaze)
-
-# 產物名一律帶 .exe：Windows 本來就是（MinGW 預設），Linux 顯式加上——
-# 與 try_2 build.sh 的慣例一致（Linux 不在意副檔名，換來跨平台指令一致：./build/try3.exe 兩邊通用）。
-set_target_properties(try3 PROPERTIES SUFFIX ".exe")
-
-# 注入源碼根目錄，讓 main.cpp 的 http 示範用 file:// 讀 test/fixtures/ 而不寫死機器路徑
-target_compile_definitions(try3 PRIVATE TRY3_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(galtxt PRIVATE glaze::glaze)
 
 # Debug 帶完整符號、關優化，方便 gdb 單步；Release 開 -O2
-target_compile_options(try3 PRIVATE
+target_compile_options(galtxt PRIVATE
     $<$<CONFIG:Debug>:-g;-O0>
     $<$<CONFIG:Release>:-O2>)
 
 if(WIN32)
-    # -municode：選 wmainCRTStartup，讓 wmain 收寬字元命令列（中文 argv 不亂碼）
-    # -static*：靜態連 libstdc++/libgcc/winpthread → 產出獨立 exe，
-    #           不依賴 C:/dev/mingw64/bin 在 PATH 上（gdb 啟動 exe 才不會找不到 runtime DLL）
-    target_link_options(try3 PRIVATE
-        -municode
-        -static -static-libgcc -static-libstdc++)
-    # http 模組的 WinHTTP 傳輸：系統內建、Schannel TLS，零額外依賴
-    target_link_libraries(try3 PRIVATE winhttp)
+    # MinGW：讓 .dll 自動匯出所有非 static 符號（免逐個 __declspec(dllexport)）；
+    # 靜態連 libstdc++/libgcc → 產出獨立 .dll，不依賴 mingw runtime DLL 在 PATH 上。
+    set_target_properties(galtxt PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    target_link_libraries(galtxt PRIVATE winhttp)
+    target_link_options(galtxt PRIVATE -static-libgcc -static-libstdc++)
 else()
     # 非 Windows：http 模組走 libcurl（vcpkg 裝 curl；見 vcpkg.json 註）
     find_package(CURL REQUIRED)
-    target_link_libraries(try3 PRIVATE CURL::libcurl)
+    target_link_libraries(galtxt PRIVATE CURL::libcurl)
+endif()
+
+# ── [交付物 2] `llm` CLI 執行檔（unix filter）──
+# libgaltxt.so 之上的薄消費端：走 C++ 鏡像 cabi.hpp（llm::abi::Client），連 libgaltxt 拿 llm_ask。
+#   src/cli.cpp   反射生成旗標＋config 檔＋組 Request→ask（用法／退出碼見 src/cli.hpp 檔頭）
+#   src/main.cpp  進入點（Windows wmain 取寬字元命令列；POSIX 標準 main）
+# glaze：cli.cpp 靠它反射 llm::abi::Client 的欄位生旗標、並反射解析 config JSON。
+add_executable(llm src/cli.cpp src/main.cpp)
+target_link_libraries(llm PRIVATE galtxt glaze::glaze)
+target_compile_options(llm PRIVATE
+    $<$<CONFIG:Debug>:-g;-O0>
+    $<$<CONFIG:Release>:-O2>)
+
+if(WIN32)
+    # -municode：wmain 取寬字元命令列（中文 argv 不亂碼），對齊舊 try_3 exe。
+    target_link_options(llm PRIVATE -municode -static-libgcc -static-libstdc++)
 endif()
