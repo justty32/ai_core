@@ -137,6 +137,22 @@ std::vector<FlagInfo> client_flags() {
   return out;
 }
 
+// 反射給不出「數值上下限／範例」這種語意——用一張以欄位名為鍵的標註表補上（--help 專用）。
+// 範圍是 OpenAI 慣例值（實際上下限依後端而定）；沒列到的欄位退回只印型別提示。
+const char *field_annot(std::string_view name) {
+  if (name == "temperature")       return "，範圍 0.0–2.0，例 0.7（越大越發散）";
+  if (name == "top_p")             return "，範圍 0.0–1.0，例 0.9（與 temperature 二擇一）";
+  if (name == "presence_penalty")  return "，範圍 -2.0–2.0，例 0.0";
+  if (name == "frequency_penalty") return "，範圍 -2.0–2.0，例 0.0";
+  if (name == "max_tokens")        return "，≥1，例 512（⚠ reasoning 模型建議不設）";
+  if (name == "seed")              return "，例 42（固定可重現）";
+  if (name == "timeout_ms")        return "，≥0（0＝不設限），例 120000";
+  if (name == "endpoint")          return "，例 http://localhost:1234/v1/chat/completions";
+  if (name == "model")             return "，例 local-model（雲端填真實 model id）";
+  if (name == "api_key")           return "，雲端 API 必給";
+  return "";
+}
+
 void print_usage() {
   std::fprintf(stderr,
       "用法：llm [旗標...] [prompt...]        # 旗標與 prompt 可交錯；沒給 prompt 且用導管餵入才讀 stdin\n"
@@ -153,8 +169,10 @@ void print_usage() {
       "  --help, -h             顯示本說明\n"
       "\n連線／取樣旗標（由 llm::abi::Client 欄位反射生成，未給即不送、交後端默認）：\n");
   for (const auto &fi : client_flags())
-    std::fprintf(stderr, "  %-22s %s\n", fi.flag.c_str(), fi.hint.c_str());
+    std::fprintf(stderr, "  %-22s %s%s\n", fi.flag.c_str(), fi.hint.c_str(),
+                 field_annot(fi.field));
   std::fprintf(stderr,
+      "\n（數值範圍為 OpenAI 慣例，實際上下限依後端而定。）\n"
       "\n設定來源（後者覆寫前者）：內建預設 → config 檔 → 命令列旗標。\n"
       "config 檔路徑：--config <檔> ＞ 環境變數 %s ＞ ~/.config/llm/config.json。\n"
       "  （env 只用來指定 config 檔路徑，不存任何設定值。）\n"
