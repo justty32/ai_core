@@ -7,8 +7,9 @@
 //   · 函數指標 + void*  → std::function（閉包自帶狀態，void* user 消失）
 //   · field_mask + 值   → std::optional（省掉記帳）
 // 出口保持 C ABI 的「對稱三 handler」（on_text/on_tool/on_media + on_error），ask() 回 Status。
-// ★ 反射糖（ask<T>、make_tool<Args>、modality<Config>）刻意不放這層——那是「方便使用」的便利層，
-//   之後由使用者自己在這薄鏡像上包裝。故本檔只依賴 cabi.h，不碰 glaze。
+// ★ 反射糖（ask_as<T>、make_tool<Args>…）刻意不放這層——那是「方便使用」的便利層，
+//   已在薄鏡像上包好：bindings/cpp/llm.hpp（零依賴人體工學）＋ llm_reflect.hpp（glaze 糖）。
+//   本檔只依賴 cabi.h，不碰 glaze。
 //
 // 按功能拆（平行於 C ABI 頭），這裡全數 include——客戶端只要 #include "cabi.hpp"：
 //   · cabi_request.hpp   輸入型（ToolDef／Schema／MediaIn／Modality／Request）

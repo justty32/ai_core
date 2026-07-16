@@ -26,6 +26,16 @@ cmake --install build >/dev/null
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 CF="$(pkg-config --cflags cllm)"; LF="$(pkg-config --libs cllm)"
 
+echo "== [1b] C++ 便利層（llm.hpp／llm_reflect.hpp）＋ glaze 標頭 =="
+cp "$HERE/bindings/cpp/llm.hpp" "$HERE/bindings/cpp/llm_reflect.hpp" "$PREFIX/include/cllm/"
+GLAZE_INC="$(find "$HERE/build/vcpkg_installed" -maxdepth 3 -type d -name glaze -path '*/include/*' | head -1)"
+if [ -n "$GLAZE_INC" ]; then
+  rm -rf "$PREFIX/include/glaze"
+  cp -r "$GLAZE_INC" "$PREFIX/include/glaze"   # header-only；llm_reflect.hpp 的反射糖要它
+else
+  echo "  ⚠ 找不到 vcpkg 的 glaze 標頭 → llm_reflect.hpp 需自備 -I"
+fi
+
 echo "== [2/7] Lua 模組（5.5 給 lua、5.4 給 fennel；模組 ABI 綁 lua 版本）＋ dkjson =="
 mkdir -p "$PREFIX/lib/lua/5.4" "$PREFIX/lib/lua/5.5" "$PREFIX/share/lua"
 gcc -O2 -fPIC -shared -I"$LUA55_INC" $CF "$HERE/bindings/lua/llm.c" $LF -o "$PREFIX/lib/lua/5.5/llm.so"
@@ -95,7 +105,7 @@ cat > "$PREFIX/share/cllm/README.md" <<'EOF'
 | 語言 | 怎麼用（＋JSON 庫） | 範例 |
 |------|--------|------|
 | C    | `cc x.c $(pkg-config --cflags --libs cllm jansson)`；`#include <cllm/cabi.h>`；JSON=jansson | examples/c |
-| C++  | `g++ -std=c++20 x.cpp $(pkg-config --cflags --libs cllm jansson)`；`<cllm/cabi.hpp>`（`llm::abi`）；JSON=jansson | examples/cpp |
+| C++  | `g++ -std=c++23 x.cpp $(pkg-config --cflags --libs cllm)`；`<cllm/llm.hpp>`（便利層 `llm::`）＋`<cllm/llm_reflect.hpp>`（`ask_as<T>` 反射糖）；底層薄鏡像 `<cllm/cabi.hpp>`（`llm::abi`）；JSON=glaze | examples/cpp |
 | Lua  | `require("llm")`（`lua`＝5.5、`lua5.4`＝5.4）；JSON=`require("dkjson")` | examples/lua |
 | Fennel | `(require :llm)`（跑在 lua 5.4）；JSON=`(require :dkjson)` | examples/fennel |
 | s7   | `llm-s7 script.scm`（`llm-ask` 已內建）；JSON=jq（shell-out） | examples/s7 |

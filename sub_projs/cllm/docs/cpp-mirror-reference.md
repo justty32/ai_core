@@ -16,7 +16,7 @@
 #include "cabi.hpp"   // header-only；連結時仍連 libcllm（薄薄轉呼叫 llm_ask）
 ```
 
-> ★ **反射糖刻意不放這層**（`ask<T>`、`make_tool<Args>`、`modality<Config>`）：那是「方便使用」的便利層，`cabi.hpp` 只依賴 `cabi.h`、不碰 glaze，留給使用者自己在薄鏡像上包。`llm` CLI 就是這薄鏡像的第一個消費端。
+> ★ **反射糖刻意不放這層**（`ask<T>`、`make_tool<Args>`、`modality<Config>`）：那是「方便使用」的便利層，`cabi.hpp` 只依賴 `cabi.h`、不碰 glaze，留給使用者自己在薄鏡像上包。`llm` CLI 就是這薄鏡像的第一個消費端。這層便利層現已存在：[`../bindings/cpp/llm.hpp`](../bindings/cpp/llm.hpp)（＋ `llm_reflect.hpp` 的反射糖）。
 
 ---
 
