@@ -1,6 +1,6 @@
 ; example.scm — 從 s7 用 cllm：基本、串流、tools+on-tool、media 輸出、schema+JSON(經 jq)、
 ;   media 輸入+modalities、shell 呼叫。
-; 跑：source ~/dev/env.sh 後  llm-s7 example.scm "$CLLM_FIXTURES"
+; 跑：source ~/dev/cllm/env.sh 後  llm-s7 example.scm "$CLLM_FIXTURES"
 (define base (if (and (pair? *argv*) (string? (car *argv*))) (car *argv*) ""))
 (define (ep n) (string-append base n))
 

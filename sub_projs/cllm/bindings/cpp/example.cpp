@@ -1,6 +1,6 @@
 // example.cpp — cllm C++ 便利層（llm.hpp + llm_reflect.hpp）＋ shell(CLI) 呼叫。
 // 編：g++ -std=c++23 example.cpp $(pkg-config --cflags --libs cllm) -o example
-// 跑：source ~/dev/env.sh 後  ./example "$CLLM_FIXTURES"
+// 跑：source ~/dev/cllm/env.sh 後  ./example "$CLLM_FIXTURES"
 #include <cstdio>
 #include <string>
 #include <cllm/llm.hpp>         // 便利層：聚合 ask／expected 錯誤／串流糖／media helpers

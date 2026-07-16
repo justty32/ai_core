@@ -10,7 +10,7 @@
 
 ```bash
 bash install-dev.sh            # → ~/dev/{include,lib,bin,share}
-source ~/dev/env.sh       # 設好 PATH／pkg-config／lua cpath／LIBCLLM／CLLM_LISP…
+source ~/dev/cllm/env.sh       # 設好 PATH／pkg-config／lua cpath／LIBCLLM／CLLM_LISP…
 # 逐語言範例（離線 fixture，$CLLM_FIXTURES 由 env.sh 設）：
 bash   ~/dev/share/cllm/examples/shell/example.sh   "$CLLM_FIXTURES"
 python3 ~/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
@@ -38,7 +38,7 @@ python3 ~/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 
 ```bash
 bash ../test/bindings_smoke.sh     # 全語言輪流跑（前置：install-dev.sh 裝好 ~/dev）
-bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/env.sh）
+bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/cllm/env.sh）
 ```
 
 每個語言資料夾各有一個 `smoke.sh`（跑該語言 example、比對關鍵標記），master 只是輪流呼叫它們。

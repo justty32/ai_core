@@ -1,6 +1,6 @@
 ;; example.fnl — 從 Fennel 用 cllm（lua 5.4 的 llm.so）：基本、串流、schema+JSON(dkjson)、
 ;;   tools、media、modalities、shell。
-;; 跑：source ~/dev/env.sh 後  fennel example.fnl "$CLLM_FIXTURES"
+;; 跑：source ~/dev/cllm/env.sh 後  fennel example.fnl "$CLLM_FIXTURES"
 ;; ⚠ 這裡呼叫的是 lua 的 llm binding，table 鍵一律用底線（:on_tool 不是 :on-tool）。
 (local llm (require :llm))
 (local json (require :dkjson))

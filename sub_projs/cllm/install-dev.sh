@@ -7,7 +7,7 @@
 #   Shell（llm CLI + jq）。
 # 一鍵可重現：重跑即冪等覆蓋重建 cllm 那份。⚠ 別 rm -rf $PREFIX——prefix（~/dev）可能還住著
 # 別的東西；要清 cllm 的部分只刪：include/cllm include/glaze lib/libcllm* lib/pkgconfig/cllm.pc
-# lib/lua lib/python lib/lisp lib/go bin/llm bin/llm-s7 share/cllm share/lua env.sh。
+# lib/lua lib/python lib/lisp lib/go bin/llm bin/llm-s7 share/cllm share/lua cllm/env.sh。
 #
 # 用：bash install-dev.sh
 #   PREFIX=/somewhere   安裝前綴（預設 ~/dev）
@@ -73,9 +73,10 @@ for d in c cpp lua fennel s7 python lisp shell; do
 done
 
 echo "== [6/7] env.sh =="
-cat > "$PREFIX/env.sh" <<EOF
+mkdir -p "$PREFIX/cllm"
+cat > "$PREFIX/cllm/env.sh" <<EOF
 #!/usr/bin/env sh
-# cllm 常駐開發環境。用： source "$PREFIX/env.sh"
+# cllm 常駐開發環境。用： source "$PREFIX/cllm/env.sh"
 DEV="$PREFIX"
 export PATH="\$DEV/bin:\$PATH"                              # llm、llm-s7
 export PKG_CONFIG_PATH="\$DEV/lib/pkgconfig:\${PKG_CONFIG_PATH:-}"  # C/C++：pkg-config cllm
@@ -97,7 +98,7 @@ cat > "$PREFIX/share/cllm/README.md" <<'EOF'
 `libcllm.so`（對外 C ABI，唯一入口 `llm_ask`）裝成可 include/link 的常駐前綴。
 由 `<cllm repo>/install-dev.sh` 產生、可重現（重跑即冪等覆蓋；⚠ 勿 rm -rf 整個 prefix，裡面可能還有別的東西）。
 
-先 `source ~/dev/env.sh`。離線自測用 `$CLLM_FIXTURES`（假回應，不必開後端）；
+先 `source ~/dev/cllm/env.sh`。離線自測用 `$CLLM_FIXTURES`（假回應，不必開後端）；
 接真後端則省略 endpoint（走內建 `http://localhost:1234/v1/chat/completions`）。
 
 | 語言 | 怎麼用（＋JSON 庫） | 範例 |
@@ -119,5 +120,5 @@ media 輸入＋modalities、以及從該語言 shell-out 呼叫 `llm` CLI。
 EOF
 
 echo ""
-echo "✅ 完成。下一步：source \"$PREFIX/env.sh\""
+echo "✅ 完成。下一步：source \"$PREFIX/cllm/env.sh\""
 echo "   自測（離線，逐語言）：見 $PREFIX/share/cllm/examples/<lang>/"

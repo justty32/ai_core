@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # smoke.sh — C++ 綁定離線煙霧測試（編譯＋跑 example.cpp，比對關鍵標記）。
-# 單獨跑：bash smoke.sh（自動 source $PREFIX/env.sh；PREFIX 預設 ~/dev）
+# 單獨跑：bash smoke.sh（自動 source $PREFIX/cllm/env.sh；PREFIX 預設 ~/dev）
 # 全語言一鍵：../../test/bindings_smoke.sh（本檔是各語言 smoke.sh 的參考實作）
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/env.sh"; fi
+if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 if ! g++ -std=c++23 "$HERE/example.cpp" $(pkg-config --cflags --libs cllm) -o "$TMP/example" 2>"$TMP/cc.log"; then

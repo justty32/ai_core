@@ -1,5 +1,5 @@
 // example — cllm Go binding：基本 ask、串流、schema+JSON(stdlib)、tools、media 輸出/輸入、shell(CLI) 呼叫。
-// 跑：source ~/dev/env.sh 後  go run ./example "$CLLM_FIXTURES"
+// 跑：source ~/dev/cllm/env.sh 後  go run ./example "$CLLM_FIXTURES"
 package main
 
 import (

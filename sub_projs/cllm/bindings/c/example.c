@@ -1,6 +1,6 @@
 /* example.c — cllm C ABI + jansson(JSON) + shell(CLI) 呼叫。
  * 編：cc example.c $(pkg-config --cflags --libs cllm jansson) -o example
- * 跑：source ~/dev/env.sh 後  ./example "$CLLM_FIXTURES" */
+ * 跑：source ~/dev/cllm/env.sh 後  ./example "$CLLM_FIXTURES" */
 #include <stdio.h>
 #include <string.h>
 #include <cllm/cabi.h>

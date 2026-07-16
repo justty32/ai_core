@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # smoke.sh — C 綁定離線煙霧測試（編譯＋跑 example.c，比對關鍵標記）。
-# 單獨跑：bash smoke.sh（自動 source $PREFIX/env.sh；PREFIX 預設 ~/dev）
+# 單獨跑：bash smoke.sh（自動 source $PREFIX/cllm/env.sh；PREFIX 預設 ~/dev）
 # 全語言一鍵：../../test/bindings_smoke.sh（參考實作見 ../cpp/smoke.sh）
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/env.sh"; fi
+if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 if ! cc "$HERE/example.c" $(pkg-config --cflags --libs cllm jansson) -o "$TMP/example" 2>"$TMP/cc.log"; then

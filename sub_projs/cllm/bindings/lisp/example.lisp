@@ -1,5 +1,5 @@
 ;;;; example.lisp — cllm CL binding：基本、串流、schema+JSON(shasht)、shell(CLI) 呼叫。
-;;;; 跑：source ~/dev/env.sh 後  sbcl --script example.lisp "$CLLM_FIXTURES"
+;;;; 跑：source ~/dev/cllm/env.sh 後  sbcl --script example.lisp "$CLLM_FIXTURES"
 (load (or #+sbcl (sb-ext:posix-getenv "CLLM_LISP") "cllm.lisp"))
 (funcall (find-symbol "QUICKLOAD" (find-package :quicklisp-client)) :shasht)
 

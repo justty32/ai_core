@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """example.py — cllm Python binding：基本 ask、串流、schema+JSON 解析、shell(CLI) 呼叫。
-跑：source ~/dev/env.sh 後  python3 example.py "$CLLM_FIXTURES" """
+跑：source ~/dev/cllm/env.sh 後  python3 example.py "$CLLM_FIXTURES" """
 import sys, json, subprocess
 import llm
 base = sys.argv[1] if len(sys.argv) > 1 else ""

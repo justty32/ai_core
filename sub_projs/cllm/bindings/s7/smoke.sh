@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # smoke.sh — s7 綁定離線煙霧測試（重編 llm-s7 ＋跑 example.scm，比對關鍵標記）。
-# 單獨跑：bash smoke.sh（自動 source $PREFIX/env.sh；PREFIX 預設 ~/dev）
+# 單獨跑：bash smoke.sh（自動 source $PREFIX/cllm/env.sh；PREFIX 預設 ~/dev）
 # 參考實作：../cpp/smoke.sh（本檔照它的模式寫，前綴 s7:）
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
-if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/env.sh"; fi
+if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
 # s7 原始碼用 repo vendor 那份（bindings/s7/vendor/，零外部依賴）；S7_DIR 可覆寫。
 : "${S7_DIR:=$HERE/vendor}"
 

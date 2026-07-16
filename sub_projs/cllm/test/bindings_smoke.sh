@@ -5,10 +5,10 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PREFIX="${PREFIX:-$HOME/dev}"
-if [ ! -f "$PREFIX/env.sh" ]; then
-  echo "找不到 $PREFIX/env.sh —— 先跑：bash install-dev.sh"; exit 2
+if [ ! -f "$PREFIX/cllm/env.sh" ]; then
+  echo "找不到 $PREFIX/cllm/env.sh —— 先跑：bash install-dev.sh"; exit 2
 fi
-. "$PREFIX/env.sh"
+. "$PREFIX/cllm/env.sh"
 
 LANGS=(c cpp lua fennel s7 python lisp go shell)
 pass=0; fail=0; skip=0

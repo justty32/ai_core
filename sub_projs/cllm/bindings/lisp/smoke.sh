@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # smoke.sh — Common Lisp 綁定離線煙霧測試（跑 example.lisp，比對關鍵標記）。
-# 單獨跑：bash smoke.sh（自動 source $PREFIX/env.sh；PREFIX 預設 ~/dev）
+# 單獨跑：bash smoke.sh（自動 source $PREFIX/cllm/env.sh；PREFIX 預設 ~/dev）
 # 全語言一鍵：../../test/bindings_smoke.sh（參考實作見 bindings/cpp/smoke.sh）
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/env.sh"; fi
+if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
 
 if ! OUT="$(sbcl --script "$HERE/example.lisp" "$CLLM_FIXTURES" 2>&1)"; then
   printf '%s\n' "$OUT"; echo "  [FAIL] lisp: example.lisp 執行失敗"; exit 1

@@ -1,13 +1,13 @@
 # Fennel 映像：產出 · 利用（CLI/lib）· 執行期修改
 
-← [bindings](../../README.md)｜需先 `source ~/dev/env.sh`
+← [bindings](../../README.md)｜需先 `source ~/dev/cllm/env.sh`
 
 > **可行性結論（你問「可以的話」）**：Fennel 跑在 Lua 上，**Lua 沒有記憶體映像 dump**（不像 SBCL 存不了活堆疊）。所以 Fennel 的「image」＝**AOT 編成獨立 `.lua`**（甚至再打成單一 binary），而 C 綁定 `llm.so` 永遠是執行期才載入的共享庫——**烤不進映像**。三件事做得到的都實測過、做不到的誠實標明。
 
 ## 1. 產出映像（＝AOT 編成獨立 .lua）
 
 ```bash
-source ~/dev/env.sh
+source ~/dev/cllm/env.sh
 fennel --compile app.fnl > app.lua      # Fennel → 純 Lua（本機實測 3 行）
 ```
 產出的 `app.lua` **免 fennel、只要 lua + llm.so** 就能跑（見下）。要更「單一檔」可選 `luastatic`（`luarocks install luastatic`）把 lua runtime＋腳本打成一顆執行檔——但 `llm.so`（C 綁定）仍是動態載入。

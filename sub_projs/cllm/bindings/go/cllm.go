@@ -20,7 +20,7 @@
 //	    cllm.MediaIn(cllm.Media{URL: "data:image/png;base64,…"}),
 //	    cllm.Modalities(cllm.Modality{Name: "audio", Config: `{"voice":"alloy"}`}))
 //
-// 建置靠 pkg-config 找 libcllm（先 source ~/dev/env.sh，或設 PKG_CONFIG_PATH 指向 cllm.pc）。
+// 建置靠 pkg-config 找 libcllm（先 source ~/dev/cllm/env.sh，或設 PKG_CONFIG_PATH 指向 cllm.pc）。
 package cllm
 
 /*

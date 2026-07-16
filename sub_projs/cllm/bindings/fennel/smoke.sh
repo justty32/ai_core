@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # smoke.sh — Fennel 綁定離線煙霧測試（跑 example.fnl，比對關鍵標記）。
-# 單獨跑：bash smoke.sh（自動 source $PREFIX/env.sh；PREFIX 預設 ~/dev）
+# 單獨跑：bash smoke.sh（自動 source $PREFIX/cllm/env.sh；PREFIX 預設 ~/dev）
 # 全語言一鍵：../../test/bindings_smoke.sh（參考實作見 ../cpp/smoke.sh）
 # 前置：Fennel 直接用 lua 的 llm.so（見 ../lua/llm.c），跑在 lua 5.4 上，
 #   llm.so 已編好裝在 $PREFIX/lib/lua/5.4/（見 ../lua/README「重編」段落）。
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/env.sh"; fi
+if [ -z "${CLLM_FIXTURES:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
 
 if ! OUT="$(LUA_CPATH="$LUA_CPATH_5_4" LUA_PATH="$LUA_PATH_5_4" fennel "$HERE/example.fnl" "$CLLM_FIXTURES" 2>&1)"; then
   printf '%s\n' "$OUT"; echo "  [FAIL] fennel: example.fnl 執行失敗"; exit 1

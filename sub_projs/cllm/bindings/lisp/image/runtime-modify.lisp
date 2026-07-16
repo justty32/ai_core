@@ -1,5 +1,5 @@
 ;;;; runtime-modify.lisp — 執行期修改程式（Lisp 活映像的精髓：跑著就改，不重啟）。
-;;;; 跑：source ~/dev/env.sh 後  sbcl --script runtime-modify.lisp
+;;;; 跑：source ~/dev/cllm/env.sh 後  sbcl --script runtime-modify.lisp
 (load (sb-ext:posix-getenv "CLLM_LISP"))
 
 ;;; ① 重定義傳播：早就編好的 caller，重定義 greet 後立即走新版

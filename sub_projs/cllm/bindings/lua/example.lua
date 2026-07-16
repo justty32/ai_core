@@ -1,6 +1,6 @@
 -- example.lua — cllm Lua binding：基本 ask、串流、schema+JSON(dkjson)、tools、media、
 --   modalities、shell(CLI) 呼叫。
--- 跑：source ~/dev/env.sh 後  lua example.lua "$CLLM_FIXTURES"
+-- 跑：source ~/dev/cllm/env.sh 後  lua example.lua "$CLLM_FIXTURES"
 local llm = require("llm")
 local json = require("dkjson")
 local base = arg[1] or ""

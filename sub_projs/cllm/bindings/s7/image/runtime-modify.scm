@@ -1,5 +1,5 @@
 ; runtime-modify.scm — s7 執行期修改：程式跑著就重定義，不重啟。
-; 跑：source ~/dev/env.sh 後  llm-s7 runtime-modify.scm
+; 跑：source ~/dev/cllm/env.sh 後  llm-s7 runtime-modify.scm
 
 ; ① 重定義傳播：早定義的 caller，set! 換掉 greet 後立即走新版
 (define (greet n) (string-append "v1：嗨 " n))
