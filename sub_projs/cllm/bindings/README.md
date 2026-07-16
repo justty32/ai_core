@@ -6,17 +6,17 @@
 
 ## 常駐開發環境（推薦入口）
 
-**[`../install-dev.sh`](../install-dev.sh)** 一鍵把 cllm 裝成常駐前綴（預設 `~/repo/dev`，像 `/usr/{include,lib,bin}`）＋搭好全部語言環境，**可重現**（`rm -rf ~/repo/dev` 後重跑即重建）：
+**[`../install-dev.sh`](../install-dev.sh)** 一鍵把 cllm 裝成常駐前綴（預設 `~/dev`，像 `/usr/{include,lib,bin}`）＋搭好全部語言環境，**可重現**（重跑即冪等覆蓋；⚠ 勿 `rm -rf ~/dev`——prefix 裡可能還有別的東西）：
 
 ```bash
-bash install-dev.sh            # → ~/repo/dev/{include,lib,bin,share}
-source ~/repo/dev/env.sh       # 設好 PATH／pkg-config／lua cpath／LIBCLLM／CLLM_LISP…
+bash install-dev.sh            # → ~/dev/{include,lib,bin,share}
+source ~/dev/env.sh       # 設好 PATH／pkg-config／lua cpath／LIBCLLM／CLLM_LISP…
 # 逐語言範例（離線 fixture，$CLLM_FIXTURES 由 env.sh 設）：
-bash   ~/repo/dev/share/cllm/examples/shell/example.sh   "$CLLM_FIXTURES"
-python3 ~/repo/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
+bash   ~/dev/share/cllm/examples/shell/example.sh   "$CLLM_FIXTURES"
+python3 ~/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 ```
 
-各語言用法＋JSON 庫對照見 `~/repo/dev/share/cllm/README.md`（由腳本生成）。
+各語言用法＋JSON 庫對照見 `~/dev/share/cllm/README.md`（由腳本生成）。
 
 ## 各語言（原始碼在此，install-dev.sh 建置/複製）
 
@@ -32,7 +32,16 @@ python3 ~/repo/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 | Go | `import "cllm"`（cgo，pkg-config cllm）| stdlib `encoding/json` | [go/](go/) |
 | Shell | `llm 你好`（unix filter CLI）| jq | [shell/](shell/) |
 
-每個 example 都示範：基本 `ask`、串流、`schema`→JSON 解析、以及從該語言 shell-out 呼叫 `llm` CLI。
+每個 example 都示範：基本 `ask`、串流、`schema`→JSON 解析、`tools`＋on_tool、media 輸出（on_media）、media 輸入＋`modalities` 搬運、以及從該語言 shell-out 呼叫 `llm` CLI。
+
+## 煙霧測試（離線、一鍵）
+
+```bash
+bash ../test/bindings_smoke.sh     # 全語言輪流跑（前置：install-dev.sh 裝好 ~/dev）
+bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/env.sh）
+```
+
+每個語言資料夾各有一個 `smoke.sh`（跑該語言 example、比對關鍵標記），master 只是輪流呼叫它們。
 
 ## 映像/部署（Lisp 家族：s7／Common Lisp／Fennel）
 
@@ -51,6 +60,7 @@ python3 ~/repo/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 - **Go**：`Ask(prompt, opts...) (string, error)`，functional options（`cllm.Endpoint(url)`／`cllm.Temperature(0.7)`／`cllm.Stream()`／`cllm.OnDelta(fn)`）；錯誤走回傳的 `error`。
 - **C++**：`ask(prompt, {.stream=…, .on_delta=…})` 回 `std::expected<std::string, Error>`；錯誤統一走 `expected`（不混 throw／空字串），要一行爽寫可 `.value()` 就地拋。
 - 欄位：`endpoint`／`api_key`／`model`／`timeout_ms`／`temperature`／`top_p`／`presence_penalty`／`frequency_penalty`／`max_tokens`／`seed`／`stream`／`schema`／`on_delta`／`on_error`（皆選填）。回完整答案字串。
+- **進階欄位（v1 已全語言收齊）**：`tools`（name/description/parameters）＋`on_tool`（收 id/name/arguments，回真值＝中止）、`media`（url 或 bytes＋mime）、`modalities`（name＋config JSON）、`on_media`（收 mime/bytes）。命名照各語言慣例（snake_case／hyphen keyword／functional options）。⚠ tools 是**單輪**：執行工具與是否回送由呼叫端決定（C ABI 無多輪 loop）。
 
 ## 注意（v1，刻意小）
 
@@ -59,7 +69,7 @@ python3 ~/repo/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 - **⚠ s7 回呼別丟 error**：`:on-delta`/`:on-error` 在 `llm_ask`（C++）途中被呼叫，s7 error 以 longjmp 實作、穿 C++ 是 UB。回呼只做無害的事。（Lua/Python/CL 有包 pcall/handler-case，安全。）
 - **Common Lisp 需 quicklisp**（載 CFFI／shasht）；`~/.sbclrc` 已載 quicklisp 即可，`--script` 下 cllm.lisp 會自載 `~/quicklisp/setup.lisp`。
 - **Go 走 cgo**：`#cgo pkg-config: cllm` 於 `go build` 時跑 pkg-config，故需先 `source env.sh`（設 `PKG_CONFIG_PATH`）。回呼用 `cgo.Handle` 把 Go closure 帶進 C，schema struct 用 `runtime.Pinner` pin（Go 1.21+ 內嵌 Go 指標規則）。
-- **只綁 text／schema／stream 主路**：`tools`／`media`／`modalities` 大多未收（C ABI 已支援，補接即可，見 [C ABI 輸入型](../docs/c-abi-input.md)）。**例外：C++ 便利層已收 `tools`**（`make_tool<Args>`／`args_as<Args>`，`llm_reflect.hpp`）**與 `media`**（`media_from_file`／`media_from_url`，`llm.hpp`）；其餘語言仍只到主路。
+- **s7 原始碼已 vendor 在 repo**（`s7/vendor/s7.{c,h}`，比照 lua 的 `vendor/dkjson.lua`）——`install-dev.sh`／`smoke.sh`／`build.sh` 都吃這份，零外部依賴。
 - **⚠ glaze 反射的 struct 要放 namespace scope**：`llm_reflect.hpp` 的 `ask_as<T>`／`make_tool<Args>` 靠 glaze 靜態反射，函式內 local struct 編不過——struct 定義要放在 namespace／檔案層級。
 - **未在 Windows 實測**（C 綁定的 `build.sh` 是 bash；Python/CL 改設 `LIBCLLM` 指 `libcllm.dll`）。
 - **⚠ 動 C ABI 要想到這些下游**：改 `src/cabi.h` 扁平結構／`llm_ask` 簽章時，這 8 個綁定都在鐵律 3 的受影響清單裡。

@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# install-dev.sh — 把 cllm 裝成「常駐開發環境」到一個 prefix（預設 ~/repo/dev），變成可
+# install-dev.sh — 把 cllm 裝成「常駐開發環境」到一個 prefix（預設 ~/dev），變成可
 # include/link 的東西（像 /usr/{include,lib,bin}），並搭好各語言環境：
 #   C / C++（pkg-config cllm，JSON 用 jansson）、Lua 5.4+5.5（llm.so，JSON 用 dkjson）、
 #   Fennel（用 5.4 的 llm.so + dkjson）、s7 Scheme（llm-s7 REPL，JSON 用 jq）、
 #   Python（ctypes llm.py，JSON 用 stdlib）、Common Lisp（CFFI cllm.lisp，JSON 用 shasht）、
 #   Shell（llm CLI + jq）。
-# 一鍵可重現：rm -rf $PREFIX 後重跑即整個重建。
+# 一鍵可重現：重跑即冪等覆蓋重建 cllm 那份。⚠ 別 rm -rf $PREFIX——prefix（~/dev）可能還住著
+# 別的東西；要清 cllm 的部分只刪：include/cllm include/glaze lib/libcllm* lib/pkgconfig/cllm.pc
+# lib/lua lib/python lib/lisp lib/go bin/llm bin/llm-s7 share/cllm share/lua env.sh。
 #
 # 用：bash install-dev.sh
-#   PREFIX=/somewhere   安裝前綴（預設 ~/repo/dev）
-#   S7_DIR=/path/to/s7  含 s7.c/s7.h 的目錄（預設 ~/repo/pas/derived/s7-playground）
+#   PREFIX=/somewhere   安裝前綴（預設 ~/dev）
 #   LUA55_INC/LUA54_INC lua 頭檔目錄（預設 /usr/include、/usr/include/lua5.4）
+# s7 原始碼已 vendor 在 repo（bindings/s7/vendor/，比照 lua 的 vendor/dkjson.lua）——零外部依賴。
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PREFIX="${PREFIX:-$HOME/repo/dev}"
-S7_DIR="${S7_DIR:-$HOME/repo/pas/derived/s7-playground}"
+PREFIX="${PREFIX:-$HOME/dev}"
 LUA55_INC="${LUA55_INC:-/usr/include}"
 LUA54_INC="${LUA54_INC:-/usr/include/lua5.4}"
 
@@ -42,13 +43,10 @@ gcc -O2 -fPIC -shared -I"$LUA55_INC" $CF "$HERE/bindings/lua/llm.c" $LF -o "$PRE
 gcc -O2 -fPIC -shared -I"$LUA54_INC" $CF "$HERE/bindings/lua/llm.c" $LF -o "$PREFIX/lib/lua/5.4/llm.so"
 cp "$HERE/bindings/lua/vendor/dkjson.lua" "$PREFIX/share/lua/dkjson.lua"   # 純 lua，5.4/5.5/fennel 共用
 
-echo "== [3/7] s7 host（llm-s7，s7.c 編進去、self-contained）=="
-if [ -f "$S7_DIR/s7.c" ]; then
-  gcc -O2 -I"$S7_DIR" $CF "$HERE/bindings/s7/host.c" "$HERE/bindings/s7/llm_s7.c" "$S7_DIR/s7.c" \
-    $LF -lm -ldl -o "$PREFIX/bin/llm-s7"
-else
-  echo "  ⚠ 找不到 $S7_DIR/s7.c → 跳過 llm-s7（設 S7_DIR 後重跑）"
-fi
+echo "== [3/7] s7 host（llm-s7，s7.c 編進去、self-contained；s7 原始碼在 repo vendor）=="
+S7_DIR="$HERE/bindings/s7/vendor"
+gcc -O2 -I"$S7_DIR" $CF "$HERE/bindings/s7/host.c" "$HERE/bindings/s7/llm_s7.c" "$S7_DIR/s7.c" \
+  $LF -lm -ldl -o "$PREFIX/bin/llm-s7"
 
 echo "== [4/7] Python（ctypes llm.py）＋ Common Lisp（CFFI cllm.lisp）=="
 mkdir -p "$PREFIX/lib/python" "$PREFIX/lib/lisp"
@@ -94,12 +92,12 @@ EOF
 
 echo "== [7/7] share/cllm/README.md =="
 cat > "$PREFIX/share/cllm/README.md" <<'EOF'
-# cllm 常駐開發環境（~/repo/dev）
+# cllm 常駐開發環境（~/dev）
 
 `libcllm.so`（對外 C ABI，唯一入口 `llm_ask`）裝成可 include/link 的常駐前綴。
-由 `<cllm repo>/install-dev.sh` 產生、可重現（`rm -rf` 後重跑即重建）。
+由 `<cllm repo>/install-dev.sh` 產生、可重現（重跑即冪等覆蓋；⚠ 勿 rm -rf 整個 prefix，裡面可能還有別的東西）。
 
-先 `source ~/repo/dev/env.sh`。離線自測用 `$CLLM_FIXTURES`（假回應，不必開後端）；
+先 `source ~/dev/env.sh`。離線自測用 `$CLLM_FIXTURES`（假回應，不必開後端）；
 接真後端則省略 endpoint（走內建 `http://localhost:1234/v1/chat/completions`）。
 
 | 語言 | 怎麼用（＋JSON 庫） | 範例 |
@@ -115,7 +113,9 @@ cat > "$PREFIX/share/cllm/README.md" <<'EOF'
 | Shell | `llm 你好`（unix filter；`llm --help`）；JSON=`jq` | examples/shell |
 
 所有語言 API 一致：`ask(prompt[, endpoint], …)` + `on_delta` 串流回呼，回完整答案字串。
-每個 example 都示範：基本 ask、串流、schema→JSON 解析、以及從該語言 shell-out 呼叫 `llm` CLI。
+每個 example 都示範：基本 ask、串流、schema→JSON 解析、tools＋on_tool、media 輸出（on_media）、
+media 輸入＋modalities、以及從該語言 shell-out 呼叫 `llm` CLI。
+離線自測：`bash <cllm repo>/test/bindings_smoke.sh`（九語言一鍵）。
 EOF
 
 echo ""

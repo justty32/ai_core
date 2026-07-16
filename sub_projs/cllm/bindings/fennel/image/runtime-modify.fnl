@@ -1,5 +1,5 @@
 ;; runtime-modify.fnl — Fennel/Lua 執行期修改（活的，但無映像持久化）。
-;; 跑：source ~/repo/dev/env.sh 後  fennel runtime-modify.fnl
+;; 跑：source ~/dev/env.sh 後  fennel runtime-modify.fnl
 (global greet (fn [n] (.. "v1：嗨 " n)))
 (fn caller [n] (greet n))
 (print (.. "① 改前：" (caller "星野")))

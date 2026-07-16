@@ -1,6 +1,6 @@
 # s7 映像：產出 · 利用（CLI/lib）· 執行期修改
 
-← [bindings](../../README.md)｜需先 `source ~/repo/dev/env.sh`（並 `export S7_DIR=…`）
+← [bindings](../../README.md)｜需先 `source ~/dev/env.sh`（並 `export S7_DIR=…`）
 
 **s7 沒有 SBCL 那種記憶體映像 dump**（存不了活著的堆疊）。它的「image」＝**AOT 編成自帶直譯器的獨立 C 執行檔**——s7.c ＋ 綁定 ＋你的 scheme，全編進一個 binary。三件事各有做法，都實測過。
 
@@ -8,8 +8,8 @@
 
 把你的 scheme 邏輯以字串 `s7_eval_c_string` 烤進 host，和 s7.c 一起編（見 [baked.c](baked.c)）：
 ```bash
-source ~/repo/dev/env.sh
-export S7_DIR=/path/to/s7           # 含 s7.c/s7.h
+source ~/dev/env.sh
+export S7_DIR=<cllm repo>/bindings/s7/vendor   # 含 s7.c/s7.h（repo 已 vendor；也可指自備的）
 gcc -O2 baked.c ../llm_s7.c "$S7_DIR/s7.c" -I"$S7_DIR" \
     $(pkg-config --cflags --libs cllm) -lm -ldl -o cllm-s7-image
 ```

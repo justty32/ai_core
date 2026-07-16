@@ -9,8 +9,7 @@
 
 ## 最新進度
 
-- **常駐開發環境 + 八語言綁定已落地**（2026-07-16）：[`install-dev.sh`](install-dev.sh) 一鍵把 cllm 裝成常駐前綴 `~/repo/dev`（include/lib/bin/pkgconfig，`cmake --install`＋rpath），並搭好 **C／C++／Lua(5.4+5.5)／Fennel／s7／Python／Common Lisp／Go(cgo)** 環境＋Shell CLI，可重現（`rm -rf ~/repo/dev` 重跑）。每個 example 示範 基本 ask／串流／schema→JSON 解析／shell-out CLI；Lisp 家族（s7/CL/Fennel）另有 `image/`（產映像／CLI/lib/執行期修改）。Linux 離線 fixture 全綠。**open 尾巴**：① `tools`／`media`／`modalities` 未綁（只 text/schema/stream 主路）——**C++ 便利層已例外收齊 tools＋media helpers**（見下條），其餘語言仍未綁；② 未在 Windows 實測；③ 未接主 CMake（bindings 刻意獨立）。詳見 [bindings/README](bindings/README.md)。
-- **C++ 便利層已落地**（2026-07-16）：`bindings/cpp/llm.hpp`（零依賴：聚合 ask／`std::expected` 統一錯誤／串流糖／media helpers）＋`llm_reflect.hpp`（glaze 糖：`ask_as<T>`／`make_tool<Args>`／`args_as<Args>`，schema 開 `error_on_missing_keys`）。install-dev.sh [1b] 裝進 prefix（含 glaze 標頭），example 五路離線全綠、cli_smoke 19/19。**open 尾巴**：① `modalities` 仍無糖（`ask(Request)` 可直塞）；② `ask_as<T>`／media 對真後端未實測（記 WAIT_USER）。
+- **八語言綁定全路收齊＋一鍵 smoke**（2026-07-16）：全語言（C／C++／Lua／Fennel／s7／Python／CL／Go＋Shell）都綁了 `tools`／`media`／`modalities`＋`on_tool`／`on_media`；每語言各有 `smoke.sh`、[`test/bindings_smoke.sh`](test/bindings_smoke.sh) 一鍵輪跑（9/9 綠）。C++ 另有便利層 `llm.hpp`（聚合 ask／`std::expected`／串流糖／media helpers）＋`llm_reflect.hpp`（`ask_as<T>`／`make_tool<Args>`／`args_as<Args>`／`modality<Config>`）。常駐前綴改 **`~/dev`**（共用目錄、install 冪等覆蓋、勿整個 rm）；s7 原始碼 vendor 進 repo（`bindings/s7/vendor/`），不再依賴 pas。**open 尾巴**：① 未在 Windows 實測；② 未接主 CMake（刻意獨立）；③ 新接口對真後端未實測（記 WAIT_USER）。詳見 [bindings/README](bindings/README.md)。
 - **反射生成 CLI 是「參考版」，已拆成清晰結構供重寫參照**：`src/cli.cpp`（orchestrator）＋`cli_flags.{hpp,cpp}`（反射旗標＋`--help`）＋`cli_config.{hpp,cpp}`（config 三層來源＋檔案/mime）＋`cli_internal.hpp`（共用常數）——按關注點拆、各檔 ≤300 行、行為不變（19/19）。**使用者仍將自行重寫一遍（加深記憶）**，這套拆法當骨架。CLI 用法見 [docs/cli-manual.md](docs/cli-manual.md)、檔對應見 [code-map ⑤](workflows/common/code-map/CODE_MAP.md)。
 
 ## 各工作流 session-log

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # example.sh — 純用 shell 呼叫 cllm CLI（llm）＋ jq 解析 JSON。
-# 跑：source ~/repo/dev/env.sh 後  bash example.sh ["$CLLM_FIXTURES"]
+# 跑：source ~/dev/env.sh 後  bash example.sh ["$CLLM_FIXTURES"]
 set -euo pipefail
 BASE="${1:-${CLLM_FIXTURES:-}}"
 

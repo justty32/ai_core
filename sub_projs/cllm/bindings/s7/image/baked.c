@@ -3,7 +3,7 @@
  * s7 沒有 SBCL 那種記憶體映像 dump——它的「image」＝AOT 編成自帶直譯器的 C 執行檔。
  * 這就是產出 s7 image 的方式：s7.c ＋ llm_s7.c（llm-ask）＋你的 scheme 字串，一起編成單一 binary。
  *
- * 編：source ~/repo/dev/env.sh 後
+ * 編：source ~/dev/env.sh 後
  *   gcc -O2 baked.c ../llm_s7.c "$S7_DIR/s7.c" -I"$S7_DIR" \
  *       $(pkg-config --cflags --libs cllm) -lm -ldl -o cllm-s7-image
  * 跑：./cllm-s7-image 你好 "$CLLM_FIXTURES/fake/chat/completions"

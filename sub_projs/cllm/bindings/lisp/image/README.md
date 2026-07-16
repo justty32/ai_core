@@ -1,13 +1,13 @@
 # Common Lisp 映像：產出 · 利用（CLI/lib）· 執行期修改
 
-← [bindings](../../README.md)｜需先 `source ~/repo/dev/env.sh`
+← [bindings](../../README.md)｜需先 `source ~/dev/env.sh`
 
 把 cllm 綁定＋你的碼「烤」進 SBCL **映像**（image）——一個含堆疊狀態的可重載/可執行檔。三件事都在本夾實測過。
 
 ## 1. 產出映像
 
 ```bash
-source ~/repo/dev/env.sh
+source ~/dev/env.sh
 sbcl --script save-image.lisp exe    # → ./cllm-image（可執行映像）
 sbcl --script save-image.lisp core   # → cllm.core（core 映像，當 lib 基底）
 ```

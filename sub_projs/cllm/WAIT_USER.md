@@ -10,5 +10,5 @@
 
 ## 待使用者項
 
-- **C++ 便利層對真後端驗證**：`bindings/cpp` 的 `ask_as<T>`（schema required 約束是否真的讓模型每欄都吐）、`ask_tools`＋`args_as`（真模型的 tool_calls 路徑）、`media_from_file`（vision）離線 fixture 只驗得了成功投影，需掛真後端實跑（`source ~/repo/dev/env.sh` 後把 example 的 endpoint 指過去）。
+- **綁定新接口對真後端驗證**：九語言的 `tools`＋`on_tool`（真模型 tool_calls）、`media`（vision）、`modalities`、C++ 的 `ask_as<T>`（schema required 約束是否真讓模型每欄都吐）——離線 fixture 只驗得了成功投影，需掛真後端實跑（`source ~/dev/env.sh` 後把各 example 的 endpoint 指過去；一鍵離線基準＝`bash test/bindings_smoke.sh`）。
 - **真後端行為驗證需本機 LM Studio（或雲端 API）**：離線 `file://` fixture 只投影「成功」、從不投影「失敗」，錯誤路徑／reasoning 模型的 `max_tokens` 行為／schema `required` 等只有打真後端才驗得出（見 [gotchas/backend](workflows/common/gotchas/backend.md)）。要驗證新接口對真後端的行為，需使用者這邊掛好後端、把 `--endpoint` 指過去實跑。

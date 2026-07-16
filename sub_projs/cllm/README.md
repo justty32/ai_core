@@ -16,7 +16,7 @@
 
 現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。（舊 L0 `archived/` 已於 2026-07-16 刪除——內容早已融進 C ABI 實作，查史用 `git log -- sub_projs/cllm/archived`。）
 
-離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（19/19 綠）。
+離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（19/19 綠）＋ `test/bindings_smoke.sh` 一鍵驗九語言綁定（輪流呼叫各 `bindings/<lang>/smoke.sh`）。
 
 ## 建置（命令列）
 
@@ -75,7 +75,7 @@ llm 用一句話介紹你自己 --endpoint http://localhost:1234/v1/chat/complet
 | 想做／想查 | 去哪 |
 |-----------|------|
 | **用某語言呼叫 cllm**（C／C++／Lua／Fennel／s7／Python／Common Lisp）| [bindings/](bindings/README.md) |
-| **裝成常駐 dev 環境**（`~/repo/dev`，可 include/link、pkg-config cllm）| [install-dev.sh](install-dev.sh) |
+| **裝成常駐 dev 環境**（`~/dev`，可 include/link、pkg-config cllm）| [install-dev.sh](install-dev.sh) |
 | **一頁看懂**（資料流／型別對照／路由）| [docs/overview.html](docs/overview.html) |
 | **API 參考**（C ABI／C++ 鏡像／CLI）| [docs/](docs/README.md) |
 | **建置環境／vcpkg 依賴** | [docs/setup.md](docs/setup.md) |

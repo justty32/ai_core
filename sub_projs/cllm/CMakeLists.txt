@@ -81,8 +81,8 @@ if(WIN32)
     target_link_options(llm PRIVATE -municode -static-libgcc -static-libstdc++)
 endif()
 
-# ── 安裝規則：常駐 prefix（如 ~/repo/dev），變成可 include/link 的東西 ──
-# 用：cmake --preset linux-debug -DCMAKE_INSTALL_PREFIX=$HOME/repo/dev
+# ── 安裝規則：常駐 prefix（如 ~/dev），變成可 include/link 的東西 ──
+# 用：cmake --preset linux-debug -DCMAKE_INSTALL_PREFIX=$HOME/dev
 #     cmake --build   --preset linux-debug
 #     cmake --install build
 # 產出 <prefix>/{include/cllm,lib,bin,lib/pkgconfig}。裝出來的 .so/exe 帶 INSTALL_RPATH

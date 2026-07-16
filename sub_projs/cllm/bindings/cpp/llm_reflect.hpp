@@ -83,4 +83,13 @@ Result<Args> args_as(const abi::ToolCall &call) {
   return parse_as<Args>(call.arguments);
 }
 
+// 從 config struct 反射生 Modality（cabi.hpp 預告的 modality<Config>）：
+// struct 欄位＝該模態的生成參數，glz::write_json 序列化成 config JSON（塞 Request.modalities）。
+template <class Config>
+abi::Modality modality(std::string name, const Config &cfg) {
+  auto json = glz::write_json(cfg);
+  return abi::Modality{.name = std::move(name),
+                       .config = json ? std::move(*json) : std::string{}};
+}
+
 } // namespace llm

@@ -2,7 +2,7 @@
 ;;;;
 ;;;; 產可執行映像：  sbcl --script save-image.lisp exe    → ./cllm-image
 ;;;; 產 core 映像：   sbcl --script save-image.lisp core   → cllm.core
-;;;; 需先  source ~/repo/dev/env.sh（提供 CLLM_LISP 綁定路徑、LIBCLLM 定位 .so）。
+;;;; 需先  source ~/dev/env.sh（提供 CLLM_LISP 綁定路徑、LIBCLLM 定位 .so）。
 ;;;;
 ;;;; 重點：CFFI 用 define-foreign-library/use-foreign-library 註冊 libcllm，SBCL 重啟映像時會
 ;;;; 自動重載該 .so——所以烤進映像後，cllm:ask 開箱即用、不必再 quickload/load（實測冷載 ~268ms

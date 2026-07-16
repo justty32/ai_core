@@ -1,6 +1,6 @@
 // example.cpp — cllm C++ 便利層（llm.hpp + llm_reflect.hpp）＋ shell(CLI) 呼叫。
 // 編：g++ -std=c++23 example.cpp $(pkg-config --cflags --libs cllm) -o example
-// 跑：source ~/repo/dev/env.sh 後  ./example "$CLLM_FIXTURES"
+// 跑：source ~/dev/env.sh 後  ./example "$CLLM_FIXTURES"
 #include <cstdio>
 #include <string>
 #include <cllm/llm.hpp>         // 便利層：聚合 ask／expected 錯誤／串流糖／media helpers
@@ -20,6 +20,9 @@ struct Character {
 };
 struct GetWeather {
   std::string city, unit;
+};
+struct AudioCfg {
+  std::string voice, format;
 };
 
 int main(int argc, char **argv) {
@@ -53,7 +56,21 @@ int main(int argc, char **argv) {
         std::printf("[cpp] tool => %s(city=%s, unit=%s)\n",
                     tc.name.c_str(), args->city.c_str(), args->unit.c_str());
 
-  // 5) shell 呼叫 llm CLI（unix filter）
+  // 5) media 輸出：fake_media fixture 回 audio → on_media 聚合進 Reply.media
+  if (auto rep = client_for(base, "fake_media/chat/completions").ask(llm::abi::Request{.prompt = "說句話"}))
+    std::printf("[cpp] media out => text=%s media=%zu mime=%s bytes=%zu\n",
+                rep->text.c_str(), rep->media.size(),
+                rep->media.empty() ? "-" : rep->media[0].mime.c_str(),
+                rep->media.empty() ? 0 : rep->media[0].bytes.size());
+
+  // 6) media 輸入＋modalities：掛上 Request 送出（fixture 不看 body，這裡驗的是搬運不炸）
+  llm::abi::Request req{.prompt = "描述這張圖"};
+  req.media.push_back(llm::media_from_url("data:image/png;base64,iVBORw0KGgo="));
+  req.modalities.push_back(llm::modality("audio", AudioCfg{.voice = "alloy", .format = "wav"}));
+  auto multi = client_for(base, "fake/chat/completions").ask(req);
+  std::printf("[cpp] media in+modality => %s\n", multi ? "ok" : multi.error().message.c_str());
+
+  // 7) shell 呼叫 llm CLI（unix filter）
   std::string cmd = "llm 你好 --endpoint '" + base + "fake/chat/completions'";
   std::string out;
   if (FILE *p = popen(cmd.c_str(), "r")) {
