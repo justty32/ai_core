@@ -14,6 +14,7 @@
 | 「頭腦風暴：找漏洞／擴展」 | **idea-capture** | [workflows/idea-capture.md](workflows/idea-capture.md)；點子與研究的家見 [workflows/ideas/README.md](workflows/ideas/README.md) |
 | 「排實作規劃 / 施工單」 | **plans** | [workflows/plans/README.md](workflows/plans/README.md) |
 | 「戰略檢視 / 該不該做 / 先做哪個」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap/README.md) |
+| 「查某技術怎麼做 / 可行性勘查」 | **investigation** | [workflows/investigation/README.md](workflows/investigation/README.md) |
 | 「記 / 查踩坑」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
@@ -35,7 +36,7 @@
 - **單檔工作流**（還沒長成資料夾的那些）：一個 `.md` 同時是入口與內容；撐大了就照「[結構整理原則](DEV-GUIDE.md)」升級成資料夾型。到底有哪些工作流、各自入口在哪，看上面的派發表即可。
 - 入口檔本身膨脹 → 一樣照結構整理原則拆。
 
-> **note**：`resume` 的入口是 repo 根的 `SESSION-LOG.md`、`spec` 的入口是規範夾 `workflows/spec/`——都不在 `workflows/` 下另立入口檔；`idea-capture` / `roadmap` 為專屬單檔（`workflows/idea-capture.md` / `workflows/roadmap.md`）；`intake` / `plans` 已長成資料夾（`workflows/intake/` / `workflows/plans/`，各自帶 README 入口）。
+> **note**：`resume` 的入口是 repo 根的 `SESSION-LOG.md`、`spec` 的入口是規範夾 `workflows/spec/`——都不在 `workflows/` 下另立入口檔；`idea-capture` / `roadmap` 為專屬單檔（`workflows/idea-capture.md` / `workflows/roadmap.md`）；`intake` / `plans` / `investigation` 已長成資料夾（各自帶 README 入口）。
 
 ## 規劃管線（點子怎麼變成核心）
 
