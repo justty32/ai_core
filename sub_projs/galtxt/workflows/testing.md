@@ -2,12 +2,12 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-> **現況：尚無驗證指令**（galtxt 規劃/起步期、無程式碼）。第一片程式碼落地時在此補上（依技術棧 C++／Lua：如 `cmake --build` / ctest / Lua 測試 runner）。本檔是「單檔工作流」，膨脹了就照 [DEV-GUIDE](../DEV-GUIDE.md) 升級成資料夾型。
+> 本檔是「單檔工作流」，膨脹了就照 [DEV-GUIDE](../DEV-GUIDE.md) 升級成資料夾型。
 
 ## 指令
 
-- **快速驗證（Claude 自己跑、鐵律要求的那套）**：`（待補）`
-- **完整驗證**：`（待補）`
+- **快速驗證（Claude 自己跑、鐵律要求的那套）**：`cd gen_v0 && lua main.lua`——六個示範全數自帶 assert（含確定性逐位元自檢），跑完印「全部示範完成」即綠。
+- **完整驗證**：同上（目前只有 gen_v0 這一片程式碼）。
 
 ## 測試分類
 
