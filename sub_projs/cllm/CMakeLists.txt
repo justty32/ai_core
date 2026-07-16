@@ -76,3 +76,27 @@ if(WIN32)
     # -municode：wmain 取寬字元命令列（中文 argv 不亂碼），對齊舊 try_3 exe。
     target_link_options(llm PRIVATE -municode -static-libgcc -static-libstdc++)
 endif()
+
+# ── 安裝規則：常駐 prefix（如 ~/repo/dev），變成可 include/link 的東西 ──
+# 用：cmake --preset linux-debug -DCMAKE_INSTALL_PREFIX=$HOME/repo/dev
+#     cmake --build   --preset linux-debug
+#     cmake --install build
+# 產出 <prefix>/{include/cllm,lib,bin,lib/pkgconfig}。裝出來的 .so/exe 帶 INSTALL_RPATH
+# 指到自己的 libdir，換位置或從任意 cwd 跑都找得到 libcllm.so（免設 LD_LIBRARY_PATH）。
+include(GNUInstallDirs)
+set_target_properties(cllm llm PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+
+# 對外頭檔（C ABI 傘檔＋功能頭＋C++ 薄鏡像）——不裝內部頭 cabi_internal.hpp／http.hpp。
+install(FILES
+    src/cabi.h src/cabi_client.h src/cabi_request.h src/cabi_response.h src/cabi_context.h
+    src/cabi.hpp src/cabi_request.hpp src/cabi_response.hpp src/cabi_context.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cllm)
+install(TARGETS cllm LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS llm  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# pkg-config：下游 `pkg-config --cflags --libs cllm` 即拿到 -I/-L/-lcllm。
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cllm.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/cllm.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cllm.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

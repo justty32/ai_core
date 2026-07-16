@@ -1,79 +1,50 @@
-# bindings — cllm 的腳本語言綁定（Lua／s7 Scheme／Python）
+# bindings — 各語言用 cllm（含直接用 C ABI 的 C/C++）
 
 ← [cllm 專案根](../README.md)｜[C ABI 參考](../docs/c-abi-reference.md)｜[INDEX](../INDEX.md)
 
-把 `libcllm.so` 的**對外 C ABI**（唯一入口 `llm_ask`）綁進腳本 VM，讓 Lua／Scheme／Python 一句話問 LLM。**只消費穩定 C ABI、不碰 cllm 的 CMake/vcpkg**——刻意輕：C 綁定各夾一個 `build.sh` 就地編，Python 走 `ctypes` **零編譯**。
+把 `libcllm.so` 的**對外 C ABI**（唯一入口 `llm_ask`）綁進各語言，一句話問 LLM。**只消費穩定 C ABI、不碰 cllm 的 CMake/vcpkg**（刻意輕）。API 對齊 galtxt/try_4：`ask` + `on_delta` 串流回呼，回完整答案字串。
 
-> API 對齊 galtxt/try_4 的既有慣例（`ask` + `on_delta` 串流回呼）。三邊語意一致，只是換語言的手感。
+## 常駐開發環境（推薦入口）
 
-## 佈局
-
-| 路徑 | 內容 |
-|------|------|
-| [`lua/`](lua/) | `llm.c`（Lua C 模組）＋`example.lua`＋`build.sh` → 產 `llm.so`（`require("llm")`）|
-| [`s7/`](s7/) | `llm_s7.c`（s7 foreign function）＋`host.c`（自帶 host）＋`example.scm`＋`build.sh` → 產 `llm-s7` 執行檔 |
-| [`python/`](python/) | `llm.py`（純 ctypes，**零編譯**）＋`example.py` → `import llm`（`LIBCLLM` 環境變數可覆寫 .so 路徑）|
-
-## 建置與試跑（Linux，實測綠）
-
-**Lua**（用系統 lua；`LUA_INC` 可覆寫頭檔目錄）：
+**[`../install-dev.sh`](../install-dev.sh)** 一鍵把 cllm 裝成常駐前綴（預設 `~/repo/dev`，像 `/usr/{include,lib,bin}`）＋搭好全部語言環境，**可重現**（`rm -rf ~/repo/dev` 後重跑即重建）：
 
 ```bash
-cmake --build --preset linux-debug          # 先有 build/libcllm.so
-bash bindings/lua/build.sh                   # → bindings/lua/llm.so
-LUA_CPATH="bindings/lua/?.so" lua bindings/lua/example.lua "file://$PWD/test/fixtures/"
+bash install-dev.sh            # → ~/repo/dev/{include,lib,bin,share}
+source ~/repo/dev/env.sh       # 設好 PATH／pkg-config／lua cpath／LIBCLLM／CLLM_LISP…
+# 逐語言範例（離線 fixture，$CLLM_FIXTURES 由 env.sh 設）：
+bash   ~/repo/dev/share/cllm/examples/shell/example.sh   "$CLLM_FIXTURES"
+python3 ~/repo/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 ```
 
-**s7**（s7 是單檔 Scheme，自備一份，`S7_DIR` 指向含 `s7.c`/`s7.h` 的目錄）：
+各語言用法＋JSON 庫對照見 `~/repo/dev/share/cllm/README.md`（由腳本生成）。
 
-```bash
-export S7_DIR=/path/to/s7                     # 例：某處的 s7-playground
-bash bindings/s7/build.sh                     # 把 s7.c 一起編 → bindings/s7/llm-s7
-./bindings/s7/llm-s7 bindings/s7/example.scm "file://$PWD/test/fixtures/"
-./bindings/s7/llm-s7 -e '(display (llm-ask "你好"))'   # 或直接 -e 表達式
-```
+## 各語言（原始碼在此，install-dev.sh 建置/複製）
 
-**Python**（純 ctypes，無需編譯，只要 `libcllm.so` 存在）：
+| 語言 | 產物／用法 | JSON 庫 | 原始碼 |
+|------|-----------|---------|--------|
+| C    | `cc x.c $(pkg-config --cflags --libs cllm jansson)`；`<cllm/cabi.h>` | jansson | [c/](c/) |
+| C++  | `g++ -std=c++20 …`；`<cllm/cabi.hpp>`（`llm::abi`）| jansson | [cpp/](cpp/) |
+| Lua  | `require("llm")`（5.5＝`lua`、5.4＝`lua5.4`）| dkjson | [lua/](lua/) |
+| Fennel | `(require :llm)`（跑在 lua 5.4）| dkjson | [fennel/](fennel/) |
+| s7   | `llm-s7 script.scm`（`llm-ask` 內建）| jq（shell-out）| [s7/](s7/) |
+| Python | `import llm`（純 ctypes、零編譯）| stdlib `json` | [python/](python/) |
+| Common Lisp | `(load CLLM_LISP)`→`cllm:ask`（CFFI）| shasht（quicklisp）| [lisp/](lisp/) |
+| Shell | `llm 你好`（unix filter CLI）| jq | [shell/](shell/) |
 
-```bash
-cmake --build --preset linux-debug          # 先有 build/libcllm.so
-cd bindings/python
-python3 example.py "file://$(cd ../.. && pwd)/test/fixtures/"
-# 或在自己的程式：import llm; print(llm.ask("你好"))
-# .so 不在預設 ../../build/ 時：export LIBCLLM=/path/to/libcllm.so
-```
+每個 example 都示範：基本 `ask`、串流、`schema`→JSON 解析、以及從該語言 shell-out 呼叫 `llm` CLI。
 
-三邊都用 `--endpoint file://…/test/fixtures/` 離線 fixture 自測（不連網、免真後端）；拿掉 `file://` 基底即走內建 `http://localhost:1234/v1/chat/completions`（本機 LM Studio）。
+## 選項（三種寫法，語意一致）
 
-## API（三邊一致）
+- **Lua / Python**：`ask(prompt[, endpoint], opts…)`，opts 用 **snake_case**（`on_delta`／`api_key`／`max_tokens`）。
+- **s7 / CL**：`(llm-ask prompt [endpoint] :key val …)`／`(cllm:ask prompt [endpoint] :key val …)`，**hyphen keyword**（`:on-delta`／`:api-key`）。
+- 欄位：`endpoint`／`api_key`／`model`／`timeout_ms`／`temperature`／`top_p`／`presence_penalty`／`frequency_penalty`／`max_tokens`／`seed`／`stream`／`schema`／`on_delta`／`on_error`（皆選填）。回完整答案字串。
 
-**Lua**：`llm.ask(prompt [, endpoint])`｜`llm.ask(prompt, opts)`｜`llm.ask(opts)`
-**s7**：`(llm-ask prompt [endpoint])`｜`(llm-ask prompt :key val …)`
-**Python**：`llm.ask(prompt [, endpoint], **opts)`
+## 注意（v1，刻意小）
 
-回**完整組合後的答案字串**。opts／keyword 欄位（皆選填，未給即不送、交後端默認）：
-
-| 欄位 | Lua key / Python kwarg | s7 keyword | 型別 |
-|------|---------|-----------|------|
-| endpoint | `endpoint` | `:endpoint` | 字串（`file://` 或 `http(s)://…/chat/completions`）|
-| api_key | `api_key` | `:api-key` | 字串 |
-| model | `model` | `:model` | 字串 |
-| timeout_ms | `timeout_ms` | `:timeout-ms` | 整數 |
-| 取樣 | `temperature`／`top_p`／`presence_penalty`／`frequency_penalty` | `:temperature`／`:top-p`／`:presence-penalty`／`:frequency-penalty` | 小數 |
-| | `max_tokens`／`seed` | `:max-tokens`／`:seed` | 整數 |
-| stream | `stream` | `:stream` | 布林 |
-| schema | `schema` | `:schema` | JSON Schema 字串（結構化輸出）|
-| 串流回呼 | `on_delta` | `:on-delta` | `fn(piece)`；回真值中止 |
-| 錯誤回呼 | `on_error` | `:on-error` | `fn(msg)` |
-
-（Python 的 kwarg 名與 Lua key 相同，皆 snake_case；s7 用連字號 keyword。）
-
-**錯誤語意**：Lua 回 `nil, errmsg`；s7 有 `:on-error` 就呼叫它並回 `#f`、否則丟 `(error 'llm-error …)`；Python 給 `on_error` 就呼叫它並回 `None`、否則 `raise LLMError`。
-
-## 範圍與注意（v1，刻意小）
-
-- **只綁 text／schema／stream 那條主路**：`tools`／`media`（vision）／`modalities` 未收——要的話照 [`llm_request_t`](../docs/c-abi-input.md) 補（C ABI 已支援，是 binding 還沒接）。
-- **⚠ s7 回呼別丟 Scheme error**：`on-delta`/`on-error` 在 `llm_ask`（C++）執行途中被呼叫，s7 error 以 longjmp 實作、穿 C++ 堆疊是 UB。回呼只做無害的事（display 等）。（Lua 這邊用 `lua_pcall` 包住、安全。）
-- **未在 Windows 實測**（C 綁定的 `build.sh` 是 bash、要另配 mingw；Python 的 ctypes 要改載 `libcllm.dll`——設 `LIBCLLM` 指過去即可）。
-- **未接 CMake**（刻意）：bindings 是 C ABI 的下游消費端，維持獨立可編、不進主建置。
-- **⚠ 動 C ABI 要想到這兩個下游**：改 `src/cabi.h` 的扁平結構／`llm_ask` 簽章時，bindings 也在鐵律 3 的受影響清單裡。
+- **⚠ Fennel 用 lua 的鍵名**：fennel 呼叫的是 lua binding，table 鍵要用**底線** `:on_delta`（不是 fennel 慣用的 `:on-delta`——那會變成 `"on-delta"` 對不上）。
+- **⚠ Lua 模組 ABI 綁 lua 版本**：`lua`（5.5）與 `fennel`（5.4）各需一份 `llm.so`（install-dev.sh 兩版都編，env.sh 用 `LUA_CPATH_5_4/5_5` 分流）。
+- **⚠ s7 回呼別丟 error**：`:on-delta`/`:on-error` 在 `llm_ask`（C++）途中被呼叫，s7 error 以 longjmp 實作、穿 C++ 是 UB。回呼只做無害的事。（Lua/Python/CL 有包 pcall/handler-case，安全。）
+- **Common Lisp 需 quicklisp**（載 CFFI／shasht）；`~/.sbclrc` 已載 quicklisp 即可，`--script` 下 cllm.lisp 會自載 `~/quicklisp/setup.lisp`。
+- **只綁 text／schema／stream 主路**：`tools`／`media`／`modalities` 未收（C ABI 已支援，補接即可，見 [C ABI 輸入型](../docs/c-abi-input.md)）。
+- **未在 Windows 實測**（C 綁定的 `build.sh` 是 bash；Python/CL 改設 `LIBCLLM` 指 `libcllm.dll`）。
+- **⚠ 動 C ABI 要想到這些下游**：改 `src/cabi.h` 扁平結構／`llm_ask` 簽章時，這 7 個綁定都在鐵律 3 的受影響清單裡。

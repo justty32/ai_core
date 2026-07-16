@@ -1,34 +1,21 @@
 #!/usr/bin/env python3
-"""example.py — cllm Python binding 示範。
-跑法（純 Python，先建好 ../../build/libcllm.so）：
-    python3 example.py "file:///<cllm絕對路徑>/test/fixtures/"   # 離線走 fixture
-    python3 example.py                                            # 無參數 → 內建 localhost（要真後端）
-libcllm.so 路徑預設 ../../build/libcllm.so，可用環境變數 LIBCLLM 覆寫。
-"""
-import sys
+"""example.py — cllm Python binding：基本 ask、串流、schema+JSON 解析、shell(CLI) 呼叫。
+跑：source ~/repo/dev/env.sh 後  python3 example.py "$CLLM_FIXTURES" """
+import sys, json, subprocess
 import llm
-
 base = sys.argv[1] if len(sys.argv) > 1 else ""
+ep = lambda n: (base + n) if base else None
 
-# ① 位置形式：prompt + endpoint（base 為空 → 省略 endpoint → 內建 localhost）
-if base:
-    ans = llm.ask("你好", base + "fake/chat/completions")
-else:
-    ans = llm.ask("你好")
-print("[py] llm.ask =>", ans)
+print("[py] ask =>", llm.ask("你好", ep("fake/chat/completions")))
+print("[py] 串流 => ", end="")
+llm.ask("數到五", endpoint=ep("fake_stream/chat/completions"), stream=True,
+        on_delta=lambda p: (print(f"[{p}]", end="", flush=True), False)[1]); print()
 
-# ② 串流 on_delta（逐段即時印；回真值可中止）
-if base:
-    print("[py] 串流逐段 => ", end="")
-    whole = llm.ask("數到五",
-                    endpoint=base + "fake_stream/chat/completions",
-                    stream=True,
-                    on_delta=lambda piece: (print("[" + piece + "]", end="", flush=True), False)[1])
-    print("　合＝" + whole)
+# schema → JSON → stdlib json 解析
+obj = json.loads(llm.ask("給我角色", endpoint=ep("fake_json/chat/completions"), schema='{"type":"object"}'))
+print(f"[py] json => name={obj['name']} affection={obj['affection']} lines={len(obj['lines'])}")
 
-# ③ schema 結構化輸出
-if base:
-    j = llm.ask("給我角色",
-                endpoint=base + "fake_json/chat/completions",
-                schema='{"type":"object"}')
-    print("[py] schema =>", j)
+# shell 呼叫：從 Python 呼叫 llm CLI，捕捉答案
+out = subprocess.run(["llm", "你好", "--endpoint", ep("fake/chat/completions")],
+                     capture_output=True, text=True)
+print("[py] shell(llm) =>", out.stdout.strip())

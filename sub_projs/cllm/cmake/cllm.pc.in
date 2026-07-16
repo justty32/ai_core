@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: cllm
+Description: LLM as a C ABI — libcllm（唯一入口 llm_ask）
+Version: 0.0.1
+Libs: -L${libdir} -Wl,-rpath,${libdir} -lcllm
+Cflags: -I${includedir} -I${includedir}/cllm
