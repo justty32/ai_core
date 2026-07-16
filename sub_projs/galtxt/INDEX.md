@@ -13,7 +13,7 @@
 | `AGENTS.md` / `CLAUDE.md` / `WORKFLOWS.md` / `INDEX.md` / `DEV-GUIDE.md` | 頂層路由 / 轉址 / 派發 / 地圖 / 結構整理參考 |
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
-| [`corpus/`](corpus/背景設定.md) | **語料庫**（進行中）：galgame 台詞語料——`背景設定.md` 世界種子＋6 個主題合併檔（台詞）＋`地點`/`人物`/`事件` 參考。|
+| [`corpus/`](corpus/README.md) | **語料庫**（日和町 galgame，~150 檔）：34 篇劇本（含 2 篇逐句深度分析）＋52 短場景＋多尺度世界設定（`世界/`）＋14 份角色 dossier（`人物/`）＋19 題評測 benchmark＋固化規則素材。入口與 canon 專名見 [corpus/README](corpus/README.md)。|
 | ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 
 ## 開發工作流
