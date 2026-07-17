@@ -13,6 +13,8 @@
   - `cd gen_v1_l && sbcl --script main.lisp`——同上的 Common Lisp 版（SBCL）。
   - `cd realizer_f && fennel main.fnl`——八股 realizer 玩具版（Fennel＋macro），六 demo 全自帶 assert，跑完印「八股 realizer（Fennel＋macro）立住了」即綠。
   - `cd realizer_l && sbcl --script main.lisp`——Common Lisp 壓縮版＋director 搜索層（realizer 90＋director 48＋main 39），九 demo 全自帶 assert（含 director 搜最優／intent 甜vs靜／direct-n 自動生 3 種台詞流）。
+  - `cd uni && sbcl --script main.lisp`——**統一節點＋共用 search kernel**（kernel/scene/search/main 四檔各≤51 行）：一種節點跑所有粒度＋搜 `*env*` 生台詞，九 demo 全自帶 assert。
+  - `cd uniform_probe/synth && sbcl --script synth.lisp`／各 `uniform_probe/aN/`——統一節點五路探索＋綜合（bench，各自帶 assert）。
 - **完整驗證**：全部都跑。
 
 ## 測試分類

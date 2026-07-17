@@ -1,7 +1,6 @@
 ;;;; a3.lisp — 統一節點 kernel（Common Lisp）。八股/段落/句式/填充物/原子事實＝同一種「節點」，粒度任意。
 ;;;; 每個節點都是一個 list：(ID :欄 值 …)，存於 *G*（唯一真源）。原子事實＝最細粒度（第0層），可帶邏輯。
 ;;;; 層數自然湧現：無引用＝第0層；有引用＝max(被引用層)+1。跑：sbcl --script a3.lisp（自帶 assert）。
-
 ;;; ════ kernel（節點容器＋層數＋接地＋一致性邏輯，全部就這一段）════════════════
 (defvar *G* (make-hash-table :test 'eq))                     ; id → 節點（一張表即整張網）
 (defmacro 節 (id &rest kv) `(progn (setf (gethash ',id *G*) ',(cons id kv)) ',id)) ; 造/註冊節點（kv＝literal data）
@@ -24,7 +23,6 @@
 (defun 可改? (id) (not (p id :鎖)))                          ; canon 鎖：呈現過的事實不可改，只可再細化
 (defun 細化合法? (child) (let ((par (p child :父)))          ; LOD 不變式：細化落在父約束內、不推翻父
                           (and par (g par) (eq (p par :型) :區間))))
-
 ;;; ════ 原子事實庫（第0層・:域 :真值）——《最後的櫻花雪》世界＋人物＋河堤場景 ════
 
 ;; ── 世界觀／年代／母題（氛圍級，被引用才細）──────────────────────────────

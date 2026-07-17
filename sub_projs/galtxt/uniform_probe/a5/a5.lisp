@@ -4,7 +4,6 @@
 ;;;;   相遇（天台）→ 分支（河鹿堂／陽溜亭）→ 收束（河堤・兩線合一）→ 主旨落點 → 尾聲（車站）。
 ;;;;   高層節點「引用」下層場景／段／句節點；未展開者以「懸空引用＝佔位需求」表示（呼應 gen_v1）。
 ;;;;   跑：sbcl --script a5.lisp   自帶 assert。
-
 ;;; ══ kernel：唯一資料型「節點」════════════════════════════════════════════════
 ;;;   一切事實（不論粒度）都是 (node id …plist…)，存進 *facts*[id]。欄位皆選配：
 ;;;     :層   粒度標（自由，僅註記；真正「層數」由 refs 推導＝自然湧現，見 層數）
@@ -24,7 +23,6 @@
                            (list k (if (member k '(:護 :效))
                                        `(lambda (w) (declare (ignorable w)) ,v)
                                        `',v))))))
-
 ;;; ── 存取／派生 ─────────────────────────────────────────────────────────────
 (defun 取 (id k &optional d) (getf (gethash id *facts*) k d))
 (defun 懸空? (id) (not (nth-value 1 (gethash id *facts*))))          ; 未定義＝佔位需求
@@ -34,7 +32,6 @@
     (if (or (null c) (懸空? id)) 0 (1+ (reduce #'max (mapcar #'層數 c) :initial-value 0)))))
 (defun 接地? (id)                                  ; 沿 :引 下行能達「已定義的葉」＝接地；全懸空＝未接地
   (cond ((懸空? id) nil) ((null (取 id :引)) t) (t (some #'接地? (取 id :引)))))
-
 ;;; ── 跨場景世界狀態 w（母題時鐘／情緒弧作為可追蹤的歷史）─────────────────────
 (defun 推 (w k v) (setf (gethash k w) (nconc (gethash k w) (list v))) v)
 (defun 史 (w k) (gethash k w))
@@ -42,7 +39,6 @@
 (defun 遞增序? (值s 序)                            ; 值s 依 序 的索引須存在且不遞減（時鐘不倒退）
   (let ((is (mapcar (lambda (v) (position v 序)) 值s)))
     (and (every #'identity is) (or (null (cdr is)) (apply #'<= is)))))
-
 ;;; ── 走訪：骨架列印 ＋ 前序過帶（跑 :效 疊世界狀態）─────────────────────────
 (defun 骨架 (id &optional (d 0))
   (unless (懸空? id)
@@ -64,11 +60,9 @@
   (let (out) (dolist (id (全序)) (dolist (c (取 id :引))
                                   (when (懸空? c) (pushnew (list id c) out :test #'equal))))
        (nreverse out)))
-
 ;;; ══ 全劇高層結構（比場景更粗的節點；引用下層，多數懸空＝尚未展開）══════════════
 (node 全劇 :層 全劇 :述 "最後的櫻花雪：相遇→分支→收束→主旨→尾聲"
       :引 (相遇 分支 收束 主旨 尾聲))
-
 (node 相遇 :層 幕 :述 "天台相遇：自在起點・櫻花將盡・埋分支伏筆（河鹿堂舊書）"
       :引 (天台・開場 天台・相認 天台・舊書引子)                       ; ← 三個下層段節點皆懸空
       :效 (progn (推 w :情緒 '自在) (推 w :季 '將盡)))
