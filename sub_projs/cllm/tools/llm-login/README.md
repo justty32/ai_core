@@ -20,11 +20,12 @@
 | [azure-openai](providers/azure-openai.json) | 標準 OAuth（Entra ID） | Entra app＋tenant＋資源角色 | 你的 Azure 資源/deployment |
 | [github-models](providers/github-models.json) | 標準 OAuth | GitHub OAuth App | GitHub Models（免費額度）|
 
-**接不了（key-only，無正規程式化 OAuth）**：
+**接不了（key-only，無正規程式化 OAuth，本工具不適用）**：
 
-- **OpenAI 直連 API**：只有 `sk-` API key，官方**沒有** OAuth-換-API 流程。網路上「用 ChatGPT 帳號」的做法＝消費訂閱 session＝下面的 ①，不做。
+- **DeepSeek**：只有 `sk-` API key，官方**沒有** OAuth-換-API（唯一的 OAuth 是用 Google/Apple 登入 DeepSeek 網站本身，不換 API token）。**但它是 OpenAI-compat＋Bearer**，所以不需要本工具——直接把 key 填進 cllm config 就能跑：`{"endpoint":"https://api.deepseek.com/chat/completions","model":"deepseek-chat","api_key":"sk-..."}`。想「用 OAuth 登入」摸到 DeepSeek，走 **OpenRouter preset**、把 `cllm_model` 設成 `deepseek/deepseek-chat` 即可。
+- **OpenAI 直連 API**：只有 `sk-` API key，官方**沒有** OAuth-換-API。網路上「用 ChatGPT 帳號」的做法＝消費訂閱 session＝下面的 ①，不做。（同樣 OpenAI-compat＋Bearer，直接填 key 即可。）
 - **Anthropic 直連 API**：只有 `x-api-key`（**連 `Authorization: Bearer` 都不是**、非 OpenAI wire format），cllm 現況本就接不上；存在的 OAuth 是 Claude Code 訂閱登入（scoped client）＝① 訂閱路，不做。
-- 這兩家要用，就乖乖填 API key 進 config，或走本機後端。
+- 一句話：這些家要嘛**直接填 API key** 進 config（DeepSeek/OpenAI 因是 OpenAI-compat 最順），要嘛透過 **OpenRouter OAuth** 借道，要嘛走**本機後端**。
 
 > ⚠ **最省事推薦 OpenRouter**：免註冊 OAuth client、登入完拿一把不過期的 user API key、一個 endpoint 通吃——最貼近「不想逐家申請 key」的原始痛點。
 
