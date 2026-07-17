@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: llm-login
+Description: OAuth 帳號登入餵 token 給 cllm — C-ABI liblogin（login_abi.h）
+Version: 0.0.1
+Libs: -L${libdir} -Wl,-rpath,${libdir} -llogin
+Cflags: -I${includedir} -I${includedir}/cllm

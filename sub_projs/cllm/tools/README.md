@@ -23,6 +23,10 @@ cmake --build --preset linux-debug          # 隨 cllm 一起建 tools/
 # 產物：build/tools/{anthropic-proxy, llm-login, liblogin.so}
 ```
 
+`llm-login` 就跟 cllm 一樣是下游可 link 的模組：`cmake --install` 會裝 `liblogin.so`＋`login_abi.h`＋
+`llm-login.pc`（＋`llm-login` CLI），下游 `pkg-config --cflags --libs llm-login` 即可 include／link。
+細節見 [llm-login/README「下游如何 link」](llm-login/README.md#下游如何-link就跟-cllm-一樣是可取用的模組)。
+
 ## 把工具接進你的東西
 
 - [INTEGRATION.md](INTEGRATION.md) — 這兩支怎麼接進 cllm CLI／某語言的 lib binding／你的 AI 應用。核心：**兩支都在行程外**，所以 binding 無關；含嵌入法（推薦 vendored sidecar）＋失敗行為（沒登入/key 失效/proxy 沒起 各長怎樣）。

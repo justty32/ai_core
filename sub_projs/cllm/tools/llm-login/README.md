@@ -64,6 +64,37 @@ cd sub_projs/cllm && cmake --preset linux-debug
 cmake --build --preset linux-debug --target llm-login   # → build/tools/{liblogin.so, llm-login}
 ```
 
+## 下游如何 link（就跟 cllm 一樣是可取用的模組）
+
+`cmake --install` 把 llm-login 裝成下游可 include/link 的模組——沿用 cllm 那一套（`configure_file`→`.pc`，非 `install(EXPORT)`），保持一致。裝到某前綴：
+
+```sh
+cmake --preset linux-debug -DCMAKE_INSTALL_PREFIX=$HOME/dev   # 或任意 prefix
+cmake --build   --preset linux-debug
+cmake --install build
+```
+
+裝出來的產物（`<prefix>/` 下）：
+
+| 產物 | 落點 | 用途 |
+|--|--|--|
+| `liblogin.so` | `lib/` | 下游 link 的 C-ABI 共享庫（帶 INSTALL_RPATH 指自己 libdir，免 `LD_LIBRARY_PATH`）|
+| `login_abi.h` | `include/cllm/` | 對外 C ABI 頭（與 cllm 頭同放）|
+| `llm-login.pc` | `lib/pkgconfig/` | pkg-config（模組名 `llm-login`，`Libs: -llogin`）|
+| `llm-login` | `bin/` | CLI（順帶裝，同 cllm 裝 `llm`）|
+
+下游純靠 pkg-config 就能 include＋link（`<prefix>/lib/pkgconfig` 進 `PKG_CONFIG_PATH`）：
+
+```sh
+gcc consumer.c $(pkg-config --cflags --libs llm-login) -o consumer
+# --cflags → -I<prefix>/include -I<prefix>/include/cllm ；--libs → -L… -Wl,-rpath,… -llogin
+```
+
+```c
+#include <login_abi.h>
+int main(void){ llm_login_opts_t o={0}; return llm_login_login(&o); }  /* 三支 C-ABI 皆匯出 */
+```
+
 ## 用法（CLI）
 
 先備 provider 設定——挑一個 preset 複製、填 `_notes` 交代的空：
@@ -98,6 +129,7 @@ llm 你好 --api-key "$(llm-login token)"   # 過期會自動 refresh 再印
 | [crypto.{hpp,cpp}](crypto.cpp) | vendored SHA-256＋base64url＋安全亂數（PKCE S256） |
 | [login_cli.cpp](login_cli.cpp) | `llm-login` CLI |
 | [test_offline.cpp](test_offline.cpp) | 離線測（SHA-256／base64url／PKCE／URL／config patch／token 到期）|
+| [login.pc.in](login.pc.in) | pkg-config 範本（`configure_file`→`llm-login.pc`；下游 link 用，見「下游如何 link」）|
 | [providers/](providers/) | 主流供應商現成 preset（每檔 `_notes` 交代要填什麼） |
 | [oauth.example.json](oauth.example.json) | 供應商中立範本（接上表以外的家、自己填全部時用） |
 | [reference/](reference/) | Python 原版（封存為參考，非現行實作） |

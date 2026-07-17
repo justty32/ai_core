@@ -64,3 +64,31 @@ target_link_libraries(llm-login PRIVATE login glaze::glaze)
 # 離線煙霧測試（crypto／URL／config patch／token record；不連網不開瀏覽器）
 add_executable(llm-login-test-offline llm-login/test_offline.cpp)
 target_link_libraries(llm-login-test-offline PRIVATE login glaze::glaze)
+
+# ── 安裝規則：讓 llm-login 就跟 cllm 一樣是下游可 link 的模組 ──
+# 沿用上層 CMakeLists 對 cllm 的同一套機制（configure_file → .pc + install(FILES/TARGETS)，
+# 非 install(EXPORT)），保持一致。裝出 <prefix>/{lib/liblogin.so, include/cllm/login_abi.h,
+# lib/pkgconfig/llm-login.pc, bin/llm-login}。下游走 `pkg-config --cflags --libs llm-login`
+# 即拿到 -I/-L/-llogin。GNUInstallDirs 於上層 CMakeLists（add_subdirectory(tools) 之前）已 include。
+#
+# 用：cmake --preset linux-debug -DCMAKE_INSTALL_PREFIX=$HOME/dev
+#     cmake --build --preset linux-debug
+#     cmake --install build
+#
+# liblogin.so 帶 INSTALL_RPATH 指到自己的 libdir（同 cllm），下游從任意 cwd 都找得到。
+set_target_properties(login llm-login PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+
+# 對外頭檔：login_abi.h（純 C 可 include），與 cllm 頭同放 include/cllm。
+install(FILES llm-login/login_abi.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cllm)
+# 下游可 link 產物：liblogin.so（＋順帶裝 llm-login CLI，同 cllm 裝 llm）。
+install(TARGETS login      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS llm-login  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# pkg-config：下游 `pkg-config --cflags --libs llm-login`。
+# 檔名＝模組名 llm-login；lib 名仍為 -llogin（target 名 login → liblogin.so）。
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/llm-login/login.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/llm-login.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/llm-login.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
