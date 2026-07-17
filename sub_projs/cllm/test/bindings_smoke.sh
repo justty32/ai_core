@@ -10,7 +10,7 @@ if [ ! -f "$PREFIX/cllm/env.sh" ]; then
 fi
 . "$PREFIX/cllm/env.sh"
 
-LANGS=(c cpp lua fennel s7 python lisp go shell)
+LANGS=(c cpp lua fennel s7 python janet lisp go shell)
 pass=0; fail=0; skip=0
 for lang in "${LANGS[@]}"; do
   s="$ROOT/bindings/$lang/smoke.sh"

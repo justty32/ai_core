@@ -28,6 +28,7 @@ python3 ~/dev/share/cllm/examples/python/example.py "$CLLM_FIXTURES"
 | Fennel | `(require :llm)`（跑在 lua 5.4）| dkjson | [fennel/](fennel/) |
 | s7   | `llm-s7 script.scm`（`llm-ask` 內建）| jq（shell-out）| [s7/](s7/) |
 | Python | `import llm`（純 ctypes、零編譯）| stdlib `json` | [python/](python/) |
+| Janet | `(import llm)`（native C 模組，非純 FFI）| spork/json | [janet/](janet/) |
 | Common Lisp | `(load CLLM_LISP)`→`cllm:ask`（CFFI）| shasht（quicklisp）| [lisp/](lisp/) |
 | Go | `import "cllm"`（cgo，pkg-config cllm）| stdlib `encoding/json` | [go/](go/) |
 | Shell | `llm 你好`（unix filter CLI）| jq | [shell/](shell/) |
@@ -56,7 +57,7 @@ bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/cllm/env.sh
 ## 選項（三種寫法，語意一致）
 
 - **Lua / Python**：`ask(prompt[, endpoint], opts…)`，opts 用 **snake_case**（`on_delta`／`api_key`／`max_tokens`）。
-- **s7 / CL**：`(llm-ask prompt [endpoint] :key val …)`／`(cllm:ask prompt [endpoint] :key val …)`，**hyphen keyword**（`:on-delta`／`:api-key`）。
+- **s7 / CL / Janet**：`(llm-ask prompt [endpoint] :key val …)`／`(cllm:ask …)`／`(llm/ask prompt [endpoint] :key val …)`，**hyphen keyword**（`:on-delta`／`:api-key`／`:max-tokens`）。
 - **Go**：`Ask(prompt, opts...) (string, error)`，functional options（`cllm.Endpoint(url)`／`cllm.Temperature(0.7)`／`cllm.Stream()`／`cllm.OnDelta(fn)`）；錯誤走回傳的 `error`。
 - **C++**：`ask(prompt, {.stream=…, .on_delta=…})` 回 `std::expected<std::string, Error>`；錯誤統一走 `expected`（不混 throw／空字串），要一行爽寫可 `.value()` 就地拋。
 - 欄位：`endpoint`／`api_key`／`model`／`timeout_ms`／`temperature`／`top_p`／`presence_penalty`／`frequency_penalty`／`max_tokens`／`seed`／`stream`／`schema`／`on_delta`／`on_error`（皆選填）。回完整答案字串。
@@ -66,10 +67,11 @@ bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/cllm/env.sh
 
 - **⚠ Fennel 用 lua 的鍵名**：fennel 呼叫的是 lua binding，table 鍵要用**底線** `:on_delta`（不是 fennel 慣用的 `:on-delta`——那會變成 `"on-delta"` 對不上）。
 - **⚠ Lua 模組 ABI 綁 lua 版本**：`lua`（5.5）與 `fennel`（5.4）各需一份 `llm.so`（install-dev.sh 兩版都編，env.sh 用 `LUA_CPATH_5_4/5_5` 分流）。
-- **⚠ s7 回呼別丟 error**：`:on-delta`/`:on-error` 在 `llm_ask`（C++）途中被呼叫，s7 error 以 longjmp 實作、穿 C++ 是 UB。回呼只做無害的事。（Lua/Python/CL 有包 pcall/handler-case，安全。）
+- **⚠ s7 回呼別丟 error**：`:on-delta`/`:on-error` 在 `llm_ask`（C++）途中被呼叫，s7 error 以 longjmp 實作、穿 C++ 是 UB。回呼只做無害的事。（Lua/Python/CL/Janet 有包 pcall/handler-case，安全。）
+- **⚠ Janet 走 native C 模組、非純 FFI**：Janet 的 `ffi/trampoline` 把回呼簽名寫死成 `void trampoline(void*, void*)`，表達不了 cllm 的 `int on_text(const char*, size_t, void*)`（三參數＋int 回傳），故跟 lua/s7 一樣寫 C 橋接（`janet_pcall` 回呼 JanetFunction，回真值＝中止；回呼 janet error 已被 pcall 收住）。`bash build.sh` 直接 gcc 編（需 `JANET_INC` 指到含 `janet.h` 的目錄，預設 `~/.local/include/janet`），不必 jpm。**⚠ JANET_PATH 併預設 tree**：env.sh 的 `JANET_PATH="$DEV/lib/janet:<janet syspath>"`——前者放裝好的 `llm.so`、後者留給 example 的 `spork/json`／`spork/sh`（janet 的 JANET_PATH 吃 `:` 分隔多根）。
 - **Common Lisp 需 quicklisp**（載 CFFI／shasht）；`~/.sbclrc` 已載 quicklisp 即可，`--script` 下 cllm.lisp 會自載 `~/quicklisp/setup.lisp`。
 - **Go 走 cgo**：`#cgo pkg-config: cllm` 於 `go build` 時跑 pkg-config，故需先 `source env.sh`（設 `PKG_CONFIG_PATH`）。回呼用 `cgo.Handle` 把 Go closure 帶進 C，schema struct 用 `runtime.Pinner` pin（Go 1.21+ 內嵌 Go 指標規則）。
 - **s7 原始碼已 vendor 在 repo**（`s7/vendor/s7.{c,h}`，比照 lua 的 `vendor/dkjson.lua`）——`install-dev.sh`／`smoke.sh`／`build.sh` 都吃這份，零外部依賴。
 - **⚠ glaze 反射的 struct 要放 namespace scope**：`llm_reflect.hpp` 的 `ask_as<T>`／`make_tool<Args>` 靠 glaze 靜態反射，函式內 local struct 編不過——struct 定義要放在 namespace／檔案層級。
 - **未在 Windows 實測**（C 綁定的 `build.sh` 是 bash；Python/CL 改設 `LIBCLLM` 指 `libcllm.dll`）。
-- **⚠ 動 C ABI 要想到這些下游**：改 `src/cabi.h` 扁平結構／`llm_ask` 簽章時，這 8 個綁定都在鐵律 3 的受影響清單裡。
+- **⚠ 動 C ABI 要想到這些下游**：改 `src/cabi.h` 扁平結構／`llm_ask` 簽章時，這 9 個綁定都在鐵律 3 的受影響清單裡。
