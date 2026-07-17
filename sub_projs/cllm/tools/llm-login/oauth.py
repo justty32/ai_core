@@ -81,7 +81,7 @@ def capture_code(host: str, port: int, expect_state: str, timeout_s: int = 300) 
     if "error" in res:
         raise RuntimeError("授權端回錯：%s（%s）"
                           % (res.get("error"), res.get("error_description", "")))
-    if res.get("state") != expect_state:
+    if expect_state is not None and res.get("state") != expect_state:
         raise RuntimeError("state 不符——可能遭 CSRF，中止。")
     if "code" not in res:
         raise RuntimeError("callback 沒帶授權碼。")
@@ -120,3 +120,23 @@ def refresh(provider: dict, refresh_token: str) -> dict:
         "refresh_token": refresh_token,
         "client_id": provider["client_id"],
     })
+
+
+# ── OpenRouter 專用流程（非標準 OAuth：callback_url＋PKCE、JSON 交換、回傳 API key）──
+# OpenRouter 的 authorize 只吃 callback_url＋code_challenge（免註冊 client_id、無 state／scope）；
+# 交換走 POST JSON、回傳的是「不過期的 user API key」而非 access_token（故無 refresh）。
+def build_authorize_url_openrouter(provider: dict, redirect_uri: str, challenge: str) -> str:
+    params = {"callback_url": redirect_uri,
+              "code_challenge": challenge, "code_challenge_method": "S256"}
+    params.update(provider.get("extra_auth_params", {}))
+    return provider["authorize_url"] + "?" + urllib.parse.urlencode(params)
+
+
+def exchange_code_openrouter(provider: dict, code: str, verifier: str) -> dict:
+    body = json.dumps({"code": code, "code_verifier": verifier,
+                       "code_challenge_method": "S256"}).encode("utf-8")
+    req = urllib.request.Request(provider["token_url"], data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Accept", "application/json")
+    with urllib.request.urlopen(req, timeout=provider.get("timeout_s", 60)) as resp:
+        return json.loads(resp.read().decode("utf-8"))

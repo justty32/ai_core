@@ -1,0 +1,12 @@
+{
+  "_notes": "OpenRouter：OAuth PKCE，免註冊 client_id——最省事、一個 OpenAI-compatible endpoint 通吃全模型。登入後拿到不過期的 user API key（故無 refresh、refresh 子命令會說不用）。redirect_port 要跟本機開的一致；OpenRouter 允許 localhost callback。改好 cllm_model 成你要的模型（見 openrouter.ai/models）。",
+  "flow": "openrouter",
+  "authorize_url": "https://openrouter.ai/auth",
+  "token_url": "https://openrouter.ai/api/v1/auth/keys",
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "cllm_endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "cllm_model": "openai/gpt-4o-mini",
+  "timeout_s": 60
+}

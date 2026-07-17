@@ -1,0 +1,13 @@
+{
+  "_notes": "Azure OpenAI via Microsoft Entra ID。你要做：① Entra 建 app registration 拿 client_id，把 <TENANT_ID> 換成你的 tenant；② 把 http://127.0.0.1:8123/callback 加進 app 重導 URI；③ 帳號要有『Cognitive Services OpenAI User』角色；④ cllm_endpoint 換成你的資源＋deployment＋api-version。scope 用 cognitiveservices／.default，offline_access 換 refresh_token。",
+  "authorize_url": "https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/authorize",
+  "token_url": "https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token",
+  "client_id": "<你的 Entra app client_id>",
+  "scopes": ["https://cognitiveservices.azure.com/.default", "offline_access"],
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "cllm_endpoint": "https://<RESOURCE>.openai.azure.com/openai/deployments/<DEPLOYMENT>/chat/completions?api-version=2024-10-21",
+  "cllm_model": "<DEPLOYMENT>",
+  "timeout_s": 60
+}

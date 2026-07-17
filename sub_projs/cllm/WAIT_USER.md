@@ -10,6 +10,6 @@
 
 ## 待使用者項
 
-- **llm-login 真 OAuth 往返驗證**：[tools/llm-login/](tools/llm-login/README.md) 骨架已落地、離線煙霧全綠（PKCE 正確性／URL 組裝／token store round-trip／config patch）。跨不過去的那關要**真供應商＋真帳號＋開瀏覽器**：① 挑一家**有提供程式化 OAuth**的供應商（②類，非消費訂閱），把 `oauth.example.json` 填成真值放 `~/.config/llm/oauth.json`；② 跑 `python3 llm_login.py login` 完成瀏覽器授權，確認 token 寫進 `config.json` 的 `api_key`、`llm` 裸跑帶得上 bearer；③ 驗 `refresh`／`token` 自動續期。踩到的真實行為（token 壽命、refresh 是否輪換、redirect_uri 白名單要求）回寫 README／gotchas。
+- **llm-login 真 OAuth 往返驗證**：[tools/llm-login/](tools/llm-login/README.md) 已落地、離線煙霧全綠（PKCE／標準＋OpenRouter URL 組裝／token store round-trip／config patch／四 preset 可載）。四家 preset endpoint 已上網核對（openrouter／google-gemini／azure-openai／github-models）。跨不過去的那關要**真帳號＋開瀏覽器**：**最快從 OpenRouter 驗**（免註冊 client）——`cp providers/openrouter.json ~/.config/llm/oauth.json` → `python3 llm_login.py login` → 確認拿到 key、寫進 `config.json`、`llm` 裸跑帶得上 bearer。其餘三家要先各自備好（Google OAuth Client／Entra app＋tenant／GitHub OAuth App）再驗。踩到的真實行為（scope 對不對、token 壽命、refresh 是否輪換、redirect_uri 白名單、OpenRouter 回應欄位是否真為 `key`）回寫 preset `_notes`／README／gotchas。
 
 - （前一項留存：真後端驗證已於 2026-07-16 完成：`ask_as<T>` required 三欄全吐、tools（C++＋Python）、vision（gemma-4-e4b 認出紅色）、錯誤路徑帶 HTTP 400 原文、真 SSE 串流；modalities 被 LM Studio 靜默忽略，記進 [gotchas/backend](workflows/common/gotchas/backend.md)。）

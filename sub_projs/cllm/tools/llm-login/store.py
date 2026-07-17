@@ -59,7 +59,10 @@ def load_provider() -> dict:
             "client_id／redirect_port／scopes）。" % p)
     with open(p, encoding="utf-8") as f:
         prov = json.load(f)
-    for key in ("authorize_url", "token_url", "client_id"):
+    required = ["authorize_url", "token_url"]
+    if prov.get("flow") != "openrouter":   # OpenRouter 免註冊 client_id
+        required.append("client_id")
+    for key in required:
         if not prov.get(key):
             raise ValueError("provider 設定缺必填欄位：%s（%s）" % (key, p))
     return prov
@@ -98,13 +101,19 @@ def is_expired(rec: dict, skew_s: int = 60) -> bool:
     return time.time() >= exp - skew_s
 
 
-# ── 回頭餵 cllm config：只 patch api_key ─────────────────────────
-def patch_cllm_api_key(access_token: str) -> str:
+# ── 回頭餵 cllm config：patch api_key（可選連 endpoint/model 一起）───
+def patch_cllm(access_token: str, endpoint: str = None, model: str = None) -> str:
+    """讀→改→寫回 cllm config.json：一定寫 api_key；preset 有帶 cllm_endpoint／
+    cllm_model 才連 endpoint／model 一起設（登入即一步到位）。其餘鍵原樣保留。"""
     p = cllm_config_path()
     cfg = {}
     if os.path.exists(p):
         with open(p, encoding="utf-8") as f:
             cfg = json.load(f)
     cfg["api_key"] = access_token
+    if endpoint:
+        cfg["endpoint"] = endpoint
+    if model:
+        cfg["model"] = model
     _write_secret(p, cfg)  # 含 bearer，一律 0600
     return p

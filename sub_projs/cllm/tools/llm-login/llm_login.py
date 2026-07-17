@@ -35,20 +35,37 @@ def _redirect_uri(prov: dict) -> tuple[str, str, int]:
     return "http://%s:%d%s" % (host, port, path), host, port
 
 
+def _open(url: str) -> None:
+    print("開瀏覽器登入；若沒自動彈出，手動開這個網址：\n  " + url, file=sys.stderr)
+    webbrowser.open(url)
+
+
 def cmd_login(_args) -> int:
     prov = store.load_provider()
     redirect_uri, host, port = _redirect_uri(prov)
     verifier, challenge = oauth.gen_pkce()
-    state = secrets.token_urlsafe(16)
-    url = oauth.build_authorize_url(prov, redirect_uri, state, challenge)
 
-    print("開瀏覽器登入；若沒自動彈出，手動開這個網址：\n  " + url, file=sys.stderr)
-    webbrowser.open(url)
-    code = oauth.capture_code(host, port, state)
-    tok = oauth.exchange_code(prov, code, redirect_uri, verifier)
+    if prov.get("flow") == "openrouter":
+        # 非標準：callback_url＋PKCE、無 state、JSON 交換回「不過期 API key」
+        url = oauth.build_authorize_url_openrouter(prov, redirect_uri, challenge)
+        _open(url)
+        code = oauth.capture_code(host, port, None)
+        raw = oauth.exchange_code_openrouter(prov, code, verifier)
+        key = raw.get("key") or raw.get("access_token")
+        if not key:
+            raise RuntimeError("交換回應沒有 key/access_token：%s" % raw)
+        tok = {"access_token": key}          # 無 expires_in→不過期、無 refresh
+    else:
+        state = secrets.token_urlsafe(16)
+        url = oauth.build_authorize_url(prov, redirect_uri, state, challenge)
+        _open(url)
+        code = oauth.capture_code(host, port, state)
+        tok = oauth.exchange_code(prov, code, redirect_uri, verifier)
+
     rec = store.save_token(tok)
-    path = store.patch_cllm_api_key(rec["access_token"])
-    print("登入成功，token 已寫進 %s。%s" % (path, _expiry_note(rec)), file=sys.stderr)
+    path = store.patch_cllm(rec["access_token"], prov.get("cllm_endpoint"),
+                           prov.get("cllm_model"))
+    print("登入成功，憑證已寫進 %s。%s" % (path, _expiry_note(rec)), file=sys.stderr)
     return 0
 
 
@@ -56,17 +73,20 @@ def cmd_refresh(_args) -> int:
     prov = store.load_provider()
     rec = store.load_token_silent()
     if not rec.get("refresh_token"):
-        print("沒有 refresh_token——先跑 login。", file=sys.stderr)
+        if rec and rec.get("expires_at") is None:
+            print("此憑證不過期（如 OpenRouter API key）——無需 refresh。", file=sys.stderr)
+            return 0
+        print("沒有 refresh_token——重跑 login。", file=sys.stderr)
         return 1
-    tok = oauth.refresh(prov, rec["refresh_token"])
-    rec = store.save_token(tok)
-    path = store.patch_cllm_api_key(rec["access_token"])
-    print("已 refresh，token 更新到 %s。%s" % (path, _expiry_note(rec)), file=sys.stderr)
+    rec = store.save_token(oauth.refresh(prov, rec["refresh_token"]))
+    path = store.patch_cllm(rec["access_token"], prov.get("cllm_endpoint"),
+                           prov.get("cllm_model"))
+    print("已 refresh，憑證更新到 %s。%s" % (path, _expiry_note(rec)), file=sys.stderr)
     return 0
 
 
 def cmd_token(_args) -> int:
-    """印出有效 access_token；快過期就先自動 refresh。stdout 只有 token，方便 $(...)。"""
+    """印出有效憑證；快過期就先自動 refresh。stdout 只有憑證，方便 $(...)。"""
     rec = store.load_token_silent()
     if not rec:
         print("還沒登入——先跑 login。", file=sys.stderr)
@@ -74,10 +94,11 @@ def cmd_token(_args) -> int:
     if store.is_expired(rec):
         prov = store.load_provider()
         if not rec.get("refresh_token"):
-            print("token 過期且無 refresh_token——重跑 login。", file=sys.stderr)
+            print("憑證過期且無 refresh_token——重跑 login。", file=sys.stderr)
             return 1
         rec = store.save_token(oauth.refresh(prov, rec["refresh_token"]))
-        store.patch_cllm_api_key(rec["access_token"])
+        store.patch_cllm(rec["access_token"], prov.get("cllm_endpoint"),
+                        prov.get("cllm_model"))
     print(rec["access_token"])
     return 0
 

@@ -7,22 +7,44 @@
 > 本工具做 OAuth 2.0 **授權碼＋PKCE** 登入、拿 token、到期自動 refresh，把當前有效
 > `access_token` 寫進 cllm 的 `config.json`。**cllm 的 C/C++ 核心一行不動**——關注點分離。
 
-## 這是哪一種「帳號登入」
+## 主流供應商：能接的與接不了的
 
-回應「假如我用帳號登入」的三種意思（詳見 cllm 討論）：
+「主流的都要」——但**主流 LLM 供應商在「OAuth 帳號登入換 API 存取」這件事上分兩派**，不是每家都能接：
 
-- **① 消費級網頁訂閱**（ChatGPT Plus／Claude Pro 那種月費帳號的 session）——**本工具不做、也別這樣用**。那是網頁 OAuth session，兩家 ToS 都禁止程式化使用消費帳號，token 短命又非 OpenAI-compatible，死路。
-- **② 供應商為程式化／API 存取提供的正規 OAuth**——**本工具正是為此**。合法、線路層與 cllm 相容（最終還是 `Authorization: Bearer`）。
-- **③ 本機後端**（LM Studio／Ollama）——**根本不用登入**，cllm 預設就指 localhost、`api_key` 留空。真痛點若是「不想申請」，這條最合專案哲學，用不到本工具。
+**能接（真・程式化 OAuth，`providers/` 有現成 preset）**——全部是 OpenAI-compatible endpoint＋Bearer 認證：
 
-> ⚠ **只對 ② 合法適用。** 本工具供應商中立、不預設任何一家；把它指向哪個 endpoint、是否符合該家條款，是使用者的責任。
+| Preset | 流程 | 你要先備 | cllm endpoint |
+|--------|------|----------|---------------|
+| [openrouter](providers/openrouter.json) | PKCE，**免註冊 client** | 一個 OpenRouter 帳號 | 單一 endpoint 通吃全模型 |
+| [google-gemini](providers/google-gemini.json) | 標準 OAuth | Google Cloud OAuth Client ID＋scope | Gemini OpenAI-compat |
+| [azure-openai](providers/azure-openai.json) | 標準 OAuth（Entra ID） | Entra app＋tenant＋資源角色 | 你的 Azure 資源/deployment |
+| [github-models](providers/github-models.json) | 標準 OAuth | GitHub OAuth App | GitHub Models（免費額度）|
+
+**接不了（key-only，無正規程式化 OAuth）**：
+
+- **OpenAI 直連 API**：只有 `sk-` API key，官方**沒有** OAuth-換-API 流程。網路上「用 ChatGPT 帳號」的做法＝消費訂閱 session＝下面的 ①，不做。
+- **Anthropic 直連 API**：只有 `x-api-key`（**連 `Authorization: Bearer` 都不是**、非 OpenAI wire format），cllm 現況本就接不上；存在的 OAuth 是 Claude Code 訂閱登入（scoped client）＝① 訂閱路，不做。
+- 這兩家要用，就乖乖填 API key 進 config，或走本機後端。
+
+> ⚠ **最省事推薦 OpenRouter**：免註冊 OAuth client、登入完拿一把不過期的 user API key、一個 endpoint 通吃——最貼近「不想逐家申請 key」的原始痛點。
+
+### 三種「帳號登入」的定位（回顧）
+
+- **① 消費級網頁訂閱**（ChatGPT Plus／Claude Pro 的 session）——**不做、也別這樣用**：ToS 禁止程式化使用消費帳號，token 短命又非 OpenAI-compatible。
+- **② 供應商為 API 存取提供的正規 OAuth**——**本工具正是為此**，上表四家即是。
+- **③ 本機後端**（LM Studio／Ollama）——**根本不用登入**，cllm 預設指 localhost、`api_key` 留空。
+
+> 本工具供應商中立；指向哪個 endpoint、是否符合該家條款，是使用者的責任。
 
 ## 用法
 
-零外部相依，純 Python 3.11+ 標準庫。先備好 provider 設定：
+零外部相依，純 Python 3.11+ 標準庫。先備好 provider 設定——**挑一個 preset 複製、填 `_notes` 交代的空**（`<...>` 佔位）：
 
 ```sh
-cp oauth.example.json ~/.config/llm/oauth.json   # 填成你那家的 authorize_url/token_url/client_id/scopes
+cp providers/openrouter.json ~/.config/llm/oauth.json     # 最省事；OpenRouter 幾乎不用改
+# 或指定別家：cp providers/google-gemini.json ~/.config/llm/oauth.json（填 client_id/secret/scope）
+# 也可不複製、用環境變數指到 preset：export LLM_OAUTH_PROVIDER=$PWD/providers/openrouter.json
+# 供應商中立範本（自己填全部）：oauth.example.json
 ```
 
 ```sh
@@ -50,9 +72,10 @@ llm 你好 --api-key "$(python3 llm_login.py token)"   # token 過期會自動 r
 |----|--------|
 | [oauth.py](oauth.py) | OAuth 協定層：PKCE、組 authorize URL、本機 callback 接碼、換 token／refresh。供應商中立、不硬編任何一家 |
 | [store.py](store.py) | 狀態層：讀 provider 設定、token 存放（0600）、回頭只 patch cllm `config.json` 的 `api_key`（不碰其他鍵、不塞 glaze 不認得的鍵） |
-| [llm_login.py](llm_login.py) | CLI：`login`／`refresh`／`token`／`status` |
-| [oauth.example.json](oauth.example.json) | provider 設定範本（複製成 `~/.config/llm/oauth.json` 填值） |
-| [test_offline.py](test_offline.py) | 離線煙霧測試（PKCE 正確性／URL 組裝／token store round-trip／config patch），不連網不開瀏覽器 |
+| [llm_login.py](llm_login.py) | CLI：`login`／`refresh`／`token`／`status`（依 `flow` 分標準 OAuth 與 OpenRouter 兩路）|
+| [providers/](providers/) | **主流供應商現成 preset**（endpoint 皆已上網核對）：openrouter／google-gemini／azure-openai／github-models。每檔 `_notes` 交代要填什麼 |
+| [oauth.example.json](oauth.example.json) | 供應商中立範本（要接上表以外的家、自己填全部時用） |
+| [test_offline.py](test_offline.py) | 離線煙霧測試（PKCE／標準＋OpenRouter URL 組裝／token store round-trip／config patch／四 preset 可載），不連網不開瀏覽器 |
 
 ## 三個檔的落點（都在 `~/.config/llm/`，可用環境變數改）
 

@@ -1,0 +1,14 @@
+{
+  "_notes": "GitHub Models（免費額度）via GitHub OAuth App。你要做：① 建一個 GitHub OAuth App 拿 client_id/client_secret，Authorization callback URL 設 http://127.0.0.1:8123/callback；② scope 依 GitHub Models 要求確認（classic OAuth 常 read:user 即可，細粒度權限是『Models』——以 GitHub 文件為準）。GitHub token 預設不過期（除非 App 設了到期）。cllm_model 見 GitHub Models 型錄。",
+  "authorize_url": "https://github.com/login/oauth/authorize",
+  "token_url": "https://github.com/login/oauth/access_token",
+  "client_id": "<你的 GitHub OAuth App client_id>",
+  "client_secret": "<你的 GitHub OAuth App client_secret>",
+  "scopes": ["read:user"],
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "cllm_endpoint": "https://models.github.ai/inference/chat/completions",
+  "cllm_model": "openai/gpt-4o-mini",
+  "timeout_s": 60
+}

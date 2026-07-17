@@ -1,0 +1,15 @@
+{
+  "_notes": "Google Gemini via OAuth。你要做：① Google Cloud 建 OAuth 2.0 Client ID（型別 Desktop app），填 client_id/client_secret；② 把 http://127.0.0.1:8123/callback 加進授權重導 URI；③ 確認 scope——generateContent 走 OpenAI-compat endpoint 時通常需 cloud-platform（下方預設），若只用 retriever 類可換窄 scope，以 Google 文件為準。access_type=offline+prompt=consent 才會給 refresh_token。cllm_model 換成你要的 gemini-*。",
+  "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+  "token_url": "https://oauth2.googleapis.com/token",
+  "client_id": "<你的>.apps.googleusercontent.com",
+  "client_secret": "<你的 Desktop client secret>",
+  "scopes": ["https://www.googleapis.com/auth/cloud-platform"],
+  "extra_auth_params": { "access_type": "offline", "prompt": "consent" },
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "cllm_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  "cllm_model": "gemini-2.5-flash",
+  "timeout_s": 60
+}
