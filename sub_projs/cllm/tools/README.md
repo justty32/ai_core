@@ -20,12 +20,24 @@ Python 原版封存在各工具的 `reference/`（一比一對照，不進建置
 
 ```sh
 cmake --build --preset linux-debug          # 隨 cllm 一起建 tools/
-# 產物：build/tools/{anthropic-proxy, llm-login, liblogin.so}
+# 產物：build/tools/{anthropic-proxy, llm-login, liblogin.so, llm-login-demo-harness}
 ```
 
 `llm-login` 就跟 cllm 一樣是下游可 link 的模組：`cmake --install` 會裝 `liblogin.so`＋`login_abi.h`＋
 `llm-login.pc`（＋`llm-login` CLI），下游 `pkg-config --cflags --libs llm-login` 即可 include／link。
 細節見 [llm-login/README「下游如何 link」](llm-login/README.md#下游如何-link就跟-cllm-一樣是可取用的模組)。
+
+## 聯動 demo（cllm × llm-login，可跑）
+
+login_abi 的設計是「cllm 401→harness 攔→`llm_login_login`→patch config→重試」、**cllm 零改動**。
+[`llm-login/demo_harness.cpp`](llm-login/demo_harness.cpp) 用假上游＋免瀏覽器把這整條跑通（真 OAuth／
+真後端要帳號＋瀏覽器，屬 [WAIT_USER](../WAIT_USER.md)）：
+
+```sh
+./build/tools/llm-login-demo-harness ./build/llm   # 7 條全綠、exit 0
+```
+
+細節（假上游怎麼搭、四步各驗什麼）見 [llm-login/README「驗證」](llm-login/README.md#驗證)。
 
 ## 把工具接進你的東西
 

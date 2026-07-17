@@ -130,6 +130,7 @@ llm 你好 --api-key "$(llm-login token)"   # 過期會自動 refresh 再印
 | [login_cli.cpp](login_cli.cpp) | `llm-login` CLI |
 | [test_offline.cpp](test_offline.cpp) | 離線測（SHA-256／base64url／PKCE／URL／config patch／token 到期）|
 | [login.pc.in](login.pc.in) | pkg-config 範本（`configure_file`→`llm-login.pc`；下游 link 用，見「下游如何 link」）|
+| [demo_harness.cpp](demo_harness.cpp) | 聯動 demo：假上游＋免瀏覽器，跑通 cllm 401→攔→`llm_login_login`→patch config→重試 |
 | [providers/](providers/) | 主流供應商現成 preset（每檔 `_notes` 交代要填什麼） |
 | [oauth.example.json](oauth.example.json) | 供應商中立範本（接上表以外的家、自己填全部時用） |
 | [reference/](reference/) | Python 原版（封存為參考，非現行實作） |
@@ -145,12 +146,21 @@ llm 你好 --api-key "$(llm-login token)"   # 過期會自動 refresh 再印
 ## 驗證
 
 ```sh
-./build/tools/llm-login-test-offline    # 離線 24 條，應全綠
+./build/tools/llm-login-test-offline              # 離線 24 條，應全綠
+./build/tools/llm-login-demo-harness ./build/llm  # 聯動 demo，7 條全綠、exit 0
 ```
 
+**聯動 demo（[demo_harness.cpp](demo_harness.cpp)）跑什麼**——把設計裡的自動登入聯動整條跑一遍，
+**cllm 一行不動**：harness 起兩支假上游（假 LLM 後端＝沒帶對 token 就回 401、假 OAuth token 端＝換回
+`GOOD-TOKEN`），另起 thread 當假瀏覽器直接打 llm-login 開的本機 callback，把真 OAuth／真後端（要帳號
+＋瀏覽器，屬 WAIT_USER）換成本機 mock。四步：① 以子行程 exec 出貨的 `llm`（`LLM_CLI_CONFIG` 指暫存
+config、帶失效 token）→ 撞 401（exit=2、stderr 見「HTTP 401」）→ ② harness 攔到 → 呼 `llm_login_login`
+（`open_browser=0`、假瀏覽器代打 callback→換 token）→ ③ config 被 patch 成新 token → ④ 重試 `llm`→
+exit=0、拿到假上游回覆。就是 login_abi 設計的聯動路徑，逐步驗綠。
+
 真 OAuth 往返（`login`／`refresh` 打真 endpoint＋開瀏覽器）本質要真供應商＋真帳號，Claude 跨不過去
-（見 [WAIT_USER](../../WAIT_USER.md)）。免瀏覽器的整條登入鏈（接 callback→換 token→存檔→patch）已用假
-token 端對測過。
+（見 [WAIT_USER](../../WAIT_USER.md)）。免瀏覽器的整條登入鏈（接 callback→換 token→存檔→patch）＋整條
+聯動（401→攔→login→patch→重試）已用假 token／假上游端對測過。
 
 ## 安全與條款
 

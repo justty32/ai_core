@@ -92,3 +92,22 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/llm-login/login.pc.in
                ${CMAKE_CURRENT_BINARY_DIR}/llm-login.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/llm-login.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+# ── 聯動 harness demo（cllm 401→攔→llm_login_login→patch config→重試；假上游、免瀏覽器）──
+# 自帶 httpd（假 LLM／假 OAuth 上游）＋http（當假瀏覽器打 callback），消費 liblogin 的 C-ABI。
+# cllm 端以子行程 exec 出貨的 llm 二進位；本 target 只證明聯動串接、不改 cllm 一行。
+add_executable(llm-login-demo-harness
+    llm-login/demo_harness.cpp
+    common/httpd.cpp
+    ${TOOLS_HTTP_SRC})
+target_include_directories(llm-login-demo-harness PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/common ${TOOLS_SRC_DIR})
+target_link_libraries(llm-login-demo-harness PRIVATE login glaze::glaze Threads::Threads)
+target_compile_options(llm-login-demo-harness PRIVATE
+    $<$<CONFIG:Debug>:-g;-O0> $<$<CONFIG:Release>:-O2>)
+if(WIN32)
+    target_link_libraries(llm-login-demo-harness PRIVATE winhttp ws2_32)
+    target_link_options(llm-login-demo-harness PRIVATE -static-libgcc -static-libstdc++)
+else()
+    target_link_libraries(llm-login-demo-harness PRIVATE CURL::libcurl)
+endif()
