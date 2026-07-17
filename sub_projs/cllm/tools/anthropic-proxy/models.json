@@ -1,0 +1,68 @@
+{
+  "_about": "Anthropic 模型清單（給 anthropic-proxy 用）。這是『資料』不是 cllm config——列出可填進 cllm `model` 欄的現行 Anthropic 模型 id。挑一個，或直接 cp 對應的 configs/<name>.json。id 皆為原生 Messages API id（代理直通），非 OpenAI 別名。",
+  "_endpoint": "http://127.0.0.1:8787/v1/chat/completions",
+  "_note_max_output": "128K 上限的模型要拿到長輸出需串流（llm --stream）；代理沒給 max_tokens 時墊 ANTHROPIC_MAX_TOKENS（預設 4096）。",
+  "_verified": "2026-07-17，來源：claude-api skill 模型表",
+  "models": [
+    {
+      "id": "claude-opus-4-8",
+      "name": "Claude Opus 4.8",
+      "tier": "opus",
+      "context": "1M",
+      "max_output": "128K",
+      "price_in_out_per_1m": "$5 / $25",
+      "config": "configs/opus.json",
+      "note": "最強 Opus、預設首選。長程 agentic／知識工作／記憶最佳。"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "name": "Claude Sonnet 5",
+      "tier": "sonnet",
+      "context": "1M",
+      "max_output": "128K",
+      "price_in_out_per_1m": "$3 / $15（2026-08-31 前introductory $2 / $10）",
+      "config": "configs/sonnet.json",
+      "note": "速度×智能平衡、高量產首選；coding／agentic 接近 Opus。"
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "name": "Claude Haiku 4.5",
+      "tier": "haiku",
+      "context": "200K",
+      "max_output": "64K",
+      "price_in_out_per_1m": "$1 / $5",
+      "config": "configs/haiku.json",
+      "note": "最快最省，簡單／延遲敏感任務。"
+    },
+    {
+      "id": "claude-fable-5",
+      "name": "Claude Fable 5",
+      "tier": "fable",
+      "context": "1M",
+      "max_output": "128K",
+      "price_in_out_per_1m": "$10 / $50",
+      "config": "configs/fable.json",
+      "note": "最強廣泛釋出模型，最硬的推理／長程 agentic。價高於 Opus，非預設。需 30 天資料保留。"
+    },
+    {
+      "id": "claude-opus-4-7",
+      "name": "Claude Opus 4.7",
+      "tier": "opus",
+      "context": "1M",
+      "max_output": "128K",
+      "price_in_out_per_1m": "$5 / $25",
+      "config": null,
+      "note": "前代 Opus。要用把 configs/opus.json 的 model 換成本 id 即可。"
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6",
+      "tier": "sonnet",
+      "context": "1M",
+      "max_output": "128K",
+      "price_in_out_per_1m": "$3 / $15",
+      "config": null,
+      "note": "前代 Sonnet。要用把 configs/sonnet.json 的 model 換成本 id。"
+    }
+  ]
+}

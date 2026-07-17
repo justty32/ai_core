@@ -1,0 +1,38 @@
+# anthropic-proxy —— systemd user 服務單元（背景常駐 cllm↔Anthropic 轉發代理）。
+#
+# 安裝（不會自動啟動——由你決定）：
+#   mkdir -p ~/.config/systemd/user
+#   ln -sf /home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy/service/anthropic-proxy.service \
+#          ~/.config/systemd/user/anthropic-proxy.service
+#   systemctl --user daemon-reload
+#   # 啟動（你自己下）：  systemctl --user start anthropic-proxy
+#   # 開機自啟（可選）：  systemctl --user enable anthropic-proxy   （需 loginctl enable-linger $USER 才能無登入常駐）
+#   # 看狀態／日誌：      systemctl --user status anthropic-proxy ； journalctl --user -u anthropic-proxy -f
+#
+# 換埠／上游／版本／墊值：取消下面 Environment 註解或 systemctl --user edit 覆寫。
+
+[Unit]
+Description=anthropic-proxy — 讓 cllm 直連 Anthropic 的本機轉發代理
+Documentation=file:///home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy
+ExecStart=/usr/bin/python3 proxy.py --host 127.0.0.1 --port 8787
+# Environment=ANTHROPIC_BASE_URL=https://api.anthropic.com
+# Environment=ANTHROPIC_VERSION=2023-06-01
+# Environment=ANTHROPIC_MAX_TOKENS=4096
+Restart=on-failure
+RestartSec=2
+# 無金鑰落地：代理只把 cllm 送來的 Authorization 轉手成 x-api-key，不讀環境金鑰。
+# 收緊一點（可選；純 stdlib、只需 loopback 出網）：
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy
+
+[Install]
+WantedBy=default.target
