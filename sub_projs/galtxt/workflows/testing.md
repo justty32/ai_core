@@ -10,6 +10,7 @@
   - `cd gen_v0 && lua main.lua`——示範全數自帶 assert（含確定性逐位元自檢），跑完印「全部示範完成」即綠。
   - `cd gen_v1 && lua main.lua`——事實庫九示範全數自帶 assert，跑完印「九個示範全部通過」即綠。
   - `cd gen_v1_f && fennel main.fnl`——同上的 Fennel 版（Fennel 1.6+）。
+  - `cd gen_v1_l && sbcl --script main.lisp`——同上的 Common Lisp 版（SBCL）。
 - **完整驗證**：全部都跑。
 
 ## 測試分類
