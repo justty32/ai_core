@@ -1,6 +1,6 @@
 ;;;; main.lisp — uni 跑批：load kernel→scene→search，跑全部 demo（自帶 assert）。
 ;;;; 跑：sbcl --script main.lisp
-(load "kernel.lisp") (load "scene.lisp") (load "search.lisp")
+(load "kernel.lisp") (load "scene.lisp") (load "search_kernel.lisp") (load "search.lisp")
 (defun hr (s) (format t "~%===== ~a =====~%" s))
 
 ;;; ── 表示：一種節點跑所有粒度 ──
@@ -48,4 +48,15 @@
 (assert (懸空? 'e1-尚未寫)) (assert (member 'e1-尚未寫 (kids '段E待展開)))
 (format t "  段E待展開 → e1-尚未寫〔懸空・待展開〕~%")
 
-(format t "~%全部 demo 通過——uni：統一節點 ＋ 共用 search kernel 立住了。~%")
+;;; ── 最後一里：可分(director)與耦合(gen_v0 形態)跑同一支 search* ──
+(hr "⑩ 同一支 search*：全場預算耦合案例（gen_v0 形態，flat enum 表達不了）")
+(multiple-value-bind (c3 cost3) (搜耦合 3)
+  (format t "  預算 ……≤3：~{~a~}（成本 ~a）~%" (mapcar #'car c3) cost3)
+  (assert (= 0 cost3)))                                       ; 夠寬 → 三句全帶「……」
+(multiple-value-bind (c1 cost1) (搜耦合 1)
+  (format t "  預算 ……≤1：~{~a~}（成本 ~a）~%" (mapcar #'car c1) cost1)
+  (assert (= 2 cost1))                                        ; 只准一句帶「……」→ 另兩句無、成本2
+  (assert (= 1 (count-if (lambda (x) (search "……" (car x))) c1))))
+(format t "  ↑ 同一支 search*：director＝可分(prior累加+終端護欄)，本例＝耦合(step 穿線預算+剪枝)~%")
+
+(format t "~%全部 demo 通過——uni：統一節點 ＋ 一支 search*（可分/耦合皆跑）立住了。~%")
