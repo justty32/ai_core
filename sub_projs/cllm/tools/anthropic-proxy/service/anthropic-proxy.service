@@ -19,20 +19,19 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy
-ExecStart=/usr/bin/python3 proxy.py --host 127.0.0.1 --port 8787
+# C++ 二進位（build 產物）。install 後可改成 PATH 上的 anthropic-proxy。
+ExecStart=/home/lorkhan/repo/ai_core/sub_projs/cllm/build/tools/anthropic-proxy --host 127.0.0.1 --port 8787
 # Environment=ANTHROPIC_BASE_URL=https://api.anthropic.com
 # Environment=ANTHROPIC_VERSION=2023-06-01
 # Environment=ANTHROPIC_MAX_TOKENS=4096
 Restart=on-failure
 RestartSec=2
 # 無金鑰落地：代理只把 cllm 送來的 Authorization 轉手成 x-api-key，不讀環境金鑰。
-# 收緊一點（可選；純 stdlib、只需 loopback 出網）：
+# 收緊一點（可選；只需 loopback 出網）：
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadOnlyPaths=/home/lorkhan/repo/ai_core/sub_projs/cllm/tools/anthropic-proxy
 
 [Install]
 WantedBy=default.target

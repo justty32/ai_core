@@ -16,7 +16,19 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # …/anthropic-proxy
+CLLM="$(cd "$HERE/../.." && pwd)"                          # …/cllm
 PORT="${PORT:-8787}"
+
+# C++ 二進位：優先 PATH（已 install），否則 build 產物。找不到就叫你先 build。
+if command -v anthropic-proxy >/dev/null 2>&1; then
+  BIN="$(command -v anthropic-proxy)"
+elif [ -x "$CLLM/build/tools/anthropic-proxy" ]; then
+  BIN="$CLLM/build/tools/anthropic-proxy"
+else
+  echo "找不到 anthropic-proxy 二進位——先 build：" >&2
+  echo "  cmake --build --preset linux-debug --target anthropic-proxy" >&2
+  exit 1
+fi
 RUNDIR="${XDG_RUNTIME_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}}/anthropic-proxy"
 PIDFILE="$RUNDIR/proxy.pid"
 LOGFILE="$RUNDIR/proxy.log"
@@ -27,8 +39,7 @@ _alive() { [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
 
 start() {
   if _alive; then echo "已在跑（PID $(cat "$PIDFILE")，埠 $PORT）。"; return 0; fi
-  cd "$HERE"
-  nohup python3 proxy.py --host 127.0.0.1 --port "$PORT" >>"$LOGFILE" 2>&1 &
+  nohup "$BIN" --host 127.0.0.1 --port "$PORT" >>"$LOGFILE" 2>&1 &
   echo $! >"$PIDFILE"
   sleep 0.5
   if _alive; then

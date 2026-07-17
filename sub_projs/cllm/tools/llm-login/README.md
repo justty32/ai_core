@@ -1,99 +1,126 @@
-# llm-login — 用「帳號登入（OAuth）」餵 token 給 cllm
+# llm-login —— 用「帳號登入（OAuth）」餵 token 給 cllm（C-ABI 共享庫＋CLI）
 
-← [tools](../README.md)｜[cllm README](../../README.md)
+← [tools](../README.md)｜[cllm INDEX](../../INDEX.md)｜對照：[anthropic-proxy](../anthropic-proxy/README.md)
 
-> **補上 cllm 缺的那一段。** cllm 的 `llm` CLI 不懂「登入」——它只把 config 的 `api_key`
-> 塞進 `Authorization: Bearer`（見 [`src/cabi.cpp`](../../src/cabi.cpp) `make_request`）。
-> 本工具做 OAuth 2.0 **授權碼＋PKCE** 登入、拿 token、到期自動 refresh，把當前有效
-> `access_token` 寫進 cllm 的 `config.json`。**cllm 的 C/C++ 核心一行不動**——關注點分離。
+> **補上 cllm 缺的那一段。** cllm 不懂「登入」——它只把 config 的 `api_key` 塞進
+> `Authorization: Bearer`。本工具做 OAuth 2.0 **授權碼＋PKCE** 登入、拿 token、到期自動
+> refresh，把當前有效 `access_token` 寫進 cllm 的 `config.json`。**cllm 核心一行不動。**
+
+## 就跟 cllm 一樣的模組形態（C-ABI lib）
+
+純 C++23，建成 **`liblogin.so`（對外 C ABI，`login_abi.h`）＋`llm-login` CLI**——正如 cllm 是
+`libcllm.so`＋`llm` CLI。C-ABI 的用意＝**與 cllm 聯動**（見下）。零新依賴：入站接 callback 用共用
+[`../common/httpd`](../common/httpd.hpp)、出站換 token 重用 [`../../src/http`](../../src/http.hpp)、
+PKCE 用 vendored SHA-256（[crypto.cpp](crypto.cpp)）、JSON 用 glaze。
+
+> Python 原版保留在 [`reference/`](reference/)（一比一對照）；C++ 版為現行實作。
+
+## 聯動場景（C-ABI 為此而生）
+
+理想流程——**cllm 零改動**，靠外層 harness 串起來：
+
+```
+cllm 呼叫 → 401（api 失效／沒登入）→ harness 偵測 → llm_login_login(&opts)
+   → 自動開瀏覽器 → 用戶登入 → 換 token → patch cllm config.json → harness 重試 cllm
+```
+
+C-ABI（[login_abi.h](login_abi.h)，記憶體約定同 [cabi.h](../../src/cabi.h)：不配置要呼叫端釋放的東西）：
+
+```c
+llm_login_status_t llm_login_login(const llm_login_opts_t *opts);    /* 開瀏覽器→登入→patch config */
+llm_login_status_t llm_login_refresh(const llm_login_opts_t *opts);  /* refresh_token 換新 */
+long               llm_login_token(const llm_login_opts_t *opts, char *buf, size_t len); /* 取有效 token */
+```
+
+`opts` 帶三個路徑（provider/token/config，NULL＝用預設探測）＋`open_browser`＋`err` buffer。回傳把
+「沒登入（NEED_LOGIN）」跟「一般錯誤」分開，讓 harness 知道該不該觸發登入。
 
 ## 主流供應商：能接的與接不了的
 
-「主流的都要」——但**主流 LLM 供應商在「OAuth 帳號登入換 API 存取」這件事上分兩派**，不是每家都能接：
+**OAuth 帳號登入換 API 存取**分兩派，不是每家都能接：
 
-**能接（真・程式化 OAuth，`providers/` 有現成 preset）**——全部是 OpenAI-compatible endpoint＋Bearer 認證：
+**能接**（真・程式化 OAuth，`providers/` 有現成 preset）——皆 OpenAI-compatible＋Bearer：
 
-| Preset | 流程 | 你要先備 | cllm endpoint |
-|--------|------|----------|---------------|
-| [openrouter](providers/openrouter.json) | PKCE，**免註冊 client** | 一個 OpenRouter 帳號 | 單一 endpoint 通吃全模型 |
-| [openrouter-deepseek](providers/openrouter-deepseek.json) | 同上 | 同上 | 同上，`cllm_model` 預設 `deepseek/deepseek-chat`（一鍵 OAuth→DeepSeek）|
-| [google-gemini](providers/google-gemini.json) | 標準 OAuth | Google Cloud OAuth Client ID＋scope | Gemini OpenAI-compat |
-| [azure-openai](providers/azure-openai.json) | 標準 OAuth（Entra ID） | Entra app＋tenant＋資源角色 | 你的 Azure 資源/deployment |
-| [github-models](providers/github-models.json) | 標準 OAuth | GitHub OAuth App | GitHub Models（免費額度）|
+| Preset | 流程 | 你要先備 |
+|--|--|--|
+| [openrouter](providers/openrouter.json) | PKCE，**免註冊 client**，換回**不過期** key | 一個 OpenRouter 帳號 |
+| [openrouter-deepseek](providers/openrouter-deepseek.json) | 同上，`cllm_model` 預設 deepseek | 同上 |
+| [google-gemini](providers/google-gemini.json) | 標準 OAuth | Google Cloud OAuth Client ID＋scope |
+| [azure-openai](providers/azure-openai.json) | 標準 OAuth（Entra ID） | Entra app＋tenant＋角色 |
+| [github-models](providers/github-models.json) | 標準 OAuth | GitHub OAuth App |
 
-**接不了（key-only，無正規程式化 OAuth，本工具不適用）**：
+**接不了**（key-only，無正規 OAuth）：**DeepSeek／OpenAI 直連**只有 `sk-` key → **直接填 config**
+即可（OpenAI-compat＋Bearer，cllm 本就接得上，不用本工具）；**Anthropic 直連**是 `x-api-key`＋非
+OpenAI 格式 → 用姊妹工具 [anthropic-proxy](../anthropic-proxy/README.md)。
 
-- **DeepSeek**：只有 `sk-` API key，官方**沒有** OAuth-換-API（唯一的 OAuth 是用 Google/Apple 登入 DeepSeek 網站本身，不換 API token）。**但它是 OpenAI-compat＋Bearer**，兩條真路：
-  - **直連**（最順、免登入）：直接把 key 填進 cllm config——`{"endpoint":"https://api.deepseek.com/chat/completions","model":"deepseek-chat","api_key":"sk-..."}`。
-  - **用 OAuth 登入摸到 DeepSeek**：跑一鍵變體 [providers/openrouter-deepseek.json](providers/openrouter-deepseek.json)（`cllm_model` 已預設 `deepseek/deepseek-chat`，可換 `deepseek/deepseek-r1`／`:free`）。
-- **OpenAI 直連 API**：只有 `sk-` API key，官方**沒有** OAuth-換-API。網路上「用 ChatGPT 帳號」的做法＝消費訂閱 session＝下面的 ①，不做。（同樣 OpenAI-compat＋Bearer，直接填 key 即可。）
-- **Anthropic 直連 API**：只有 `x-api-key`（**連 `Authorization: Bearer` 都不是**、非 OpenAI wire format），cllm 現況本就接不上；存在的 OAuth 是 Claude Code 訂閱登入（scoped client）＝① 訂閱路，不做。**→ 要拿自己的 `sk-ant-` key 直連，用姊妹工具 [anthropic-proxy](../anthropic-proxy/README.md)（本機轉發代理，翻 wire format＋認證頭）。**
-- 一句話：這些家要嘛**直接填 API key** 進 config（DeepSeek/OpenAI 因是 OpenAI-compat 最順），要嘛透過 **OpenRouter OAuth** 借道，要嘛走**本機後端**。
+> ⚠ **最省事推薦 OpenRouter**：免註冊 OAuth client、換回不過期 key、一個 endpoint 通吃（含 Claude）。
 
-> ⚠ **最省事推薦 OpenRouter**：免註冊 OAuth client、登入完拿一把不過期的 user API key、一個 endpoint 通吃——最貼近「不想逐家申請 key」的原始痛點。
+## 建置
 
-### 三種「帳號登入」的定位（回顧）
+隨 cllm 一起建（`-DCLLM_BUILD_TOOLS`，預設 ON）：
 
-- **① 消費級網頁訂閱**（ChatGPT Plus／Claude Pro 的 session）——**不做、也別這樣用**：ToS 禁止程式化使用消費帳號，token 短命又非 OpenAI-compatible。
-- **② 供應商為 API 存取提供的正規 OAuth**——**本工具正是為此**，上表四家即是。
-- **③ 本機後端**（LM Studio／Ollama）——**根本不用登入**，cllm 預設指 localhost、`api_key` 留空。
+```sh
+cd sub_projs/cllm && cmake --preset linux-debug
+cmake --build --preset linux-debug --target llm-login   # → build/tools/{liblogin.so, llm-login}
+```
 
-> 本工具供應商中立；指向哪個 endpoint、是否符合該家條款，是使用者的責任。
+## 用法（CLI）
 
-## 用法
-
-零外部相依，純 Python 3.11+ 標準庫。先備好 provider 設定——**挑一個 preset 複製、填 `_notes` 交代的空**（`<...>` 佔位）：
+先備 provider 設定——挑一個 preset 複製、填 `_notes` 交代的空：
 
 ```sh
 cp providers/openrouter.json ~/.config/llm/oauth.json     # 最省事；OpenRouter 幾乎不用改
-# 或指定別家：cp providers/google-gemini.json ~/.config/llm/oauth.json（填 client_id/secret/scope）
-# 也可不複製、用環境變數指到 preset：export LLM_OAUTH_PROVIDER=$PWD/providers/openrouter.json
-# 供應商中立範本（自己填全部）：oauth.example.json
+# 或用環境變數指到 preset：export LLM_OAUTH_PROVIDER=$PWD/providers/openrouter.json
 ```
 
 ```sh
-python3 llm_login.py login      # 開瀏覽器登入一次 → 拿 token、寫進 cllm config.json
-python3 llm_login.py status     # 看目前狀態（不外洩 token 本身）
-python3 llm_login.py refresh    # 手動用 refresh_token 換新 access_token
-python3 llm_login.py token      # 印當前有效 token（快過期自動 refresh）
+llm-login login      # 開瀏覽器登入一次 → 拿 token、patch cllm config
+llm-login status     # 看狀態（不外洩 token 本身）
+llm-login refresh    # 手動用 refresh_token 換新
+llm-login token      # 印當前有效 token（快過期自動 refresh）——給腳本 $(...)
+# 旗標：--provider P / --token T / --config C 覆寫路徑；--no-browser 只印網址不自動開（headless）
 ```
 
-登入後，裸跑 cllm 就帶著 bearer 了（因為 `config.json` 的 `api_key` 已被寫入）：
+登入後裸跑 cllm 就帶著 bearer（config 的 `api_key` 已被寫入）。短命 token 也可即時取：
 
 ```sh
-llm 用一句話介紹你自己 --endpoint https://你的/v1/chat/completions --model 你的model
-```
-
-短命 token 要嘛靠 `token` 子命令即時取（腳本場景）：
-
-```sh
-llm 你好 --api-key "$(python3 llm_login.py token)"   # token 過期會自動 refresh 再印
+llm 你好 --api-key "$(llm-login token)"   # 過期會自動 refresh 再印
 ```
 
 ## 檔案
 
 | 檔 | 是什麼 |
-|----|--------|
-| [oauth.py](oauth.py) | OAuth 協定層：PKCE、組 authorize URL、本機 callback 接碼、換 token／refresh。供應商中立、不硬編任何一家 |
-| [store.py](store.py) | 狀態層：讀 provider 設定、token 存放（0600）、回頭只 patch cllm `config.json` 的 `api_key`（不碰其他鍵、不塞 glaze 不認得的鍵） |
-| [llm_login.py](llm_login.py) | CLI：`login`／`refresh`／`token`／`status`（依 `flow` 分標準 OAuth 與 OpenRouter 兩路）|
-| [providers/](providers/) | **主流供應商現成 preset**（endpoint 皆已上網核對）：openrouter／google-gemini／azure-openai／github-models。每檔 `_notes` 交代要填什麼 |
-| [oauth.example.json](oauth.example.json) | 供應商中立範本（要接上表以外的家、自己填全部時用） |
-| [test_offline.py](test_offline.py) | 離線煙霧測試（PKCE／標準＋OpenRouter URL 組裝／token store round-trip／config patch／四 preset 可載），不連網不開瀏覽器 |
+|--|--|
+| [login_abi.h](login_abi.h) | 對外 C ABI（仿 cabi.h）：login／refresh／token；聯動入口 |
+| [login.{hpp,cpp}](login.cpp) | C++ 編排（三流程）＋C-ABI 出口＋開瀏覽器（xdg-open／ShellExecute） |
+| [oauth.{hpp,cpp}](oauth.cpp) | 協定層：PKCE、authorize URL（標準＋OpenRouter）、接 callback、換／刷 token |
+| [store.{hpp,cpp}](store.cpp) | 狀態層：路徑探測、token 存放（0600）、只 patch cllm config 的 api_key/endpoint/model |
+| [crypto.{hpp,cpp}](crypto.cpp) | vendored SHA-256＋base64url＋安全亂數（PKCE S256） |
+| [login_cli.cpp](login_cli.cpp) | `llm-login` CLI |
+| [test_offline.cpp](test_offline.cpp) | 離線測（SHA-256／base64url／PKCE／URL／config patch／token 到期）|
+| [providers/](providers/) | 主流供應商現成 preset（每檔 `_notes` 交代要填什麼） |
+| [oauth.example.json](oauth.example.json) | 供應商中立範本（接上表以外的家、自己填全部時用） |
+| [reference/](reference/) | Python 原版（封存為參考，非現行實作） |
 
-## 三個檔的落點（都在 `~/.config/llm/`，可用環境變數改）
+## 三個檔的落點（都在 `~/.config/llm/`，可用 opts/env 改）
 
 | 檔 | 誰寫 | 內容 |
-|----|------|------|
+|--|--|--|
 | `oauth.json` | 使用者手填（或 `LLM_OAUTH_PROVIDER` 指定） | provider 設定 |
 | `oauth_token.json` | 本工具（0600） | access／refresh／expires_at |
-| `config.json` | cllm CLI 的設定；本工具**只 patch `api_key`**（或 `LLM_CLI_CONFIG` 指定） | 其餘鍵原樣保留 |
+| `config.json` | cllm 的設定；本工具**只 patch** api_key/endpoint/model（或 `LLM_CLI_CONFIG` 指定） | 其餘鍵原樣保留 |
 
 ## 驗證
 
 ```sh
-python3 test_offline.py       # 全離線，應全綠
+./build/tools/llm-login-test-offline    # 離線 24 條，應全綠
 ```
 
-真 OAuth 往返（`login`/`refresh` 打真 endpoint＋開瀏覽器）本質要**真供應商＋真帳號**，
-Claude 跨不過去——見 [WAIT_USER](../../WAIT_USER.md)。
+真 OAuth 往返（`login`／`refresh` 打真 endpoint＋開瀏覽器）本質要真供應商＋真帳號，Claude 跨不過去
+（見 [WAIT_USER](../../WAIT_USER.md)）。免瀏覽器的整條登入鏈（接 callback→換 token→存檔→patch）已用假
+token 端對測過。
+
+## 安全與條款
+
+金鑰走呼叫端提供的 buffer／0600 檔，不外洩。只對「有提供 OAuth 給 API 存取」的供應商合法適用；
+拿去套消費級網頁訂閱的 session 屬濫用，別這樣用。指向哪個 endpoint、是否符合條款，是使用者的責任。

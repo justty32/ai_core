@@ -75,6 +75,26 @@ CLI 依三關注點拆檔（cli.cpp 只當 orchestrator）：
 
 舊 L0 可獨立呼叫入口——`llm.{hpp,cpp}`（`llm::Client`／`ask`／`from_env`）、`llm_tool`／`llm_media`／`llm_json`（三擴充）、`llm_schema.hpp`（`schema_of<T>()` 反射生 required 的便利層）、舊反射 `cli`、`demo`、舊 `main`。重構時融進 C ABI 實作，**不再對外提供獨立函數**。改現行程式碼**不必讀這裡**；只在追溯「這功能以前怎麼寫的」時參考。
 
+### ⑦ 周邊工具（`tools/`，C++ 模組，進主建置 `-DCLLM_BUILD_TOOLS`）
+
+建在 core 之上、非 `src/` 核心。**入站**用共用微型 server、**出站**重用 `src/http`；翻譯／oauth 用
+glaze `json_t`（外部 wire 動態重塑，cllm 自家 ABI 才用反射 struct）。Python 原版在各 `reference/`（不在維護鏈）。
+
+| 檔 | 職責 | 關鍵符號 |
+|---|---|---|
+| `tools/common/httpd.{hpp,cpp}` | 微型 HTTP/1.1 **server**（入站；cllm 只有 client）。raw socket、chunked；POSIX＋Winsock（`httpd_impl` 子 ns）| `httpd::Server`（serve_forever/serve_once/port）、`httpd::Request`／`Responder`（send/begin_chunked/write_chunk）|
+| `tools/anthropic-proxy/translate.{hpp,cpp}` | OpenAI⇄Anthropic 翻譯（`axl_impl` 子 ns）| `axl::to_anthropic`／`from_anthropic`／`err_to_openai`／`StreamXlate`、`axl::kStructTool` |
+| `tools/anthropic-proxy/proxy.cpp` | 代理執行檔：httpd 入站＋src/http 出站＋串流；金鑰轉手不落地 | `main`／`handle` |
+| `tools/llm-login/login_abi.h` | 對外 C ABI（仿 cabi.h，**穩定介面**）：與 cllm 聯動入口 | `llm_login_login`／`_refresh`／`_token`、`llm_login_opts_t`／`llm_login_status_t` |
+| `tools/llm-login/login.{hpp,cpp}` | C++ 編排（三流程）＋C-ABI 出口＋開瀏覽器 | `llm::login::do_login`／`do_refresh`／`get_token`／`resolve`／`open_browser`、`NeedLogin` |
+| `tools/llm-login/oauth.{hpp,cpp}` | PKCE／authorize URL／接 callback／換刷 token（`oauth_impl` 子 ns）| `login::oauth::authorize_url`／`_openrouter`／`capture_code`／`exchange_code`／`refresh`／`redirect_of` |
+| `tools/llm-login/store.{hpp,cpp}` | 路徑探測／token 存放 0600／patch cllm config（只動 api_key/endpoint/model）| `login::store::read_json`／`write_file`／`make_token_record`／`is_expired`／`patch_cllm`／`default_path` |
+| `tools/llm-login/crypto.{hpp,cpp}` | vendored SHA-256＋base64url＋安全亂數（PKCE S256；`crypto_impl` 子 ns）| `login::crypto::sha256`／`base64url_nopad`／`random_bytes`／`gen_pkce` |
+| `tools/llm-login/login_cli.cpp` | `llm-login` CLI | `main`／`cmd_status` |
+
+> ⚠ **低層模組在頂層 ns `login`**（`login::crypto`／`oauth`／`store`）；C++ 入口在 `llm::login`。在
+> `llm::login` 內直寫 `store::` 會被解成 `llm::login::store`（不存在）——`login.cpp` 用 `namespace store = ::login::store;` 別名指回。
+
 ## 常見任務 → 先讀哪些檔
 
 | 你要做… | 先讀 |
@@ -91,3 +111,4 @@ CLI 依三關注點拆檔（cli.cpp 只當 orchestrator）：
 
 - **唯一測試**：`test/cli_smoke.sh`（離線黑箱，31/31）——**端到端**驅動 `build/llm` 打 `test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/` 的 `file://` 假回應。無單元測試檔，故任何一層改動都靠這支 smoke 從 CLI 端驗（見 [testing](../../testing.md)）。
 - **真後端行為**（錯誤路徑／reasoning `max_tokens`／schema `required`）離線驗不出，需使用者實跑（[WAIT_USER](../../../WAIT_USER.md)、[gotchas/backend](../gotchas/backend.md)）。
+- **周邊工具 tools/**：`llm-login` 有離線測 `build/tools/llm-login-test-offline`（SHA-256/base64url/PKCE/URL/config patch/token 到期，全綠）；`anthropic-proxy` 靠假上游端對端驗（非串流/串流/[DONE]/缺 key→401）。真 OAuth／真 Anthropic 往返需真帳號（WAIT_USER）。
