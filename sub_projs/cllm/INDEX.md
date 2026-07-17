@@ -13,6 +13,7 @@
 | `src/` | 現行原始碼：`http.{hpp,cpp}`（native HTTP 傳輸）＋`cabi.h`＋`cabi_{client,request,response,context}.h`（對外 C ABI 傘檔＋功能頭）＋`cabi.cpp`／`cabi_request.cpp`／`cabi_response.cpp`／`cabi_stream.cpp`（C ABI 實作，按關注點拆檔）＋`cabi_internal.hpp`（實作共用內部頭）＋`cabi.hpp`＋`cabi_{context,request,response}.hpp`（C++ 薄鏡像 `llm::abi`）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）|
 | [`bindings/`](bindings/README.md) | **八語言綁定 + 常駐開發環境**（C ABI 下游消費端）：C／C++／Lua／Fennel／s7／Python／Common Lisp／Go 各語言原始碼＋example（含 JSON 解析＋shell-out CLI）；Lisp 家族另有 `image/`（產映像／CLI/lib／執行期修改）。[`install-dev.sh`](install-dev.sh) 一鍵裝成常駐前綴 `~/dev`。API 對齊 galtxt/try_4（`ask`＋`on_delta`）；不進主建置 |
 | [`install-dev.sh`](install-dev.sh) / [`cmake/`](cmake/) | 把 cllm 裝成常駐可 include/link 前綴（`cmake --install`＋pkg-config `cllm.pc`）並搭好各語言環境；可重現 |
+| [`tools/`](tools/README.md) | **周邊工具（非核心、不進主建置）**：[`llm-login/`](tools/llm-login/README.md)＝OAuth（授權碼＋PKCE）帳號登入換 token 餵 `llm` CLI 的 `api_key`、到期自動 refresh；補上 cllm 缺的「登入」段，核心不動。零外部相依 Python |
 | `test/` | `cli_smoke.sh`（離線黑箱煙霧測試，31/31）＋`bindings_smoke.sh`（九語言綁定一鍵 smoke，輪流呼叫各 `bindings/<lang>/smoke.sh`）＋`fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/`（版控的假回應，`file://` 餵進 CLI 與綁定）|
 | `CMakeLists.txt` / `CMakePresets.json` / `vcpkg.json` | 建置：兩交付物 target（`cllm` SHARED＝`libcllm.so`、`llm` executable）＋兩組 preset（`mingw-*`／`linux-*`）＋vcpkg manifest（glaze）|
 | `.clangd` / `.vscode/` | 編輯器整合（clangd 讀 `build/compile_commands.json`；`.vscode/` 為 Windows VSCode 專用）|

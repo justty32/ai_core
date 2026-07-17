@@ -9,6 +9,7 @@
 
 ## 最新進度
 
+- **llm-login 骨架已落地（帳號登入＝OAuth 授權碼＋PKCE→餵 cllm config）**（2026-07-17）：回應「用帳號登入而非申請 API key」——[tools/llm-login/](tools/llm-login/README.md) 供應商中立、零外部相依 Python，做 login/refresh/token/status，把有效 `access_token` patch 進 cllm `config.json` 的 `api_key`；**cllm C/C++ 核心一行不動**（關注點分離）。離線煙霧全綠。**open 尾巴**：真 OAuth 往返要真供應商＋真帳號＋瀏覽器 → [WAIT_USER](WAIT_USER.md)；只對「有提供程式化 OAuth」的供應商合法，消費訂閱 session 不做。
 - **八語言綁定全路收齊＋一鍵 smoke**（2026-07-16）：全語言（C／C++／Lua／Fennel／s7／Python／CL／Go＋Shell）都綁了 `tools`／`media`／`modalities`＋`on_tool`／`on_media`；每語言各有 `smoke.sh`、[`test/bindings_smoke.sh`](test/bindings_smoke.sh) 一鍵輪跑（9/9 綠）。C++ 另有便利層 `llm.hpp`（聚合 ask／`std::expected`／串流糖／media helpers）＋`llm_reflect.hpp`（`ask_as<T>`／`make_tool<Args>`／`args_as<Args>`／`modality<Config>`）。常駐前綴改 **`~/dev`**（共用目錄、install 冪等覆蓋、勿整個 rm）；s7 原始碼 vendor 進 repo（`bindings/s7/vendor/`），不再依賴 pas。**真後端已驗**（2026-07-16，LM Studio）：`ask_as<T>` required 全吐／tools（C++＋Python）／vision／錯誤路徑／SSE 串流全過；modalities 被靜默忽略（記 [gotchas/backend](workflows/common/gotchas/backend.md)）。**open 尾巴**：① 未在 Windows 實測；② 未接主 CMake（刻意獨立）。詳見 [bindings/README](bindings/README.md)。
 - **CLI 打磨第一輪已落地**（2026-07-16，詳見 git log）：管線體驗（stdin×位置參數合體、「-」插入點）＋tools/modalities/media-out 旗標（四路 handler 全開，新 TU `cli_output.*`）＋錯誤訊息打磨，cli_smoke 31/31、真後端驗過（stdin 合體＋`--tool` 打 LM Studio）。**open**：下一輪打磨方向待使用者再點（便利層方向已評估為不值得，撤）。CLI 用法見 [docs/cli-manual.md](docs/cli-manual.md)、檔對應見 [code-map ⑤](workflows/common/code-map/CODE_MAP.md)。
 

@@ -1,0 +1,12 @@
+{
+  "_comment": "複製成 ~/.config/llm/oauth.json 後填成你那家供應商的真值。本工具供應商中立，不預設任何一家。client_secret 只有機密型 client 才要（多數桌面/CLI 用 PKCE 的 public client 不填）。",
+  "authorize_url": "https://provider.example.com/oauth/authorize",
+  "token_url": "https://provider.example.com/oauth/token",
+  "client_id": "填你的 client_id",
+  "scopes": ["openid", "offline_access"],
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "extra_auth_params": {},
+  "timeout_s": 60
+}
