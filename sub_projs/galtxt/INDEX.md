@@ -18,7 +18,7 @@
 | [`gen_v1_f/`](gen_v1_f/README.md) | **gen_v1 的 Fennel 移植**（Fennel 定調翻案復試）：行為與九示範逐條對齊 Lua 版，拆檔一比一。跑法 `cd gen_v1_f && fennel main.fnl`。 |
 | [`gen_v1_l/`](gen_v1_l/README.md) | **gen_v1 的 Common Lisp 移植**（三線並排第三線，SBCL）：行為與九示範逐條對齊。跑法 `cd gen_v1_l && sbcl --script main.lisp`。 |
 | [`realizer_f/`](realizer_f/README.md) | **敘事風格層（realizer）玩具原型**（Fennel＋Lisp macro）：`tmpl` macro 把句子模板當 list、編譯期折成字串接合（同像性）；`G(母題,風格座標)→整場河堤台詞`，固定旁白框＋多句子模板＋兩條護欄，六 demo 全綠。跑法 `cd realizer_f && fennel main.fnl`。 |
-| [`realizer_l/`](realizer_l/README.md) | **realizer 的 Common Lisp 壓縮版**（macro 母語，接 comfy/gen_v1_l）：同一套八股，單檔 **109 行**（Fennel 六檔 224 的壓縮對照——filler 兩表併一、scene 塌成扁平 item 序）；六 demo 逐位元同。跑法 `cd realizer_l && sbcl --script realizer.lisp`。 |
+| [`realizer_l/`](realizer_l/README.md) | **realizer（CL 壓縮版）＋director 搜索層**（macro 母語，接 comfy/gen_v1_l）：同一套八股（核心 90 行，Fennel 六檔 224 的壓縮對照）；**director 升格**——不再顯式給風格座標，改窮舉模板×填充＋成本挑最優，`intent`（甜/靜）搜出不同風格、`direct-n` 自動生 N 種台詞流（閉環最初手寫「20 種」）。九 demo 全綠。跑法 `cd realizer_l && sbcl --script main.lisp`。 |
 | [`corpus/`](corpus/README.md) | **語料庫**（日和町 galgame，~150 檔）：34 篇劇本（含 2 篇逐句深度分析）＋52 短場景＋多尺度世界設定（`世界/`）＋14 份角色 dossier（`人物/`）＋19 題評測 benchmark＋固化規則素材。入口與 canon 專名見 [corpus/README](corpus/README.md)。|
 | ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 

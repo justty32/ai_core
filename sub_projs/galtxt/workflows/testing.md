@@ -12,7 +12,7 @@
   - `cd gen_v1_f && fennel main.fnl`——同上的 Fennel 版（Fennel 1.6+）。
   - `cd gen_v1_l && sbcl --script main.lisp`——同上的 Common Lisp 版（SBCL）。
   - `cd realizer_f && fennel main.fnl`——八股 realizer 玩具版（Fennel＋macro），六 demo 全自帶 assert，跑完印「八股 realizer（Fennel＋macro）立住了」即綠。
-  - `cd realizer_l && sbcl --script realizer.lisp`——同上的 Common Lisp 壓縮版（單檔 109 行），六 demo 全自帶 assert。
+  - `cd realizer_l && sbcl --script main.lisp`——Common Lisp 壓縮版＋director 搜索層（realizer 90＋director 48＋main 39），九 demo 全自帶 assert（含 director 搜最優／intent 甜vs靜／direct-n 自動生 3 種台詞流）。
 - **完整驗證**：全部都跑。
 
 ## 測試分類
