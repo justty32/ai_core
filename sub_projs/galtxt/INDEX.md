@@ -14,6 +14,7 @@
 | `SESSION-LOG.md` / `WAIT_USER.md` | 活狀態（open-only）：進度 hub、待使用者項 |
 | `workflows/` | 開發工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | [`gen_v0/`](gen_v0/README.md) | **確定性台詞生成器・玩具版**（Lua）：`G(條件)→台詞` 純函數雛形，條件全以 lua table 表述；範圍鎖死河鹿堂定點。跑法 `cd gen_v0 && lua main.lua`。 |
+| [`gen_v1/`](gen_v1/README.md) | **事實層地基**：事實/敘事風格分離——facts（帶型別邊的分層 LOD 網）→ director → act → realizer。事實庫玩具版已落地（Lua，六動詞＋兩道寫入門，九示範全 assert）；director/realizer 未動工。跑法 `cd gen_v1 && lua main.lua`。 |
 | [`corpus/`](corpus/README.md) | **語料庫**（日和町 galgame，~150 檔）：34 篇劇本（含 2 篇逐句深度分析）＋52 短場景＋多尺度世界設定（`世界/`）＋14 份角色 dossier（`人物/`）＋19 題評測 benchmark＋固化規則素材。入口與 canon 專名見 [corpus/README](corpus/README.md)。|
 | ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 
