@@ -1,0 +1,12 @@
+{
+  "_notes": "OpenRouter → DeepSeek 一鍵版：跟 openrouter.json 同流程（PKCE 免註冊 client），只是 cllm_model 預設成 DeepSeek。這是「用 OAuth 帳號登入摸到 DeepSeek」的合法路徑（DeepSeek 直連 API 無 OAuth）。可換 deepseek/deepseek-r1（推理）或 deepseek/deepseek-r1:free（免費版）；最新旗艦 slug 以 openrouter.ai/models 為準。",
+  "flow": "openrouter",
+  "authorize_url": "https://openrouter.ai/auth",
+  "token_url": "https://openrouter.ai/api/v1/auth/keys",
+  "redirect_host": "127.0.0.1",
+  "redirect_port": 8123,
+  "redirect_path": "/callback",
+  "cllm_endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "cllm_model": "deepseek/deepseek-chat",
+  "timeout_s": 60
+}

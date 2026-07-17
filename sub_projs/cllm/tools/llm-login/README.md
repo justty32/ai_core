@@ -16,13 +16,16 @@
 | Preset | 流程 | 你要先備 | cllm endpoint |
 |--------|------|----------|---------------|
 | [openrouter](providers/openrouter.json) | PKCE，**免註冊 client** | 一個 OpenRouter 帳號 | 單一 endpoint 通吃全模型 |
+| [openrouter-deepseek](providers/openrouter-deepseek.json) | 同上 | 同上 | 同上，`cllm_model` 預設 `deepseek/deepseek-chat`（一鍵 OAuth→DeepSeek）|
 | [google-gemini](providers/google-gemini.json) | 標準 OAuth | Google Cloud OAuth Client ID＋scope | Gemini OpenAI-compat |
 | [azure-openai](providers/azure-openai.json) | 標準 OAuth（Entra ID） | Entra app＋tenant＋資源角色 | 你的 Azure 資源/deployment |
 | [github-models](providers/github-models.json) | 標準 OAuth | GitHub OAuth App | GitHub Models（免費額度）|
 
 **接不了（key-only，無正規程式化 OAuth，本工具不適用）**：
 
-- **DeepSeek**：只有 `sk-` API key，官方**沒有** OAuth-換-API（唯一的 OAuth 是用 Google/Apple 登入 DeepSeek 網站本身，不換 API token）。**但它是 OpenAI-compat＋Bearer**，所以不需要本工具——直接把 key 填進 cllm config 就能跑：`{"endpoint":"https://api.deepseek.com/chat/completions","model":"deepseek-chat","api_key":"sk-..."}`。想「用 OAuth 登入」摸到 DeepSeek，走 **OpenRouter preset**、把 `cllm_model` 設成 `deepseek/deepseek-chat` 即可。
+- **DeepSeek**：只有 `sk-` API key，官方**沒有** OAuth-換-API（唯一的 OAuth 是用 Google/Apple 登入 DeepSeek 網站本身，不換 API token）。**但它是 OpenAI-compat＋Bearer**，兩條真路：
+  - **直連**（最順、免登入）：直接把 key 填進 cllm config——`{"endpoint":"https://api.deepseek.com/chat/completions","model":"deepseek-chat","api_key":"sk-..."}`。
+  - **用 OAuth 登入摸到 DeepSeek**：跑一鍵變體 [providers/openrouter-deepseek.json](providers/openrouter-deepseek.json)（`cllm_model` 已預設 `deepseek/deepseek-chat`，可換 `deepseek/deepseek-r1`／`:free`）。
 - **OpenAI 直連 API**：只有 `sk-` API key，官方**沒有** OAuth-換-API。網路上「用 ChatGPT 帳號」的做法＝消費訂閱 session＝下面的 ①，不做。（同樣 OpenAI-compat＋Bearer，直接填 key 即可。）
 - **Anthropic 直連 API**：只有 `x-api-key`（**連 `Authorization: Bearer` 都不是**、非 OpenAI wire format），cllm 現況本就接不上；存在的 OAuth 是 Claude Code 訂閱登入（scoped client）＝① 訂閱路，不做。
 - 一句話：這些家要嘛**直接填 API key** 進 config（DeepSeek/OpenAI 因是 OpenAI-compat 最順），要嘛透過 **OpenRouter OAuth** 借道，要嘛走**本機後端**。
