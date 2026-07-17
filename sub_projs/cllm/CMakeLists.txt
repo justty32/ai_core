@@ -105,3 +105,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cllm.pc.in
                ${CMAKE_CURRENT_BINARY_DIR}/cllm.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cllm.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+# ── 周邊工具（tools/）：C++ 重寫的 anthropic-proxy／llm-login ──
+# 建在 cllm 之上、重用 src/http；預設一起建，可 -DCLLM_BUILD_TOOLS=OFF 關掉。
+option(CLLM_BUILD_TOOLS "建置周邊工具 tools/（anthropic-proxy, llm-login）" ON)
+if(CLLM_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
