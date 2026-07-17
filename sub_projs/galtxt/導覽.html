@@ -105,15 +105,18 @@
     </ul>
   </div>
 
-  <h2>檔案地圖（點進去）</h2>
+  <h2>完整文檔索引（每個產物都有文檔）</h2>
   <div class="card">
+    <p class="muted" style="margin:0 0 8px">審計過：本輪每個程式碼夾都配了 README／設計註記。以下即全部：</p>
     <table>
-      <tr><th>類別</th><th>檔</th></tr>
-      <tr><td>本輪終點</td><td><a href="uni/README.md">uni/</a>（統一節點＋search*）｜<a href="一台搜尋機.md">一台搜尋機.md</a>（gen_v0≅director）</td></tr>
-      <tr><td>探索 bench</td><td><a href="uniform_probe/README.md">uniform_probe/</a>（五路並行＋綜合、五個關鍵發現）</td></tr>
-      <tr><td>realizer</td><td><a href="realizer_l/README.md">realizer_l</a>（CL）｜<a href="realizer_f/README.md">realizer_f</a>（Fennel）</td></tr>
+      <tr><th>類別</th><th>文檔</th></tr>
+      <tr><td>本輪終點</td><td><a href="uni/README.md">uni/README</a>（統一節點＋search*）｜<a href="一台搜尋機.md">一台搜尋機.md</a>（gen_v0≅director）</td></tr>
+      <tr><td>探索 bench</td><td><a href="uniform_probe/README.md">uniform_probe/README</a>（五路對照＋五發現）｜<a href="uniform_probe/synth/README.md">synth/README</a>（綜合 kernel）｜五路各自：<a href="uniform_probe/a1/設計註記.md">a1</a> <a href="uniform_probe/a2/設計註記.md">a2</a> <a href="uniform_probe/a3/設計註記.md">a3</a> <a href="uniform_probe/a4/NOTES.md">a4</a> <a href="uniform_probe/a5/設計.md">a5</a></td></tr>
+      <tr><td>realizer</td><td><a href="realizer_l/README.md">realizer_l</a>（CL＋director）｜<a href="realizer_f/README.md">realizer_f</a>（Fennel）</td></tr>
       <tr><td>corpus・河堤</td><td><a href="corpus/劇本/最後的櫻花雪/台詞流_場景二_河堤_20種.md">台詞流 20 種</a>｜<a href="corpus/劇本/最後的櫻花雪/模板_場景二_河堤_八股拆解.md">八股拆解</a>｜<a href="corpus/劇本/最後的櫻花雪/句子模板庫_場景二_河堤.md">句子模板庫</a></td></tr>
-      <tr><td>引擎</td><td><a href="gen_v0/README.md">gen_v0</a>（搜 act）｜<a href="gen_v1/00_設計.md">gen_v1 設計</a>（事實層四柱）</td></tr>
+      <tr><td>引擎</td><td><a href="gen_v0/README.md">gen_v0</a>（搜 act）｜gen_v1 <a href="gen_v1/README.md">Lua</a>／<a href="gen_v1_f/README.md">Fennel</a>／<a href="gen_v1_l/README.md">CL</a>＋<a href="gen_v1/00_設計.md">設計（事實層四柱）</a></td></tr>
+      <tr><td>cllm 側線</td><td><a href="../cllm/tools/llm-login/README.md">llm-login/README</a>（OAuth 帳號登入）｜<a href="../cllm/README.md">cllm/README</a></td></tr>
+      <tr><td>規範・驗證</td><td><a href="workflows/common/conventions.md">conventions</a>（≤150 行等）｜<a href="workflows/testing.md">testing</a>（跑法清單）</td></tr>
       <tr><td>狀態</td><td><a href="SESSION-LOG.md">SESSION-LOG</a>｜<a href="WAIT_USER.md">WAIT_USER</a>｜<a href="INDEX.md">INDEX</a></td></tr>
     </table>
   </div>
