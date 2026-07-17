@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>galtxt 導覽 — 回家接手</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --ink:#e6e8ee; --dim:#9aa3b2;
+    --line:#2a2f3a; --accent:#7cc4ff; --gold:#e8c37a; --green:#8fd694; --pink:#f3a6c0;
+    --code:#0b0d11;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --ink:#1b1f27; --dim:#5b6472;
+           --line:#e2e5ea; --accent:#1f6fb2; --gold:#8a6d1f; --green:#2f7d3a; --pink:#a63f6a; --code:#f2f3f6; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.7 -apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:34px 0 12px;color:var(--accent)}
+  .sub{color:var(--dim);margin:0 0 24px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+  .start{border-color:var(--gold);background:linear-gradient(180deg,rgba(232,195,122,.08),transparent)}
+  .decide{border-color:var(--pink)}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  code,kbd{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+    font:13px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;margin:8px 0}
+  pre code{border:0;padding:0;background:none}
+  table{width:100%;border-collapse:collapse;margin:6px 0} th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:13px} td.g{color:var(--green)}
+  .pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+  .step{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px;white-space:nowrap}
+  .step.done{border-color:var(--green)} .arr{color:var(--dim)}
+  .tag{display:inline-block;font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:0 6px;margin-left:6px}
+  ul{margin:6px 0 6px 2px;padding-left:18px} li{margin:4px 0}
+  .muted{color:var(--dim);font-size:14px}
+  .k{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>galtxt 導覽 — 回家接手</h1>
+  <p class="sub">galgame 台詞生成鍛成確定性程式。這頁＝這輪 session 的地圖＋接手點。權威狀態仍在
+    <a href="SESSION-LOG.md">SESSION-LOG</a> / <a href="WAIT_USER.md">WAIT_USER</a> / <a href="INDEX.md">INDEX</a>。</p>
+
+  <div class="card start">
+    <b>⏱ 從這裡開始（30 秒）</b>
+    <p style="margin:8px 0 4px">這輪把一個問題鑿到底：<b>同一場戲，怎麼確定性地生出多種台詞</b>。答案收斂成兩句——
+      <span class="k">表示塌成一種節點</span>（八股/段/句式/填充/原子事實都是同一個 <code>node</code>），
+      <span class="k">演算法塌成一支搜索</span>（<code>search*</code>：可分＝realizer director、耦合＝gen_v0）。</p>
+    <p style="margin:4px 0">想立刻看它跑：</p>
+    <pre><code>cd sub_projs/galtxt/uni &amp;&amp; sbcl --script main.lisp</code></pre>
+    <p class="muted" style="margin:4px 0 0">十個 demo 會逐一印出：一種節點跑整場、粒度湧現、真值域vs字面域、搜最優、
+      intent 甜vs靜、護欄剪枝、direct-n 自動生 3 種台詞流、分支、懸空、以及「同一支 search* 跑耦合預算」。</p>
+  </div>
+
+  <h2>這輪的敘事弧（都已落地・全綠）</h2>
+  <div class="card">
+    <div class="pipe">
+      <span class="step done">手寫 20 種</span><span class="arr">→</span>
+      <span class="step done">八股拆解</span><span class="arr">→</span>
+      <span class="step done">induce 模板</span><span class="arr">→</span>
+      <span class="step done">句子模板庫</span><span class="arr">→</span>
+      <span class="step done">realizer 引擎</span><span class="arr">→</span>
+      <span class="step done">director 搜索</span>
+    </div>
+    <div class="pipe" style="margin-top:2px">
+      <span class="step done">統一節點（五路綜合）</span><span class="arr">→</span>
+      <span class="step done">一台搜尋機（表示×演算法）</span><span class="arr">→</span>
+      <span class="step done">一支 search*（可分/耦合合一）</span>
+    </div>
+    <p class="muted" style="margin:10px 0 0">人肉窮舉 → 抽象成模板 → 寫成引擎 → 升格成搜索 → 塌成一種節點一支搜索。
+      「壓縮帶來智能」的落地：<a href="一台搜尋機.md">一台搜尋機.md</a>。</p>
+  </div>
+
+  <h2>能跑什麼（複製即跑，皆自帶 assert）</h2>
+  <div class="card">
+  <table>
+    <tr><th>目標</th><th>指令（在 sub_projs/galtxt/ 下）</th><th>是什麼</th></tr>
+    <tr><td class="g">uni</td><td><code>cd uni &amp;&amp; sbcl --script main.lisp</code></td><td>★ 統一節點＋一支 search*（本輪終點）</td></tr>
+    <tr><td>realizer_l</td><td><code>cd realizer_l &amp;&amp; sbcl --script main.lisp</code></td><td>CL 壓縮版 realizer＋director（uni 前身）</td></tr>
+    <tr><td>realizer_f</td><td><code>cd realizer_f &amp;&amp; fennel main.fnl</code></td><td>同一套八股的 Fennel 版（對照）</td></tr>
+    <tr><td>synth</td><td><code>cd uniform_probe/synth &amp;&amp; sbcl --script synth.lisp</code></td><td>五路綜合的最小統一 kernel（102 行）</td></tr>
+    <tr><td>gen_v0</td><td><code>cd gen_v0 &amp;&amp; lua main.lua</code></td><td>確定性生成器（搜 act/座標，Lua）</td></tr>
+    <tr><td>gen_v1 ×3</td><td><code>cd gen_v1{,_f,_l} &amp;&amp; …</code></td><td>事實庫三語言並排（Lua/Fennel/CL）</td></tr>
+  </table>
+  <p class="muted">需要 <code>lua</code>／<code>fennel</code>／<code>sbcl</code>；驗證清單見 <a href="workflows/testing.md">workflows/testing.md</a>。</p>
+  </div>
+
+  <h2 style="color:var(--pink)">🔑 待你決定 / 待你做（接手重點）</h2>
+  <div class="card decide">
+    <b>galtxt</b>（<a href="WAIT_USER.md">WAIT_USER</a>）
+    <ul>
+      <li><b>三線語言收斂</b>：gen_v1 / gen_v1_f / gen_v1_l（Lua/Fennel/CL）三版事實庫並排——上手玩過後<b>挑主力語言</b>，另兩線定去留。realizer 這邊 CL 明顯更緊（<a href="realizer_l/README.md">realizer_l</a> vs <a href="realizer_f/README.md">realizer_f</a>），可當一個對照點。</li>
+      <li><b>你說要親手改 gen_v1</b> — 改完 <code>cd gen_v1 &amp;&amp; lua main.lua</code> 驗。</li>
+      <li><b>uni 是否扶正</b>進 llm_forge 成正式框架（取代分層四表）？＝「畢業」決定，照規矩等你點頭。</li>
+      <li><b>跨語言最後一里</b>：把 gen_v0（Lua）的 <code>fill_sequence</code> 實際改接 CL 的 <code>search*</code>（已證同形，屬 port）。</li>
+    </ul>
+    <b>cllm</b>（側線・<a href="../cllm/WAIT_USER.md">cllm/WAIT_USER</a>）
+    <ul>
+      <li><b>llm-login 真 OAuth 往返驗證</b>：帳號登入換 token 餵 cllm 的工具已落地、離線全綠。<b>最快從 OpenRouter 驗</b>（免註冊 client）——<code>cp providers/openrouter.json ~/.config/llm/oauth.json</code> → <code>python3 llm_login.py login</code>。詳見 <a href="../cllm/tools/llm-login/README.md">llm-login/README</a>。</li>
+    </ul>
+  </div>
+
+  <h2>檔案地圖（點進去）</h2>
+  <div class="card">
+    <table>
+      <tr><th>類別</th><th>檔</th></tr>
+      <tr><td>本輪終點</td><td><a href="uni/README.md">uni/</a>（統一節點＋search*）｜<a href="一台搜尋機.md">一台搜尋機.md</a>（gen_v0≅director）</td></tr>
+      <tr><td>探索 bench</td><td><a href="uniform_probe/README.md">uniform_probe/</a>（五路並行＋綜合、五個關鍵發現）</td></tr>
+      <tr><td>realizer</td><td><a href="realizer_l/README.md">realizer_l</a>（CL）｜<a href="realizer_f/README.md">realizer_f</a>（Fennel）</td></tr>
+      <tr><td>corpus・河堤</td><td><a href="corpus/劇本/最後的櫻花雪/台詞流_場景二_河堤_20種.md">台詞流 20 種</a>｜<a href="corpus/劇本/最後的櫻花雪/模板_場景二_河堤_八股拆解.md">八股拆解</a>｜<a href="corpus/劇本/最後的櫻花雪/句子模板庫_場景二_河堤.md">句子模板庫</a></td></tr>
+      <tr><td>引擎</td><td><a href="gen_v0/README.md">gen_v0</a>（搜 act）｜<a href="gen_v1/00_設計.md">gen_v1 設計</a>（事實層四柱）</td></tr>
+      <tr><td>狀態</td><td><a href="SESSION-LOG.md">SESSION-LOG</a>｜<a href="WAIT_USER.md">WAIT_USER</a>｜<a href="INDEX.md">INDEX</a></td></tr>
+    </table>
+  </div>
+
+  <h2>概念速記（重載 context 用）</h2>
+  <div class="card">
+    <ul>
+      <li><span class="k">統一節點</span>：八股/段/句式/填充/原子事實不是不同種類，只是不同<b>粒度</b>；粒度由 refs 湧現、不限四種。一張表 <code>*ns*</code>。</li>
+      <li><span class="k">兩個域</span>：同容器，<code>真值?</code> 分「真值域」（事實・帶 canon/排斥/蘊含）與「字面域」（句式/填充・無真假）。</li>
+      <li><span class="k">八股</span>：固定旁白框＋固定段序；變的只有台詞候選與 slot 值。分支＝ <code>(? :choice A B)</code> 普通節點；懸空引用＝佔位工單。</li>
+      <li><span class="k">一台搜尋機</span>：gen_v0 引擎 ≅ director＝枚舉→護欄剪枝→成本(prior＋intent＋history)取最小→history 迭代多樣。唯一差異＝耦合度。</li>
+      <li><span class="k">search*</span>：一支 DFS，<code>可分</code>（step 累加＋終端護欄）與<code>耦合</code>（step 穿線全場預算＋剪枝）都跑。</li>
+      <li><span class="k">規矩</span>：程式碼單檔 ≤150 行；輸出用繁中；push 先確認；確定的東西才往 llm_forge 搬。</li>
+    </ul>
+  </div>
+
+  <p class="muted" style="margin-top:24px">本頁是導覽、非權威；任何狀態以 SESSION-LOG / WAIT_USER 為準。祝接手順利。🌸</p>
+</div>
+</body>
+</html>
