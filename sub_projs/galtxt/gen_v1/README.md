@@ -12,13 +12,19 @@
 cd gen_v1 && lua main.lua     # Lua 5.4+；示範 ①～⑨ 全數自帶 assert
 ```
 
-## 檔案
+## 檔案（單檔 ≤120 行慣例，見 [conventions](../workflows/common/conventions.md)）
 
 | 檔 | 是什麼 |
 |----|--------|
 | [00_設計.md](00_設計.md) | **設計定調**：四柱（分層／知識視圖／LOD＋canon 鎖／網）＋查詢介面草案 |
-| [facts.lua](facts.lua) | **事實庫**：平表儲存、分層網語義；六動詞（resolve/match/trace/backrefs/speculate/refine）；兩道寫入門（編譯期 add+refine、執行期 act commit），不變式全架在門上 |
-| [main.lua](main.lua) | 九個示範（見下） |
+| [facts.lua](facts.lua) | **事實庫聚合入口**：拼裝子模組、`new()`；總則註解在此 |
+| [facts_store.lua](facts_store.lua) | 編譯期門①（add 入庫）＋ modify（canon 鎖）＋知識視圖 view ＋ dump |
+| [facts_lod.lua](facts_lod.lua) | 編譯期門②（refine：節點取點／連結加段／約束滿足→掛起工單） |
+| [facts_query.lua](facts_query.lua) | 讀取五動詞：resolve／match／trace／backrefs／layer |
+| [facts_tx.lua](facts_tx.lua) | 執行期門：speculate 交易（begin→apply→check→commit/rollback）＋呈現傳染 |
+| [facts_util.lua](facts_util.lua) | 共用小工具（has／佔位判定／排斥邊檢查） |
+| [seed.lua](seed.lua) | 建材期素材：河鹿堂定點灌庫，回傳 db |
+| [main.lua](main.lua) | 跑批入口 → [demos_graph.lua](demos_graph.lua)（①～④）＋ [demos_gates.lua](demos_gates.lua)（⑤～⑨） |
 
 ## 九個示範各釘一條定調
 

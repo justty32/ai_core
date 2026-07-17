@@ -4,13 +4,13 @@
 
 碰原始碼的工作流（feature-dev / refactor…）共用這套規矩。純文檔/調查類工作流用不到。結構整理原則（被動、按需取用）在 [DEV-GUIDE](../../DEV-GUIDE.md)；always-on 鐵律在 [AGENTS.md](../../AGENTS.md)。
 
-> **現況：尚無程式碼**——本檔是骨架，第一片程式碼落地時邊做邊補實況慣例（鐵律：邊執行邊生規範）。
+> **現況**：程式碼已落地（gen_v0／gen_v1，Lua）——慣例邊做邊補（鐵律：邊執行邊生規範）。
 
 ## 程式碼慣例
 
 - **能跑的用 port 別重建**（鐵律 2）——動 LLM 接口那塊先搬 [core_handy](../../../ver_1/try_implement/core_handy/) 的能跑地基，別憑記憶重寫。
 - **技術棧**：C++ 效能核心（header-only C++20 姿態，承 core_handy）＋ 內嵌 Lua（膠水／確定性小函式，取代 bash）；少 Python。語言中立的縫＝**LLM socket 協定 ＋ 函式 `--metadata` 文字契約**。
-- **單檔行數門檻 300 行**（與 [DEV-GUIDE](../../DEV-GUIDE.md) 觸發 A 一致）：超標觸發檢視、按職責拆。
+- **程式碼單檔上限 120 行**（使用者定調 2026-07-17，硬限制）：超標即按職責拆檔——薄聚合入口＋子模組（範例：gen_v1 的 `facts.lua` → `facts_*.lua`）。文檔類單檔仍照 [DEV-GUIDE](../../DEV-GUIDE.md) 觸發 A（300 行，超標觸發檢視）。
 - **breaking change 前先全域 grep 受影響處、同 commit 更新**；契約（`--metadata` / socket 協定）變動時同步文檔。
 
 ## 導航 index（code map）維護鏈
