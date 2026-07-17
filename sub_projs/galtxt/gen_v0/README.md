@@ -12,13 +12,16 @@
 cd gen_v0 && lua main.lua     # Lua 5.4+；示範 ①～⑧ 全數自帶 assert
 ```
 
-## 檔案
+## 檔案（單檔 ≤120 行慣例，見 [conventions](../workflows/common/conventions.md)）
 
 | 檔 | 是什麼 |
 |----|--------|
 | [conditions.lua](conditions.lua) | **條件向量**（G 的唯一輸入）：version／world／cast／relation／scene／history。scene 有兩層 API：點座標（低階）或只給 `intent="甜"/"靜"`（高階，座標交給搜尋） |
-| [tables.lua](tables.lua) | **規則表**（真源的快取形態）：稱謂階、話題池＋階門檻、相容性定價、intent 成本、beat 產生式參數、預算、**句庫**（含承接約束）、護欄 |
-| [engine.lua](engine.lua) | **G 本體（v1）**：L1 座標搜尋（門檻/✕定價/intent 全進成本）→ L2 產生式展開（輪數、B4/B5 融合、B6 有無與位置＝c2/c3/c4）→ L3+L4 全場窮舉（預算 threading＋下界剪枝＋requires_pick 承接鏈）→ L5 護欄 |
+| [tables.lua](tables.lua) | **規則表**（真源的快取形態）：稱謂階、話題池＋階門檻、相容性定價、intent 成本、beat 產生式參數、預算、護欄；**句庫掛 `require("library")`** |
+| [library.lua](library.lua) | **句庫**（L4 建材）：B0–B7 各拍候選（含 requires／prior／features／requires_pick 承接約束／`${slot}` 文字）——編譯期 LLM 炸候選＋人審入庫、執行期只查 |
+| [engine.lua](engine.lua) | **G 編排本體（v1）**：版本檢查＋L1 座標搜尋（門檻/✕定價/intent 全進成本）；L2/L3+L4 委給 engine_search、組稿委給 engine_build |
+| [engine_search.lua](engine_search.lua) | **搜尋原語**：L1 admissible／L2 產生式展開（輪數、B4/B5 融合、B6 有無與位置＝c2/c3/c4）／L3+L4 全場窮舉（預算 threading＋下界剪枝＋requires_pick 承接鏈） |
+| [engine_build.lua](engine_build.lua) | **組稿層**：槽填充、無解錯誤（確定性排序）、成稿＋L5 護欄＋trace |
 | [main.lua](main.lua) | 八個示範（見下） |
 
 ## 八個示範各釘一條定調
