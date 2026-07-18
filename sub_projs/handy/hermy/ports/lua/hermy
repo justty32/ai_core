@@ -1,0 +1,78 @@
+#!/usr/bin/env lua
+-- hermy（Lua 版）— 編排器：把 lib/* 小原語用 CLI 串起來跑 agent 迴圈（各檔可單獨呼叫）。
+-- 串連：lib/skills-json（發現）→ lib/ds-chat（一次呼叫）→ lib/run-skill（執行）→ lib/mem-append（記憶）。
+-- 無 cjson：messages 陣列存成 JSON 字串，增修一律 shell-out 給 jq。用法：hermy <任務...> 或 echo ... | hermy
+local function q(s) return "'"..tostring(s):gsub("'", "'\\''").."'" end
+local function slurp(p) local f = io.open(p); if not f then return "" end; local s = f:read("*a"); f:close(); return s or "" end
+local function tmp(s) local t = os.tmpname(); local f = io.open(t, "w"); f:write(s or ""); f:close(); return t end
+local function trim(s) return ((s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
+
+local HERE = arg[0]:match("^(.*)/[^/]*$") or "."
+local LIB = HERE.."/lib"
+local SYSTEM = trim(slurp(HERE.."/prompt/system.md"))
+local MAX = tonumber(os.getenv("HERMY_MAX_STEPS") or "") or 12
+
+-- 呼叫一支 lib 原語：args=陣列, stdin=字串 → 回傳 stdout（stderr 轉發、非零則結束）
+local function call(tool, args, stdin)
+  local inf, of, ef, cf = tmp(stdin or ""), os.tmpname(), os.tmpname(), os.tmpname()
+  local cmd = q(LIB.."/"..tool)
+  for _, a in ipairs(args or {}) do cmd = cmd.." "..q(a) end
+  os.execute(cmd.." < "..inf.." > "..of.." 2> "..ef.."; echo $? > "..cf)
+  local out, err, code = slurp(of), trim(slurp(ef)), tonumber(trim(slurp(cf))) or 0
+  for _, p in ipairs({inf, of, ef, cf}) do os.remove(p) end
+  if err ~= "" then io.stderr:write(err.."\n") end
+  if code ~= 0 then os.exit(code) end
+  return out
+end
+-- jq 小工具：input 字串進 stdin，回傳 trim 後 stdout
+local function jq(input, filter, flags)
+  local inf = tmp(input); local p = io.popen("jq "..(flags or "").." "..q(filter).." "..inf)
+  local o = p:read("*a"); p:close(); os.remove(inf); return trim(o)
+end
+-- 兩份 JSON 併：a 陣列 + [b 物件]
+local function push(arr, obj)
+  local af, bf = tmp(arr), tmp(obj); local p = io.popen("jq -c -s '.[0] + [.[1]]' "..af.." "..bf)
+  local o = p:read("*a"); p:close(); os.remove(af); os.remove(bf); return trim(o)
+end
+-- jq -n 建物件（給定已 shell-quote 的 args 片段）
+local function build(args, filter)
+  local p = io.popen("jq -cn "..args.." "..q(filter)); local o = p:read("*a"); p:close(); return trim(o)
+end
+local function mem(rec) call("mem-append", {}, rec) end
+
+local task = trim(table.concat(arg, " "))
+if task == "" then task = trim(io.read("*a") or "") end
+if task == "" then io.stderr:write("用法：hermy <任務...>   或   echo ... | hermy\n"); os.exit(2) end
+
+local tools = call("skills-json"); if trim(tools) == "" then tools = "[]" end
+io.stderr:write("[hermy] 載入 "..jq(tools, "length").." 個技能\n")
+local messages = build("--arg s "..q(SYSTEM).." --arg t "..q(task),
+  '[{role:"system",content:$s},{role:"user",content:$t}]')
+mem(build("--arg t "..q(task), '{role:"user",content:$t}'))
+
+for _ = 1, MAX do
+  local inf_m, inf_t = tmp(messages), tmp(tools)
+  local p = io.popen("jq -c -s '{messages:.[0],tools:.[1]}' "..inf_m.." "..inf_t)
+  local chatin = trim(p:read("*a")); p:close(); os.remove(inf_m); os.remove(inf_t)
+  local msg = call("ds-chat", {}, chatin)
+  messages = push(messages, msg)
+  local ncalls = tonumber(jq(msg, "(.tool_calls // []) | length")) or 0
+  if ncalls == 0 then
+    print(jq(msg, '.content // ""', "-r"))
+    mem(jq(msg, '{role:"assistant",content:.content}', "-c"))
+    os.exit(0)
+  end
+  for i = 0, ncalls - 1 do
+    local fn = jq(msg, ".tool_calls["..i.."].function.name", "-r")
+    local args = jq(msg, "(.tool_calls["..i.."].function.arguments) // \"{}\"", "-r")
+    local id = jq(msg, ".tool_calls["..i.."].id", "-r")
+    io.stderr:write("[hermy] → 技能 "..fn.." "..args.."\n")
+    local result = trim(call("run-skill", {fn}, args))
+    if fn == "create_skill" then tools = call("skills-json"); if trim(tools) == "" then tools = "[]" end end
+    messages = push(messages, build("--arg id "..q(id).." --arg c "..q(result),
+      '{role:"tool",tool_call_id:$id,content:$c}'))
+    mem(build("--arg n "..q(fn).." --arg r "..q(result:sub(1, 2000)),
+      '{role:"tool",name:$n,result:$r}'))
+  end
+end
+io.stderr:write("[hermy] 到達步數上限 "..MAX.."\n")

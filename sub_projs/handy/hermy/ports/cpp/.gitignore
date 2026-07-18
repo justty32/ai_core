@@ -1,0 +1,12 @@
+# build 產物（可執行檔，無副檔名）
+/hermy
+/lib/skills-json
+/lib/ds-chat
+/lib/run-skill
+/lib/mem-append
+*.o
+# python 種子技能的快取
+__pycache__/
+*.pyc
+# 記憶是 runtime 產物，不進版控
+memory/log.ndjson

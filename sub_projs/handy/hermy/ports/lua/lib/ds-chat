@@ -1,0 +1,32 @@
+#!/usr/bin/env lua
+-- ds-chat（Lua 版）— stdin={"messages":[...],"tools":[...]} → stdout=回應 message JSON。
+-- 「腦」的最小單元：無 cjson，body 用 jq 組、HTTP 用 curl。無狀態；messages 由編排器自管。
+local function q(s) return "'"..tostring(s):gsub("'", "'\\''").."'" end
+local function slurp(p) local f = io.open(p); if not f then return "" end; local s = f:read("*a"); f:close(); return s or "" end
+local function tmp(s) local t = os.tmpname(); local f = io.open(t, "w"); f:write(s or ""); f:close(); return t end
+
+local KEY = os.getenv("DEEPSEEK_API_KEY")
+if not KEY or KEY == "" then io.stderr:write("[ds-chat] 未設 DEEPSEEK_API_KEY\n"); os.exit(2) end
+local MODEL = os.getenv("HERMY_MODEL"); if not MODEL or MODEL == "" then MODEL = "deepseek-chat" end
+local EP = os.getenv("HERMY_ENDPOINT"); if not EP or EP == "" then EP = "https://api.deepseek.com/v1/chat/completions" end
+
+local reqf = tmp(io.read("*a") or "{}")
+local bodyf = os.tmpname()
+os.execute("jq -c --arg m "..q(MODEL).." '{model:$m,messages:(.messages//[])}"
+  .." + (if ((.tools//[])|length)>0 then {tools:.tools,tool_choice:\"auto\"} else {} end)' "
+  ..reqf.." > "..bodyf.." 2>/dev/null")
+
+local respf = os.tmpname()
+os.execute("curl -s -X POST "..q(EP).." -H 'Content-Type: application/json'"
+  .." -H "..q("Authorization: Bearer "..KEY).." -d @"..bodyf.." > "..respf.." 2>/dev/null")
+
+local msgf = os.tmpname()
+local ok = os.execute("jq -e -c '.choices[0].message' "..respf.." > "..msgf.." 2>/dev/null")
+local msg = slurp(msgf):gsub("%s+$", "")
+if not (ok == true or ok == 0) or msg == "" then
+  local resp = slurp(respf)
+  io.stderr:write("[ds-chat] 請求失敗："..(resp ~= "" and resp:sub(1, 500) or "無回應").."\n")
+  os.exit(1)
+end
+for _, p in ipairs({reqf, bodyf, respf, msgf}) do os.remove(p) end
+print(msg)

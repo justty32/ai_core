@@ -1,0 +1,23 @@
+#!/usr/bin/env lua
+-- mem-append（Lua 版）— stdin=一筆 JSON record → 加 ts → append 到 ../memory/log.ndjson。
+-- 「記憶」的最小單元：對話後同步（append-log）。無 cjson：加 ts 交給 jq。
+local function q(s) return "'"..tostring(s):gsub("'", "'\\''").."'" end
+local function slurp(p) local f = io.open(p); if not f then return "" end; local s = f:read("*a"); f:close(); return s or "" end
+local function tmp(s) local t = os.tmpname(); local f = io.open(t, "w"); f:write(s or ""); f:close(); return t end
+local function popen(cmd) local p = io.popen(cmd); local o = p:read("*a"); p:close(); return o or "" end
+
+local HERE = arg[0]:match("^(.*)/[^/]*$") or "."
+local M = os.getenv("HERMY_MEMORY_DIR"); if not M or M == "" then M = HERE.."/../memory" end
+os.execute("mkdir -p "..q(M))
+local raw = io.read("*a") or ""
+local ts = os.date("!%Y-%m-%dT%H:%M:%S+00:00")
+
+local rf = tmp(raw ~= "" and raw or "{}")
+local of = os.tmpname()
+os.execute("jq -c --arg ts "..q(ts).." '. + {ts:$ts}' "..rf.." > "..of.." 2>/dev/null")
+local line = slurp(of):gsub("%s+$", "")
+if line == "" then  -- 非合法 JSON → 包成 {raw, ts}
+  line = popen("jq -cn --arg raw "..q(raw).." --arg ts "..q(ts).." '{raw:$raw,ts:$ts}'"):gsub("%s+$", "")
+end
+local logf = io.open(M.."/log.ndjson", "a"); logf:write(line.."\n"); logf:close()
+os.remove(rf); os.remove(of)

@@ -1,0 +1,27 @@
+#!/usr/bin/env lua
+-- skills-json（Lua 版）— 掃 ../skills/*/skill.json，印出 OpenAI function-tools JSON 陣列。
+-- 無 cjson：每個 skill.json 交給 jq 轉成 tool 物件，最後 jq -s 併成陣列。
+local function q(s) return "'"..tostring(s):gsub("'", "'\\''").."'" end
+local function exists(p) local f = io.open(p); if f then f:close(); return true end; return false end
+local function popen(cmd) local p = io.popen(cmd); local o = p:read("*a"); p:close(); return o or "" end
+
+local HERE = arg[0]:match("^(.*)/[^/]*$") or "."
+local D = os.getenv("HERMY_SKILLS_DIR"); if not D or D == "" then D = HERE.."/../skills" end
+
+local parts = {}
+if exists(D) then
+  for name in popen("ls -1 "..q(D).." 2>/dev/null"):gmatch("[^\n]+") do
+    local dir = D.."/"..name
+    local meta, run = dir.."/skill.json", dir.."/run"
+    if not name:match("^_") and exists(meta) and exists(run) then
+      local obj = popen("jq -c --arg n "..q(name).." '{type:\"function\",function:{"
+        .."name:(.name//$n),description:(.description//\"\"),"
+        .."parameters:(.parameters//{type:\"object\",properties:{}})}}' "..q(meta).." 2>/dev/null")
+      if obj:gsub("%s", "") ~= "" then parts[#parts+1] = obj
+      else io.stderr:write("[skills-json] "..name.." 的 skill.json 壞了\n") end
+    end
+  end
+end
+local tf = os.tmpname(); local f = io.open(tf, "w"); f:write(table.concat(parts)); f:close()
+io.write(popen("jq -c -s '.' "..tf))
+os.remove(tf)

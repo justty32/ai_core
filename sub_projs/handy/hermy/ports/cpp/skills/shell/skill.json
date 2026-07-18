@@ -1,0 +1,11 @@
+{
+  "name": "shell",
+  "description": "在當前工作目錄執行一段 shell 命令，回傳其 stdout/stderr。用於讀寫檔案、查資料、跑指令等需要「動手」的事。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command": { "type": "string", "description": "要執行的 shell 命令（sh -c）" }
+    },
+    "required": ["command"]
+  }
+}

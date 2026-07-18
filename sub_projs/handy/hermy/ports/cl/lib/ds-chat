@@ -1,0 +1,34 @@
+#!/usr/bin/sbcl --script
+;; ds-chat — 一次 DeepSeek 呼叫：stdin={"messages":[...],"tools":[...]} → stdout=回應 message JSON。
+;; 「腦」的最小單元：一次請求一次呼叫，無狀態；messages 由編排器自管。HTTP=curl、JSON=jq。
+(defparameter *root* (make-pathname :directory (butlast (pathname-directory *load-truename*))))
+(load (merge-pathnames "src/util.lisp" *root*))
+
+(let ((key (env "DEEPSEEK_API_KEY")))
+  (unless key (die 2 "[ds-chat] 未設 DEEPSEEK_API_KEY"))
+  (let* ((model (env "HERMY_MODEL" "deepseek-chat"))
+         (endpoint (env "HERMY_ENDPOINT" "https://api.deepseek.com/v1/chat/completions"))
+         (req (trim (slurp)))
+         (body (jq "{model:$model, messages:(.messages // [])} + (if ((.tools // [])|length)>0 then {tools:.tools, tool_choice:\"auto\"} else {} end)"
+                   :input (if (plusp (length req)) req "{}") :args (list "--arg" "model" model))))
+    (unless body (die 1 "[ds-chat] 請求 JSON 解析失敗"))
+    (multiple-value-bind (out err code)
+        (run "curl" (list "-sS" "-X" "POST" endpoint
+                          "-H" "Content-Type: application/json"
+                          "-H" (format nil "Authorization: Bearer ~a" key)
+                          "--data-binary" "@-" "-w" (format nil "~%%{http_code}"))
+             :input body)
+      (when (/= code 0)
+        (format *error-output* "[ds-chat] 請求失敗：curl ~a ~a~%" code (trim err))
+        (sb-ext:exit :code 1))
+      (let* ((nl (position #\Newline out :from-end t))
+             (http (if nl (subseq out (1+ nl)) out))
+             (resp (if nl (subseq out 0 nl) "")))
+        (if (and (plusp (length http)) (char= (char http 0) #\2))
+            (let ((msg (jq ".choices[0].message" :input resp)))
+              (if msg (emit msg)
+                  (die 1 "[ds-chat] 回應無 message：~a" (subseq resp 0 (min 500 (length resp))))))
+            (progn
+              (format *error-output* "[ds-chat] HTTP ~a: ~a~%" http
+                      (subseq resp 0 (min 500 (length resp))))
+              (sb-ext:exit :code 1)))))))

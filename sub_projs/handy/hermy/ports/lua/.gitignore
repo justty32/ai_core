@@ -1,0 +1,2 @@
+# runtime 產物不進版控（另見 memory/.gitignore）
+memory/log.ndjson

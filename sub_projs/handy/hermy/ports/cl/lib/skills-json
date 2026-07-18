@@ -1,0 +1,19 @@
+#!/usr/bin/sbcl --script
+;; skills-json — 掃 <skills>/*/skill.json，印出 OpenAI function-tools JSON 陣列。
+;; folder-as-callable 的「技能發現」：每個 skills/<name>/ 需有 skill.json + run。
+(defparameter *root* (make-pathname :directory (butlast (pathname-directory *load-truename*))))
+(load (merge-pathnames "src/util.lisp" *root*))
+
+(let ((dir (skills-dir)) (objs '()))
+  (when (probe-file dir)
+    (dolist (d (sort (directory (merge-pathnames "*/" dir))
+                     #'string< :key (lambda (p) (car (last (pathname-directory p))))))
+      (let* ((name (car (last (pathname-directory d))))
+             (meta (merge-pathnames "skill.json" d))
+             (run  (merge-pathnames "run" d)))
+        (when (and (not (char= (char name 0) #\_)) (probe-file meta) (probe-file run))
+          (let ((obj (jq "{type:\"function\",function:{name:(.name // $dn),description:(.description // \"\"),parameters:(.parameters // {type:\"object\",properties:{}})}}"
+                         :input (read-file meta) :args (list "--arg" "dn" name))))
+            (if obj (push obj objs)
+                (format *error-output* "[skills-json] ~a 的 skill.json 壞了~%" name)))))))
+  (emit (format nil "[~{~a~^,~}]" (nreverse objs))))
