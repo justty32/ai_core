@@ -11,6 +11,7 @@
 | 「**加一個新住戶／寫個小腳本**包裝某能力」 | **new-resident** | [workflows/new-resident.md](workflows/new-resident.md) |
 | 「用 llme 換 endpoint／加一個 endpoint config」 | **llme** | [llme/README.md](llme/README.md) |
 | 「調 zhtw／照 zhtw 做一個新人格薄包裝」 | **zhtw**（範例住戶）| `zhtw` 檔頭註解 |
+| 「**把一個任務丟給 agent 去做**（問答/生成 or 動手改程式）」 | **wf** | `wf` 檔頭註解 |
 | 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 | 「開發環境 / 後端 / build / fresh clone 要做什麼」 | **dev-env** | [workflows/dev-env.md](workflows/dev-env.md) |
 
@@ -32,14 +33,14 @@
 
 **tick 只派發、不判斷**；「什麼時間該做什麼」的判斷與清單各歸 routines / schedule。
 
-## Phase 2：用 handy 執行檔復刻 workflows 功能（規劃中）
+## Phase 2：用 handy 執行檔復刻 workflows 功能
 
-[`~/repo/workflows`](/home/lorkhan/repo/workflows) 那套是**給人開的 Claude Code 照著跑的 markdown 提示**。handy 的進一步目標是**用可執行工具集復刻其功能**——做成能跑的住戶：
+[`~/repo/workflows`](/home/lorkhan/repo/workflows) 那套是**給人開的 Claude Code 照著跑的 markdown 提示**。handy 用**可執行工具集復刻其功能**、且**基於自己的 stack**：
 
-- **`wf`**（規劃中）：`./wf <任務>`（如 `./wf 幫我去改這段程式`）→ 把任務**派發給 claude code 這類成熟 agent** 跑（dispatch-by-intent，但可執行）。
-- **inbox 協議**：太複雜的任務走 email 式交接給更成熟的 agent（見 workflows repo `template/workflows/inbox`）——由 `wf` 在複雜任務時採用。
+- **`wf`（可用・MVP）**：`./wf <任務>` **兩層派發**——先用 **llme(DeepSeek) 當路由腦**判「要不要動手」：只需腦（問答/翻譯/生成）→ **llme** 直接答（便宜、純 handy stack）；要動手（改檔/跑指令）→ **claude -p** headless agent 在當前目錄動手。`-b`/`-a` 強制。入口＝`wf` 檔頭。
+- **inbox 協議（未做）**：太複雜、要跨 session 交接的任務走 email 式交接給更成熟的 agent（見 workflows repo `template/workflows/inbox`）——由 `wf` 在複雜任務時採用。**待動手**，見 [SESSION-LOG](SESSION-LOG.md)。
 
-> 上面的 markdown 定期工作流（tick/routines/schedule）是**現在就能用的、給 agent session 照著跑的形式**；`wf` 執行檔是**未來讓這些功能變裸命令**的方向，兩者並存不衝突。進度見 [SESSION-LOG](SESSION-LOG.md)。
+> 上面的 markdown 定期工作流（tick/routines/schedule）是**給 agent session 照著跑的形式**；`wf` 是**讓派發變裸命令**的執行檔，兩者並存不衝突。
 
 ## 工作流的統一形式（規範）
 

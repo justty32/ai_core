@@ -25,7 +25,7 @@
 |------|------|--------|------|
 | **llme** | 可用・已驗真後端 | 換 endpoint 名＝換模型；auto-inject api key | [llme/README.md](llme/README.md) |
 | **zhtw** | 可用 | 繁中翻譯薄包裝；stdin 管線公民 | 檔頭註解 |
-| **wf** | 規劃中（Phase 2）| `./wf <任務>` 把任務派發給 claude code 這類成熟 agent；複雜任務走 inbox 協議 | 見 [WORKFLOWS](WORKFLOWS.md)＋[SESSION-LOG](SESSION-LOG.md) |
+| **wf** | 可用（MVP）| **兩層任務派發器**：llme(DeepSeek) 當路由腦判「要不要動手」→ 只需腦走 `llme`、要動手走 `claude -p`。`-b`/`-a` 強制。 | `wf` 檔頭註解 |
 | **daemon** | 待動手 | 常駐小程式，client 寫命令進檔/socket → `claude -p` headless run | 見 [dev-env](workflows/dev-env.md)「daemon 觸發條件」＋ [SESSION-LOG](SESSION-LOG.md) |
 
 ## 不重造（本專案吃現成、別憑記憶重建）

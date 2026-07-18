@@ -1,0 +1,129 @@
+#!/usr/bin/env fennel
+;; wf — 兩層任務派發器：用 llme（DeepSeek）當路由腦，判斷任務「要不要動手」，
+;;      只需腦的走 llme、要動手的走 claude code（headless agent）。
+;;
+;; workflows repo 那套是「給人開的 Claude Code 照著跑的 markdown 提示」；wf 是它的
+;; **可執行復刻**，且**基於 handy 自己的 stack（llme）**——llme 既是路由器，也是簡單
+;; 任務的執行者；只有真需要「手」（讀寫檔、跑指令、跨多檔改）才升級到 claude。
+;;
+;;   wf 幫我把 foo.py 的錯誤處理補上         auto：分類→多半判 AGENT→claude 動手
+;;   wf 用繁中解釋什麼是 mmap                auto：判 BRAIN→llme 直接答
+;;   cat foo.py | wf 幫我改、加型別註記        pipe＝附給任務的上下文
+;;   wf -b <任務>                            強制 BRAIN（走 llme，跳過分類）
+;;   wf -a <任務>                            強制 AGENT（走 claude，跳過分類）
+;;   wf < TASK.md                            無參數＝整個 stdin 當任務
+;;
+;; 太複雜、要跨 session 交接的 → 未來走 inbox 協議（見 WORKFLOWS.md Phase 2）。
+;;
+;; 環境變數（handy 慣例，改行為不改碼）：
+;;   WF_ENDPOINT    llme 的 endpoint（預設 "deepseek"；BRAIN 執行與路由分類都用它）
+;;   WF_LLME        覆寫 llme 執行檔（預設 "llme"；測試設 echo 可看轉出的命令）
+;;   WF_CLAUDE      覆寫 claude 執行檔（預設 "claude"；測試設 echo）
+;;   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"：自動接受改檔、其餘
+;;                  危險操作仍受管；要全自主設 "bypassPermissions"，自負風險）
+;;   WF_MODEL       claude --model（預設不帶＝繼承 claude 預設）
+;;   WF_EFFORT      claude --effort（選填，如 high）
+;;   WF_SYSTEM      追加 system 指示（預設要 agent/llme 用繁中溝通；設空字串關掉）
+
+(fn getenv-nonempty [k]
+  (let [v (os.getenv k)]
+    (if (and v (not= v "")) v nil)))
+
+(fn shquote [s] (.. "'" (s:gsub "'" "'\\''") "'"))
+(fn trim [s] (or (s:match "^%s*(.-)%s*$") s))
+(fn upper [s] (s:upper))
+
+;; stdin 被 pipe / 重導才讀（test -t 0 不讀位元組、安全），避免互動卡等 EOF。
+(fn stdin-piped? []
+  (not (os.execute "test -t 0")))
+
+(fn capture [cmd]
+  (with-open [p (io.popen cmd)]
+    (p:read "*a")))
+
+;; ── 解析前置旗標（-b/--brain、-a/--agent、-- 停止）＋收任務詞 ──────────
+(var force nil)   ; nil＝auto；"brain"／"agent"
+(var i 1)
+(var stop false)
+(local words [])
+(while (<= i (length arg))
+  (let [a (. arg i)]
+    (if stop
+        (table.insert words a)
+        (or (= a "-b") (= a "--brain")) (set force "brain")
+        (or (= a "-a") (= a "--agent")) (set force "agent")
+        (= a "--") (set stop true)
+        (or (= a "-h") (= a "--help"))
+          (do (io.stderr:write "用法：wf [-b|-a] <任務...>；或 … | wf <任務>；或 wf < TASK.md\n"
+                               "  -b 強制走 llme（只需腦）；-a 強制走 claude（要動手）；預設 auto 分類。\n")
+              (os.exit 0))
+        (table.insert words a)))
+  (set i (+ i 1)))
+
+;; ── 取輸入：argv＝任務指令；pipe＝上下文 ─────────────────────────
+(local task (table.concat words " "))
+(local piped (stdin-piped?))
+(local ctx (if piped (trim (io.read "*a")) nil))
+(local has-ctx (and ctx (< 0 (length ctx))))
+
+(local prompt
+  (if (< 0 (length task))
+      (if has-ctx (.. task "\n\n--- 以下為透過管線傳入的上下文 ---\n" ctx) task)
+      (if has-ctx ctx nil)))
+
+(when (= prompt nil)
+  (io.stderr:write
+    "用法：wf [-b|-a] <任務...>            例：wf 幫我把 foo.py 的錯誤處理補上\n"
+    "      cat foo.py | wf 幫我改          （pipe 當上下文附給任務）\n"
+    "      wf < TASK.md                    （無參數＝整個 stdin 當任務）\n"
+    "  -b 強制 llme（只需腦）／-a 強制 claude（要動手）；預設 auto 由 llme 分類。\n")
+  (os.exit 2))
+
+(local endpoint (or (getenv-nonempty "WF_ENDPOINT") "deepseek"))
+(local llme (or (getenv-nonempty "WF_LLME") "llme"))
+(local claude (or (getenv-nonempty "WF_CLAUDE") "claude"))
+(local system (let [s (os.getenv "WF_SYSTEM")]
+                (if (= s nil) "與使用者溝通時用繁體中文。" s)))
+
+;; ── 路由：auto 時用 llme（DeepSeek）判 AGENT/BRAIN ───────────────────
+(local CLASSIFY-SYS
+  (.. "你是任務路由器。判斷使用者的任務**是否需要實際動手**（讀寫檔案、執行指令、"
+      "跨多檔修改、跑測試等 agent 能力）。需要動手→回 AGENT；只需生成文字／回答／"
+      "翻譯／摘要／寫一段內容（不落檔）→回 BRAIN。只回一個詞：AGENT 或 BRAIN。"))
+
+(fn classify [text]
+  ;; 回 "agent" 或 "brain"；不清楚/失敗 → "agent"（偏向能完成動手任務，較安全）
+  (let [cmd (table.concat
+              [(shquote llme) (shquote endpoint)
+               "--temperature" "0" "--max-tokens" "16"
+               "--system" (shquote CLASSIFY-SYS)
+               "--" (shquote text)] " ")
+        out (upper (trim (or (capture cmd) "")))]
+    (if (out:match "BRAIN") "brain"
+        (out:match "AGENT") "agent"
+        "agent")))
+
+(local route (or force (classify prompt)))
+(io.stderr:write (.. "[wf] 路由：" route (if force "（強制）" (.. "（llme 分類，endpoint=" endpoint "）")) "\n"))
+
+;; ── 執行 ────────────────────────────────────────────────────────────
+(local parts
+  (if (= route "brain")
+      ;; 只需腦 → llme（DeepSeek）直接答，串流吐出
+      (let [p [(shquote llme) (shquote endpoint) "--stream"]]
+        (when (< 0 (length system))
+          (table.insert p "--system") (table.insert p (shquote system)))
+        (table.insert p "--") (table.insert p (shquote prompt))
+        p)
+      ;; 要動手 → claude -p headless agent（在當前目錄動手）
+      (let [permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits")
+            p [(shquote claude) "-p" "--permission-mode" (shquote permission)]]
+        (when (< 0 (length system))
+          (table.insert p "--append-system-prompt") (table.insert p (shquote system)))
+        (let [m (getenv-nonempty "WF_MODEL")]  (when m (table.insert p "--model")  (table.insert p (shquote m))))
+        (let [e (getenv-nonempty "WF_EFFORT")] (when e (table.insert p "--effort") (table.insert p (shquote e))))
+        (table.insert p "--") (table.insert p (shquote prompt))
+        p)))
+
+(local (_ _ code) (os.execute (table.concat parts " ")))
+(os.exit (or code 0))

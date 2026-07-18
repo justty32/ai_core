@@ -28,5 +28,6 @@
 | `llme/_exec.fnl` | Fennel | llme **dispatcher 本體**：解析 `<endpoint>` → `configs/<ep>.json`；掃可用 endpoint（`ls`）；**auto-inject api key**（`LLME_KEY_<EP>` ＞ `<EP>_API_KEY`，偵測使用者是否自帶 `--api-key`）；`shquote` 轉義；組 `llm --config <cfg> [--api-key …] <argv>` 並 exec、透傳退出碼。 |
 | `llme/configs/*.json` | 資料 | cllm config（`endpoint`/`model`/`api_key`/`timeout_ms`）。`_` 開頭＝模板/隱藏不列。 |
 | `zhtw` | Fennel（單檔住戶）| 繁中翻譯薄包裝：烤死 `ENDPOINT`/`SYSTEM`/`PREFIX`/`FLAGS` 常數；argv 或 stdin 取輸入；`shquote` → 組 `llme deepseek <FLAGS> --system <SYSTEM> -- <前置+文字>` exec。改常數即換人格。 |
+| `wf` | Fennel（單檔住戶）| **兩層任務派發器**：解析前置旗標（`-b`/`-a`/`--`）；argv＝任務、pipe＝上下文；auto 時 `classify` 用 `llme <ep> --max-tokens 16` 判 AGENT/BRAIN（不清楚→agent）；BRAIN→`llme <ep> --stream` 直接答，AGENT→`claude -p --permission-mode <WF_PERMISSION>` 動手。`capture` 用 `io.popen` 收分類輸出。 |
 
 > 新住戶落地後在此表加列。目前住戶少、一個檔就夠；大了按住戶拆成 `common/code-map/` 多份子 index。
