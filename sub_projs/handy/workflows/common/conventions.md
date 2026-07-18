@@ -28,7 +28,7 @@
 | `llme/_exec.fnl` | Fennel | llme **dispatcher 本體**：解析 `<endpoint>` → `configs/<ep>.json`；掃可用 endpoint（`ls`）；**auto-inject api key**（`LLME_KEY_<EP>` ＞ `<EP>_API_KEY`，偵測使用者是否自帶 `--api-key`）；`shquote` 轉義；組 `llm --config <cfg> [--api-key …] <argv>` 並 exec、透傳退出碼。 |
 | `llme/configs/*.json` | 資料 | cllm config（`endpoint`/`model`/`api_key`/`timeout_ms`）。`_` 開頭＝模板/隱藏不列。 |
 | `zhtw` | Fennel（單檔住戶）| 繁中翻譯薄包裝：烤死 `ENDPOINT`/`SYSTEM`/`PREFIX`/`FLAGS` 常數；argv 或 stdin 取輸入；`shquote` → 組 `llme deepseek <FLAGS> --system <SYSTEM> -- <前置+文字>` exec。改常數即換人格。 |
-| `wf` | Fennel（單檔住戶）| **兩層任務派發器**：解析前置旗標（`-b`/`-a`/`-i`/`--`）；argv＝任務、pipe＝上下文；auto 時 `classify` 用 `llme <ep> --max-tokens 16` 判 AGENT/BRAIN（不清楚→agent）；BRAIN→`llme <ep> --stream`，AGENT→`claude -p --permission-mode <WF_PERMISSION>`，`-i`→轉同層 `mail send`（task/ctx 分開傳）。`capture` 用 `io.popen` 收分類輸出。 |
+| `wf` | Fennel（單檔住戶）| **兩層任務派發器**：解析前置旗標（`-b`/`-a`/`-i`/`--`）；argv＝任務、pipe＝上下文。路由順序＝**強制旗標 ＞ `heuristic-route`（關鍵詞 `AGENT-PATS`/`BRAIN-PATS` 比對，免 LLM）＞ `classify`（`llme <ep> --max-tokens 16`，只有前兩者沒定案才呼叫）**；BRAIN→`llme <ep> --stream`，AGENT→`claude -p --permission-mode <WF_PERMISSION>`，`-i`→轉同層 `mail send`（task/ctx 分開傳）。`capture` 用 `io.popen` 收分類輸出。 |
 | `mail` | Fennel（單檔住戶）| **inbox 協議**：子命令 `send`/`list`/`run`。信箱＝`INBOX_DIR`（預設同層 `inbox/`）＋`done/`。`slugify`（UTF-8 安全 `utf8.offset` 限 16 字）＋`unique-path`（撞名補 -n）；`run` 逐封讀信→`claude -p`→退出碼 0 才 `os.rename` 進 `done/`。與 `wf` 共用 `WF_CLAUDE`/`WF_PERMISSION`。 |
 | `inbox/` | 資料（runtime）| mail 的信箱：頂層＝待處理、`done/`＝已處理。`.gitignore` 擋 `*.md`、留 `.gitkeep` 骨架。 |
 

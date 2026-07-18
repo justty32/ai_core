@@ -9,7 +9,7 @@
 ## 最新進度（open）
 
 - **〔可用・MVP，待擴充〕`wf`（兩層任務派發器）＋`mail`（inbox 協議）**：
-  - `wf`：llme(DeepSeek) 當路由腦判 AGENT/BRAIN → 只需腦走 `llme`、要動手走 `claude -p`；`-b`/`-a`/`-i` 三模式。auto 分類、argv/stdin/上下文、繁中 append 驗綠（brain 端到端真 DeepSeek、agent 路由判斷正確）。
+  - `wf`：兩層派發，`-b`/`-a`/`-i` 三模式。**auto 路由＝啟發式關鍵詞（免 LLM）＞ llme 分類 fallback**〔2026-07-18・部分求值〕——清楚任務 0 個路由 call（brain 由 2→1 call、agent 省掉分類 call），只有兩類詞都中/都沒中才花一個 llme 分類。argv/stdin/上下文、繁中 append、啟發式六情境＋真 DeepSeek 端到端皆驗綠。
   - `mail`：inbox 協議可執行版——`send`/`list`/`run`＋信箱 `inbox/`。send/list/撞名/UTF-8 slug/`run --dry`/`run` 歸檔 done/／失敗保留、`wf -i` 投遞皆驗綠（claude 用 echo 模擬）。
   - **未由使用者驗收**：真 agent 動手端到端——`wf -a <改檔任務>` 與 `mail run` 都會 **spawn 真 claude** 用 `acceptEdits` 動手改當前目錄（全自主要 `WF_PERMISSION=bypassPermissions`）。使用者上次擋掉真 spawn，待其驗收。
   - **可長**：daemon 常駐自動 drain inbox、多 agent 通訊錄/回信（見 [workflows/inbox.md](workflows/inbox.md)「之後可長的」）。
