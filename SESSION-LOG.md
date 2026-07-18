@@ -18,6 +18,8 @@
 
 - **路徑一開工：`handy` 子專案（把 OS 當 AI agent 的落地試驗田）**（2026-07-18）：一組靈活小腳本／小程式集，拿現成程式（尤其 `cllm` 與其 tool）用腳本包裝、資料夾＝callable、按慣例組合。**已有兩個可用住戶**：`llme`（cllm 多 endpoint dispatcher，Fennel 單檔，`llme <endpoint>` → `llm --config configs/<endpoint>.json`，真後端 LM Studio 驗過、串流＋多 endpoint 皆綠）＋`zhtw`（薄包裝範例：固定取樣參數＋system＋前置轉呼 llme）。**技術棧定調**：腳本層 LuaJIT＋Fennel（少 Python）；daemon（`--serve`）暫緩、觸發＝跨呼叫共享狀態非省啟動。**Lua/Fennel 那條「舒適地基候選」即在此落地**（comfy SBCL 線保留並存）。設計脈絡見 [notes/20260718-0924-路徑一-daemon與llme兩塊試驗田.md](workflows/notes/20260718-0924-路徑一-daemon與llme兩塊試驗田.md)，入口 [sub_projs/handy/AGENTS.md](sub_projs/handy/AGENTS.md)。**open 尾巴**：daemon 未動；真網路後端 endpoint 待使用者填真 key；`llm` 加 `--system` 待辦（見 cllm SESSION-LOG）。
 
+- **呼叫閘道加 `.so` kind ＋ 值跨邊界（設計已收斂、未動工）**（2026-07-18）：script 與 `.so` 對等共存，統合在「呼叫綁定」層——給既有 `lib/call.py`（in_process/subprocess/http）加第四 kind `dlopen`。核心決定：**一個 typed `Value`、兩種物理形態**（in-process 傳 C struct 零序列化／跨行程序列化成 JSON，CBOR 延後），故 typed 不逆 `spec/data_format.md`（它只管跨行程 wire）；`.so→腳本` 兩條都要，門檻＝**可信∧支援→in-process，其餘 exec 地板**。`.so` 端 ABI 沿用 cllm `llm_ask` 範式。**續談加了**：①「邊界 × 知不知道簽名」兩根正交軸（JSON 是 unknown 稅非 out 稅）＋萬能入口符號 `call(fn_name,Value*,Value*)`；② LLM 砍平人因軸→語言選擇退化成純能力題（給「語言中立」補硬理由）；③〔決定〕**收回 drop-shebang**：每檔兩面孔＝CLI 走 shebang、`.so` 走 `--gen-h`（吐 `.h`＋`.c` marshaling shim，腳本的 known/typed in-process 路徑，泛型 adapter 當預設、生成 shim opt-in）；④〔提案未追認〕第三物理形態＝shm 無指標 binary（把 C ABI 偷塞進 out-process，四格連續譜）。**open 尾巴**：加 `kind:"so"`（先 exec 等價）、定 `Value`＋LuaJIT FFI mirror、`--gen-h`/`--emit-header`、in-process 資源上限沿用 note_06 B3 未解洞。設計脈絡見 [notes/20260718-2324-so與腳本共存-呼叫閘道-value跨邊界.md](workflows/notes/20260718-2324-so與腳本共存-呼叫閘道-value跨邊界.md)。
+
 ## 各工作流 session-log
 
 （尚無工作流長出自己的 session-log）
