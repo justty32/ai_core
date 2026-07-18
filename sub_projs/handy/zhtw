@@ -2,7 +2,8 @@
 ;; zhtw — 薄包裝範例：固定取樣參數 ＋ system prompt ＋ prompt 前置，轉呼 llme。
 ;;
 ;; 一個「人格」單檔（不用資料夾）：把一組設定烤死，使用者只給要翻的文字。
-;;   zhtw <要翻譯的文字...>
+;;   zhtw <要翻譯的文字...>          位置參數當輸入
+;;   echo ... | zhtw / zhtw < file  無位置參數時讀 stdin（管線公民）
 ;;     → llme local --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
 ;;
 ;; 這就是 handy 的「薄包裝」：站在 llme 上，把 endpoint／取樣參數／人格烤死，
@@ -24,14 +25,22 @@
 
 (fn shquote [s] (.. "'" (s:gsub "'" "'\\''") "'"))
 
-;; 使用者的話＝所有位置參數併成一句
+;; 去掉頭尾空白（stdin 常帶結尾換行）
+(fn trim [s] (or (s:match "^%s*(.-)%s*$") s))
+
+;; 輸入來源：有位置參數＝所有參數併成一句；否則讀 stdin（管線公民慣例）。
+;; 兩者皆空才報用法。stdin 一次讀完（翻譯是整段輸入，不做逐行串流）。
 (local words [])
 (for [i 1 (length arg)] (table.insert words (. arg i)))
-(when (= 0 (length words))
-  (io.stderr:write "用法：zhtw <要翻譯的文字...>\n")
+(local text
+  (if (< 0 (length words))
+      (table.concat words " ")
+      (trim (io.read "*a"))))
+(when (= 0 (length text))
+  (io.stderr:write "用法：zhtw <要翻譯的文字...>   或   echo ... | zhtw\n")
   (os.exit 2))
 
-(local prompt (.. PREFIX (table.concat words " ")))
+(local prompt (.. PREFIX text))
 
 ;; 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
 (local parts [(shquote "llme") (shquote ENDPOINT)])
