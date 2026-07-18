@@ -2,7 +2,7 @@
 
 ← [INDEX](../INDEX.md)
 
-本夾收各自成一攤的次級物：**半封存的舊實作版** `ver_1/`、**框架規劃地** `llm_forge/`、**動手實驗場** `galtxt/`、**獨立 C LLM 產物** `cllm/`、**舒適 CL 地基** `comfy/`。各目錄自帶入口，先讀入口再深入。
+本夾收各自成一攤的次級物：**半封存的舊實作版** `ver_1/`、**框架規劃地** `llm_forge/`、**動手實驗場** `galtxt/`、**獨立 C LLM 產物** `cllm/`、**舒適 CL 地基** `comfy/`、**OS-當-agent 試驗田** `handy/`。各目錄自帶入口，先讀入口再深入。
 
 | 目錄 | 內容 | 入口 |
 |------|------|------|
@@ -11,3 +11,4 @@
 | [galtxt/](galtxt/) | **動手實驗場（第一把刀）**：ai_core 北極星第一目標問題的落地執行處。**依賴 llm_forge**，先在此跑通想法、確定了才搬進 llm_forge 固化。套 workflows 分層模板；LLM 接口探索三線（try_1 s7／try_2 Lua／try_4 整合）已跑通洞見後**退出並移除工作樹**（細節留 git log）；現行推進線＝語料庫 `corpus/`。 | [AGENTS.md](galtxt/AGENTS.md) |
 | [cllm/](cllm/) | **獨立 C LLM 產物**：把 LLM 收成一支對外 C ABI 共享庫 `libcllm.so`（`extern "C"`，唯一入口 `llm_ask`）＋建在其上的 `llm` unix filter CLI。純 C++、零腳本 VM、CMake+Ninja+vcpkg+glaze；離線 17/17 綠、Windows／Manjaro 雙機驗。源自 `galtxt/try_3`，收斂後抽離。 | [AGENTS.md](cllm/AGENTS.md) |
 | [comfy/](comfy/) | **舒適 Common Lisp 地基（框架外實驗場）**：一層順手糖（`true`/`false`、`'a'` 字元）＋成熟可 VSCode/Alive debug 的 SBCL 環境。與 galtxt 的 s7 線並存、兩邊都推。零外部相依（只用 SBCL 內建 ASDF）。 | [README.md](comfy/README.md) |
+| [handy/](handy/) | **路徑一試驗田（OS 當 AI agent）**：一組靈活小腳本／小程式集，拿現成程式（尤其 `cllm` 與其 tool）用腳本包裝、資料夾＝callable、按慣例組合。兩塊共存試驗田——`llme`（cllm 多 endpoint dispatcher）＋`daemon`（常駐 server、client 注入命令、開 `claude -p`／活 agent poll 檔案）。開田期，方法論已定、程式碼待動手。 | [AGENTS.md](handy/AGENTS.md) |
