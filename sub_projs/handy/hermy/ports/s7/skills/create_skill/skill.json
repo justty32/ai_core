@@ -1,0 +1,14 @@
+{
+  "name": "create_skill",
+  "description": "自我擴展：當缺少合適技能時，寫一個新的 folder-as-callable 技能。傳入技能名、描述、參數 schema、以及 run 執行體的完整原始碼（任何有 shebang 的可執行腳本）。建好後本 agent 下一步即可呼叫它。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "description": "技能名（英數與底線，當作工具名與資料夾名）" },
+      "description": { "type": "string", "description": "技能用途，供未來 LLM 判斷何時呼叫" },
+      "parameters": { "type": "object", "description": "此技能的參數 JSON schema（object）" },
+      "run_code": { "type": "string", "description": "run 執行體完整原始碼，含 shebang；從 stdin 讀 JSON 參數、印結果於 stdout" }
+    },
+    "required": ["name", "description", "run_code"]
+  }
+}

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# hermy — shell shim：定位自身→備妥 llm-s7（env.sh）→exec 庫的 orchestrate。邏輯全在 src/util.scm。
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export HERMY_ROOT="$HERE"
+command -v llm-s7 >/dev/null 2>&1 || source ~/dev/cllm/env.sh
+exec llm-s7 "$HERE/src/util.scm" orchestrate "$@"

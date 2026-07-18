@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# ds-chat — shell shim：定位自身→HERMY_ROOT＝上一層→備妥 llm-s7→exec 庫的 ds-chat。邏輯全在 ../src/util.scm。
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export HERMY_ROOT="$(dirname "$HERE")"
+command -v llm-s7 >/dev/null 2>&1 || source ~/dev/cllm/env.sh
+exec llm-s7 "$HERMY_ROOT/src/util.scm" ds-chat "$@"

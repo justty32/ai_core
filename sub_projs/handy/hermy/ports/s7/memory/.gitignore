@@ -1,0 +1,3 @@
+# 記憶是 runtime 產物，不進版控
+log.ndjson
+!.gitkeep
