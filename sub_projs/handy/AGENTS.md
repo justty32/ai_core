@@ -44,7 +44,7 @@ handy/
 
 - **重度依賴 cllm**：本專案的「肉」多是薄腳本／薄程式，把 cllm 及其 tool 串起來。建 cllm 見 [cllm/AGENTS.md](../cllm/AGENTS.md)（CMake＋Ninja＋vcpkg）。
 - **技術棧**〔決定・2026-07-18〕：**腳本層＝LuaJIT ＋ Fennel**（Fennel 編到 LuaJIT，手寫用 Lisp 手感、同 runtime；少 Python——太重、每腳本冷啟 ~50–150ms）。三層分工看性質選：
-  - **純膠水**（挑檔／轉發／exec，如 `llme`）→ **編譯 C++**（零 interpreter 啟動），或 shell。
+  - **純膠水**（挑檔／轉發／exec）→ 一般選 **編譯 C++／shell**（零 interpreter 啟動）；**但若膠水緊接一次慢呼叫**（如 `llme` 接 LLM，啟動稅埋在 token 延遲裡＝雜訊）→ 免建置的 **Fennel** 更順手。llme 就是後者（Fennel 一個檔、shebang 直接跑）。
   - **有邏輯的小工具** → **Fennel/LuaJIT**（冷啟 ~1–5ms，甜蜜區；預編成 `.lua` 免重複編譯）。
   - **要免重載重狀態** → 掛 **daemon** 當瘦 client（見下）。
   - 呼叫 cllm：cllm 已有 Lua＋Fennel 綁定；LuaJIT 還能 **FFI 直接 call `libcllm.so`**（連綁定都省）。
@@ -56,7 +56,7 @@ handy/
 事情告一段落或臨時中止時 → 把**還沒完成**的活狀態記到進度；需**使用者親自做／驗證**的 → 記到待使用者。兩者**只列 open**，完成即移除。
 
 ### 進度（open）
-- 〔進行中〕`llme`（第一個住戶，C++）：薄轉發器已成、冒煙全綠（`LLME_LLM=echo` 驗轉發／找不到 endpoint／usage／經 `llme.sh`／跨 cwd）。`llme <endpoint>` → `llm --config configs/<endpoint>.json <其餘>`。**未做**：接真 `llm`＋真後端端到端跑一次（需 `llm` 在 PATH＋backend）；config 慣例目前〔提案〕`<endpoint>.json`、可改。入口 [llme/README.md](llme/README.md)。
+- 〔進行中〕`llme`（第一個住戶，**Fennel**）：薄轉發器已成、冒煙全綠（轉發／中文＋`'` shell 轉義／找不到 endpoint／usage／`--help`／退出碼傳遞／經 `llme.sh` 跨 cwd）。`llme <endpoint>` → `llm --config configs/<endpoint>.json <其餘>`。**未做**：接真 `llm`＋真後端端到端跑一次（需 `llm` 在 PATH＋backend）；config 慣例目前〔提案〕`<endpoint>.json`、可改。入口 [llme/README.md](llme/README.md)。
 - 〔待動手〕daemon（下一個住戶）〔note 0718 §六提案〕：常駐小程式，client 寫命令進一個檔／socket，daemon 讀到就 `claude -p` 起 headless run；命令通道複用 append-log。
 
 ### 待使用者（open）
