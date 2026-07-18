@@ -56,7 +56,7 @@ handy/
 事情告一段落或臨時中止時 → 把**還沒完成**的活狀態記到進度；需**使用者親自做／驗證**的 → 記到待使用者。兩者**只列 open**，完成即移除。
 
 ### 進度（open）
-- 〔可用〕`llme`（第一個住戶，**Fennel**）：薄轉發器已成。`llme <endpoint>` → `llm --config configs/<endpoint>.json <其餘>`。**端到端已驗**（真 `llm`→libcllm→`file://` fixture→completion，非串流＋串流＋經外殼皆綠）。`llme`／`llm` 已上 PATH（`~/.local/bin` symlink，本機；別台複製法見 README「上 PATH」）。**未做**：真網路後端跑一次（需使用者真 endpoint／起 LM Studio；`local.json` 現無後端）。config 慣例〔提案〕`<endpoint>.json`、可改。入口 [llme/README.md](llme/README.md)。
+- 〔可用・已驗真後端〕`llme`（第一個住戶，**Fennel**）：薄轉發器已成。`llme <endpoint>` → `llm --config configs/<endpoint>.json <其餘>`。**真後端跑通**（LM Studio）：`llme local` → gemma、`llme qwen` → qwen3.5-9b，**換 endpoint 名＝換模型**（dispatcher 核心價值當場證明）；串流 `--stream` 逐段印、非串流、經 `llme.sh` 外殼皆綠、exit 0。也驗過離線 `file://` fixture 全鏈。`llme`／`llm` 已上 PATH（`~/.local/bin` symlink，本機；別台複製法見 README「上 PATH」）。config 慣例〔提案〕`<endpoint>.json`、可改。入口 [llme/README.md](llme/README.md)。
 - 〔待動手〕daemon（下一個住戶）〔note 0718 §六提案〕：常駐小程式，client 寫命令進一個檔／socket，daemon 讀到就 `claude -p` 起 headless run；命令通道複用 append-log。
 
 ### 待使用者（open）
