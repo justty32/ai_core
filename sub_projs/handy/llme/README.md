@@ -28,6 +28,17 @@ llme/
 ```
 外層 [`../llme.sh`](../llme.sh) 是轉發入口，把呼叫轉給本資料夾的 `_exec`——放上 PATH（或 symlink 成 `llme`）即可當一支命令。
 
+## 上 PATH（讓 `llme` 變裸命令）
+
+`llme` 轉呼的 `llm` 需在 PATH。把兩者都 symlink 進任一個 PATH 目錄（如 `~/.local/bin`）：
+
+```sh
+ln -sf <cllm>/build/llm         ~/.local/bin/llm    # 或 install-dev.sh 裝的 ~/dev/bin/llm
+ln -sf <repo>/sub_projs/handy/llme.sh ~/.local/bin/llme
+llme --help        # 裸命令即可用
+```
+`llme.sh` 已 `readlink -f` 解 symlink，經 `~/.local/bin/llme` 呼叫也能正確定位 `llme/_exec`。
+
 ## 環境變數
 
 | 變數 | 作用 |
