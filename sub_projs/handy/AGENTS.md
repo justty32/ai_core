@@ -43,7 +43,12 @@ handy/
 ## 開發環境
 
 - **重度依賴 cllm**：本專案的「肉」多是薄腳本／薄程式，把 cllm 及其 tool 串起來。建 cllm 見 [cllm/AGENTS.md](../cllm/AGENTS.md)（CMake＋Ninja＋vcpkg）。
-- **技術棧方向**〔沿用 llm_forge §9.2〕：核心用 C++／需要時內嵌 Lua，手寫腳本用 Lisp/Fennel 或 shell；少 Python、少 bash 當主力。**但本專案性質偏「腳本包裝」，shell/小腳本在此是合法主力**（＝使用者要的靈活包裝）。
+- **技術棧**〔決定・2026-07-18〕：**腳本層＝LuaJIT ＋ Fennel**（Fennel 編到 LuaJIT，手寫用 Lisp 手感、同 runtime；少 Python——太重、每腳本冷啟 ~50–150ms）。三層分工看性質選：
+  - **純膠水**（挑檔／轉發／exec，如 `llme`）→ **編譯 C++**（零 interpreter 啟動），或 shell。
+  - **有邏輯的小工具** → **Fennel/LuaJIT**（冷啟 ~1–5ms，甜蜜區；預編成 `.lua` 免重複編譯）。
+  - **要免重載重狀態** → 掛 **daemon** 當瘦 client（見下）。
+  - 呼叫 cllm：cllm 已有 Lua＋Fennel 綁定；LuaJIT 還能 **FFI 直接 call `libcllm.so`**（連綁定都省）。
+- **daemon（`--serve`）暫緩，但要記對觸發條件**〔洞見・2026-07-18〕：**不是**為了省啟動——LLM 呼叫的載入環境時間 vs token 吐出延遲差幾個數量級，那幾 ms 是雜訊，為此做 daemon 不划算。daemon 的**真正觸發＝需要跨呼叫的共享狀態**（`llm_entry` 的 `RateMeter` 跨請求累計、LLM 當單一資源循序佇列化、活 agent 保 context）。→ Q1「操縱活 agent」就是這類，那才是 daemon 正主。
 - **驗證**：目前**尚無**程式碼、無驗證指令（開田期）；有第一片可跑物後再補。
 
 ## 主工作流（進度與待測）
