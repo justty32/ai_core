@@ -1,0 +1,5 @@
+{
+  "endpoint": "http://localhost:1234/v1/chat/completions",
+  "model": "local-model",
+  "timeout_ms": 120000
+}

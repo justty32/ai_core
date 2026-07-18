@@ -51,8 +51,8 @@ handy/
 事情告一段落或臨時中止時 → 把**還沒完成**的活狀態記到進度；需**使用者親自做／驗證**的 → 記到待使用者。兩者**只列 open**，完成即移除。
 
 ### 進度（open）
-- 〔待動手〕試驗田 B 第一鏟〔note 0718 §六提案〕：常駐小程式，client 寫命令進一個檔／socket，daemon 讀到就 `claude -p` 起 headless run；命令通道複用 append-log。
-- 〔待動手〕試驗田 A `llme`：資料夾 `_exec`＋configs＋外層 `llme.sh` 轉發，`llme <endpoint> ... ` 轉呼 cllm。
+- 〔進行中〕`llme`（第一個住戶，C++）：薄轉發器已成、冒煙全綠（`LLME_LLM=echo` 驗轉發／找不到 endpoint／usage／經 `llme.sh`／跨 cwd）。`llme <endpoint>` → `llm --config configs/<endpoint>.json <其餘>`。**未做**：接真 `llm`＋真後端端到端跑一次（需 `llm` 在 PATH＋backend）；config 慣例目前〔提案〕`<endpoint>.json`、可改。入口 [llme/README.md](llme/README.md)。
+- 〔待動手〕daemon（下一個住戶）〔note 0718 §六提案〕：常駐小程式，client 寫命令進一個檔／socket，daemon 讀到就 `claude -p` 起 headless run；命令通道複用 append-log。
 
 ### 待使用者（open）
 - （暫無）

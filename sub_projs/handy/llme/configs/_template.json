@@ -1,0 +1,7 @@
+{
+  "_notes": "複製本檔成 <endpoint>.json（如 opus.json），填下列欄位。llme <endpoint> 會把此檔當 --config 傳給 llm CLI。api_key 留空可走 llm-login（它會 patch 進來）。`_` 開頭的檔（含本模板）不會被列進可用 endpoint。",
+  "endpoint": "https://api.example.com/v1/chat/completions",
+  "model": "MODEL-ID",
+  "api_key": "",
+  "timeout_ms": 120000
+}
