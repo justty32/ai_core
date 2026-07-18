@@ -1,0 +1,118 @@
+#!/usr/bin/env fennel
+;; _exec.fnl — llme：cllm 多 endpoint dispatcher（薄轉發器，Fennel 本體）
+;; 入口是同層的 shell shim `_exec`（給 .fnl 語法高亮才拆兩檔）；也可直接跑本檔。
+;;
+;;   llme <endpoint> [llm 的其餘參數...]
+;;     → 把 <endpoint> 翻成 <config_dir>/<endpoint>.json
+;;     → 轉呼 `llm --config <那個檔> <其餘參數...>`
+;;
+;; 不 link libcllm、不重造任何東西——只是挑一個 cllm config 檔、原樣轉呼現成的
+;; llm CLI（handy 方法論：拿現成程式薄殼包裝）。純 Fennel，無外部相依；runtime
+;; 只要 llm 在 PATH。啟動永遠緊接一次 LLM 呼叫，那幾 ms 埋在 token 延遲裡＝雜訊，
+;; 故不追求零啟動（該理由對 llme 不咬），改用免建置的 Fennel。
+;;
+;; 環境變數：
+;;   LLME_LLM         覆寫要轉呼的 llm 執行檔（預設 "llm"；測試設 echo 可看轉出的參數）
+;;   LLME_CONFIG_DIR  覆寫 config 目錄（預設＝本 script 同層的 configs/）
+;;   <自動注入 api key>  呼叫 <endpoint> 時，若使用者沒自帶 --api-key，依序找：
+;;                      ① LLME_KEY_<EP>（llme 專屬覆寫）
+;;                      ② <EP>_API_KEY（通用 provider 慣例，如 DEEPSEEK_API_KEY）
+;;                      找到就自動補 --api-key <值>；<EP>＝endpoint 名大寫、非英數轉 _。
+;;                      本地免 key 的 endpoint（沒設對應 env）不受影響；使用者自帶
+;;                      --api-key 則一律尊重、不覆寫（keyless config 的 secret 不落版控）。
+
+(fn getenv-nonempty [k]
+  (let [v (os.getenv k)]
+    (if (and v (not= v "")) v nil)))
+
+(fn dirname [path]
+  (or (path:match "(.*)/[^/]*$") "."))
+
+(fn abspath [path]
+  (if (path:match "^/") path
+      (.. (or (os.getenv "PWD") ".") "/" path)))
+
+(fn script-dir []
+  (dirname (abspath (. arg 0))))
+
+(fn config-dir []
+  (or (getenv-nonempty "LLME_CONFIG_DIR")
+      (.. (script-dir) "/configs")))
+
+(fn file-exists? [p]
+  (let [f (io.open p "r")]
+    (if f (do (f:close) true) false)))
+
+;; 掃 config 目錄裡的 <name>.json（`_` 開頭視為模板/隱藏，不列）。純 Lua 無列目錄
+;; 內建，借 `ls`（只讀、無副作用；找不到目錄也安靜）。
+(fn list-endpoints [dir]
+  (let [out []]
+    (with-open [p (io.popen (.. "ls -1 " dir " 2>/dev/null"))]
+      (each [line (p:lines)]
+        (let [stem (line:match "^([^_].-)%.json$")]
+          (when stem (table.insert out stem)))))
+    out))
+
+(fn usage [dir]
+  (io.stderr:write
+    "用法：llme <endpoint> [llm 的其餘參數...]\n"
+    "  例：llme opus --stream 你好\n"
+    (.. "  <endpoint> 對應 " dir "/<endpoint>.json（cllm config），\n")
+    "  其餘參數原樣轉給 llm CLI（--config <那個檔> 已自動帶上）。\n"
+    "  環境變數：LLME_LLM 覆寫 llm 執行檔；LLME_CONFIG_DIR 覆寫 config 目錄。\n")
+  (let [eps (list-endpoints dir)]
+    (if (= 0 (length eps))
+        (io.stderr:write (.. "  （目前 " dir " 下沒有可用的 endpoint config）\n"))
+        (io.stderr:write (.. "  可用 endpoint：" (table.concat eps " ") "\n")))))
+
+;; 單引號包住每個參數，安全轉進 shell（含中文/空白/旗標）。
+(fn shquote [s]
+  (.. "'" (s:gsub "'" "'\\''") "'"))
+
+(local ep (. arg 1))
+(local dir (config-dir))
+
+(when (or (= ep nil) (= ep "--help") (= ep "-h"))
+  (usage dir)
+  (os.exit (if (= ep nil) 2 0)))
+
+(local cfg (.. dir "/" ep ".json"))
+(when (not (file-exists? cfg))
+  (io.stderr:write (.. "llme：找不到 endpoint「" ep "」的 config（" cfg "）\n"))
+  (usage dir)
+  (os.exit 2))
+
+(local llm (or (getenv-nonempty "LLME_LLM") "llm"))
+
+;; endpoint 名 → env 慣例的大寫識別子（非英數→_，如 deep-seek → DEEP_SEEK）
+(fn env-stem [s] (: (s:upper) :gsub "[^%w]" "_"))
+
+;; 使用者是否已自帶 --api-key（含 --api-key=… 形式）？有就不自動注入、尊重之。
+(fn user-gave-api-key? []
+  (var found false)
+  (for [i 2 (length arg)]
+    (let [a (. arg i)]
+      (when (or (= a "--api-key") (a:match "^%-%-api%-key="))
+        (set found true))))
+  found)
+
+;; 自動注入的 api key：LLME_KEY_<EP> ＞ <EP>_API_KEY（皆 nonempty 才算）。
+(fn auto-api-key [ep]
+  (let [stem (env-stem ep)]
+    (or (getenv-nonempty (.. "LLME_KEY_" stem))
+        (getenv-nonempty (.. stem "_API_KEY")))))
+
+;; 組轉發命令：llm --config <cfg> [--api-key <env>] <argv[2..]>
+;; 自動 --api-key 放在使用者參數「之前」——即便真跑到重複，命令列後者覆寫前者
+;; （設定來源：config → 旗標，後蓋前），使用者顯式帶的仍最終生效。
+(local parts [(shquote llm) "--config" (shquote cfg)])
+(when (not (user-gave-api-key?))
+  (let [k (auto-api-key ep)]
+    (when k
+      (table.insert parts "--api-key")
+      (table.insert parts (shquote k)))))
+(for [i 2 (length arg)]
+  (table.insert parts (shquote (. arg i))))
+
+(local (_ _ code) (os.execute (table.concat parts " ")))
+(os.exit (or code 0))
