@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# skills-json — 掃 ../skills/*/skill.json，印出 OpenAI function-tools JSON 陣列。
+# folder-as-callable 的「技能發現」：每個 skills/<name>/ 需有 skill.json + run。
+import json, os, sys
+from pathlib import Path
+
+D = Path(os.environ.get("HERMY_SKILLS_DIR") or (Path(__file__).resolve().parent.parent / "skills"))
+tools = []
+if D.is_dir():
+    for d in sorted(D.iterdir()):
+        if not d.is_dir() or d.name.startswith("_"):
+            continue
+        meta, run = d / "skill.json", d / "run"
+        if not meta.is_file() or not run.exists():
+            continue
+        try:
+            s = json.loads(meta.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[skills-json] {d.name} 的 skill.json 壞了：{e}", file=sys.stderr)
+            continue
+        s.setdefault("name", d.name)
+        tools.append({"type": "function", "function": {
+            "name": s["name"], "description": s.get("description", ""),
+            "parameters": s.get("parameters", {"type": "object", "properties": {}})}})
+print(json.dumps(tools, ensure_ascii=False))

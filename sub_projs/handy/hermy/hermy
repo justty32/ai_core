@@ -1,187 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-hermy — 用 handy 思想復刻 hermes-agent 的最小自我改進技能型 agent。
-
-本質映射（hermes → handy）：
-  - Skills（skills/ 目錄、腳本包成 LLM 工具、Agent 能 create_skill 自產）→ folder-as-callable
-  - 對話迴圈（模型→工具分派→結果→迴圈）→ DeepSeek function-calling 迴圈 + shell-out 執行技能
-  - 記憶（對話後同步、檔案化）→ memory/log.ndjson append-log
-  - LLM provider → DeepSeek（後端）
-
-「腦」＝DeepSeek（/v1/chat/completions，本迴圈自管 messages 陣列，才能多輪帶 tool 結果——
-llm CLI 是單發、餵不回 tool-role，故這裡直接打 API；仍是 handy 精神：LLM 只是眾工具的驅動核心）。
-「手」＝skills/<name>/（folder-as-callable：skill.json 宣告工具 + run 執行體，shell-out 呼叫）。
-
-用法：
-  hermy <任務...>            位置參數＝任務
-  echo ... | hermy           無參數＝讀 stdin
-環境變數：
-  DEEPSEEK_API_KEY   必給（DeepSeek 金鑰）
-  HERMY_MODEL        模型（預設 deepseek-chat）
-  HERMY_ENDPOINT     endpoint（預設 https://api.deepseek.com/v1/chat/completions）
-  HERMY_MAX_STEPS    工具迴圈上限（預設 12）
-  HERMY_SKILLS_DIR / HERMY_MEMORY_DIR  覆寫技能/記憶目錄（預設本檔同層 skills/ 、memory/）
-"""
-import json
-import os
-import subprocess
-import sys
-import urllib.request
-import urllib.error
-from datetime import datetime, timezone
+# hermy — 編排器：把 lib/* 小原語用 CLI 串起來跑 agent 迴圈（每檔 <50 行、可單獨呼叫）。
+# 串連：lib/skills-json（發現）→ lib/ds-chat（一次呼叫）→ lib/run-skill（執行）→ lib/mem-append（記憶）。
+# messages 由本檔自管；本質映射與用法見 README.md。用法：hermy <任務...> 或 echo ... | hermy
+import json, os, subprocess, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SKILLS_DIR = Path(os.environ.get("HERMY_SKILLS_DIR") or (HERE / "skills"))
-MEMORY_DIR = Path(os.environ.get("HERMY_MEMORY_DIR") or (HERE / "memory"))
-LOG_PATH = MEMORY_DIR / "log.ndjson"
-MODEL = os.environ.get("HERMY_MODEL") or "deepseek-chat"
-ENDPOINT = os.environ.get("HERMY_ENDPOINT") or "https://api.deepseek.com/v1/chat/completions"
-MAX_STEPS = int(os.environ.get("HERMY_MAX_STEPS") or "12")
+LIB = HERE / "lib"
+SYSTEM = (HERE / "prompt" / "system.md").read_text(encoding="utf-8").strip()
+MAX = int(os.environ.get("HERMY_MAX_STEPS") or "12")
 
+def call(tool, *args, stdin=""):
+    p = subprocess.run([str(LIB / tool), *args], input=stdin, capture_output=True, text=True)
+    if p.stderr.strip(): print(p.stderr.strip(), file=sys.stderr)
+    if p.returncode != 0: sys.exit(p.returncode)
+    return p.stdout
 
-def eprint(*a):
-    print(*a, file=sys.stderr, flush=True)
-
-
-# ── 技能發現（folder-as-callable）─────────────────────────────────────
-# 每個 skills/<name>/ 需有 skill.json（{"name","description","parameters":<JSON schema>}）
-# 與可執行的 run（收 JSON 參數於 stdin、印結果於 stdout）。`_` 開頭的資料夾忽略（模板/隱藏）。
-def discover_skills():
-    skills = {}
-    if not SKILLS_DIR.is_dir():
-        return skills
-    for d in sorted(SKILLS_DIR.iterdir()):
-        if not d.is_dir() or d.name.startswith("_"):
-            continue
-        meta = d / "skill.json"
-        run = d / "run"
-        if not meta.is_file() or not run.exists():
-            continue
-        try:
-            spec = json.loads(meta.read_text(encoding="utf-8"))
-        except Exception as e:
-            eprint(f"[hermy] 技能 {d.name} 的 skill.json 壞了，略過：{e}")
-            continue
-        spec.setdefault("name", d.name)
-        skills[spec["name"]] = {"dir": d, "run": run, "spec": spec}
-    return skills
-
-
-def tools_payload(skills):
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": s["spec"]["name"],
-                "description": s["spec"].get("description", ""),
-                "parameters": s["spec"].get("parameters", {"type": "object", "properties": {}}),
-            },
-        }
-        for s in skills.values()
-    ]
-
-
-def run_skill(skill, arguments):
-    """shell-out 呼叫 skills/<name>/run，JSON 參數餵 stdin，回 stdout（截斷保護）。"""
-    try:
-        # cwd 不設＝繼承 hermy 的呼叫目錄（技能在使用者所在處動手）；
-        # 需知道自身位置的技能（如 create_skill）自己從 __file__ 解出，不靠 cwd。
-        proc = subprocess.run(
-            [str(skill["run"])],
-            input=json.dumps(arguments, ensure_ascii=False),
-            capture_output=True, text=True, timeout=300,
-        )
-        out = proc.stdout.strip()
-        if proc.returncode != 0:
-            out = f"[退出碼 {proc.returncode}] " + (proc.stderr.strip() or out)
-        return out[:8000] if out else "（技能無輸出）"
-    except Exception as e:
-        return f"[技能執行失敗] {e}"
-
-
-# ── DeepSeek /chat/completions（本迴圈自管 messages）──────────────────
-def chat(messages, tools):
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    if not key:
-        eprint("[hermy] 未設 DEEPSEEK_API_KEY"); sys.exit(2)
-    body = {"model": MODEL, "messages": messages}
-    if tools:
-        body["tools"] = tools
-        body["tool_choice"] = "auto"
-    req = urllib.request.Request(
-        ENDPOINT, method="POST",
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            data = json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        eprint(f"[hermy] HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:500]}"); sys.exit(1)
-    except Exception as e:
-        eprint(f"[hermy] 請求失敗：{e}"); sys.exit(1)
-    return data["choices"][0]["message"]
-
-
-def log_memory(record):
-    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-    record["ts"] = datetime.now(timezone.utc).isoformat()
-    with LOG_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-
-SYSTEM = (
-    "你是 hermy，一個用 handy 思想打造的技能型 agent。你有一組「技能」（folder-as-callable 的工具），"
-    "需要動手（讀寫檔、跑指令、查資料）時就呼叫對應技能；只需回答/生成就直接回。"
-    "缺技能時可用 create_skill 自己寫一個新技能再用（自我擴展）。"
-    "全程用繁體中文與使用者溝通。回答精簡、務實。"
-)
-
+def mem(rec): call("mem-append", stdin=json.dumps(rec, ensure_ascii=False))
 
 def main():
     task = " ".join(sys.argv[1:]).strip()
-    if not task and not sys.stdin.isatty():
-        task = sys.stdin.read().strip()
-    if not task:
-        eprint("用法：hermy <任務...>   或   echo ... | hermy"); sys.exit(2)
-
-    skills = discover_skills()
-    tools = tools_payload(skills)
-    eprint(f"[hermy] 載入 {len(skills)} 個技能：{' '.join(skills) or '（無）'}")
-
-    messages = [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": task}]
-    log_memory({"role": "user", "content": task})
-
-    for step in range(MAX_STEPS):
-        msg = chat(messages, tools)
+    if not task and not sys.stdin.isatty(): task = sys.stdin.read().strip()
+    if not task: print("用法：hermy <任務...>   或   echo ... | hermy", file=sys.stderr); sys.exit(2)
+    tools = json.loads(call("skills-json") or "[]")
+    print(f"[hermy] 載入 {len(tools)} 個技能", file=sys.stderr)
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": task}]
+    mem({"role": "user", "content": task})
+    for _ in range(MAX):
+        msg = json.loads(call("ds-chat", stdin=json.dumps({"messages": messages, "tools": tools}, ensure_ascii=False)))
         messages.append(msg)
         calls = msg.get("tool_calls") or []
         if not calls:
-            answer = msg.get("content") or ""
-            print(answer)
-            log_memory({"role": "assistant", "content": answer})
-            return
-        for call in calls:
-            fn = call["function"]["name"]
-            try:
-                args = json.loads(call["function"].get("arguments") or "{}")
-            except Exception:
-                args = {}
-            eprint(f"[hermy] → 技能 {fn} {json.dumps(args, ensure_ascii=False)}")
-            if fn in skills:
-                result = run_skill(skills[fn], args)
-                # 新技能可能剛被 create_skill 寫出來→重新發現，下輪就能用
-                if fn == "create_skill":
-                    skills = discover_skills(); tools = tools_payload(skills)
-            else:
-                result = f"[找不到技能 {fn}]"
-            log_memory({"role": "tool", "name": fn, "args": args, "result": result[:2000]})
-            messages.append({"role": "tool", "tool_call_id": call["id"], "content": result})
-    eprint(f"[hermy] 到達步數上限 {MAX_STEPS}，停止。")
-
+            print(msg.get("content") or ""); mem({"role": "assistant", "content": msg.get("content")}); return
+        for c in calls:
+            fn, args = c["function"]["name"], c["function"].get("arguments") or "{}"
+            print(f"[hermy] → 技能 {fn} {args}", file=sys.stderr)
+            result = call("run-skill", fn, stdin=args).strip()
+            if fn == "create_skill": tools = json.loads(call("skills-json") or "[]")
+            messages.append({"role": "tool", "tool_call_id": c["id"], "content": result})
+            mem({"role": "tool", "name": fn, "result": result[:2000]})
+    print(f"[hermy] 到達步數上限 {MAX}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

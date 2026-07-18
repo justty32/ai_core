@@ -26,16 +26,26 @@ echo "把 37 度攝氏轉華氏" | ./hermy
 
 agent 會：發現技能 → 組工具給 DeepSeek → 模型決定呼叫哪個技能 → shell-out 執行 → 結果回饋 → 迴圈直到給出答案。缺技能時自己 `create_skill` 寫一個再用。
 
-## 結構（folder-as-callable）
+## 結構（folder-as-callable ＋ CLI 串連的小檔）
+
+刻意拆到**每檔 <50 行、每個都能單獨 CLI 呼叫**，`hermy` 只是把它們用 CLI 串起來的薄編排器（unix-composition）：
 
 ```
 hermy/
-├─ hermy                主執行檔（Python：技能發現 + DeepSeek function-calling 迴圈 + 記憶）
+├─ hermy                編排器（<50 行）：把 lib/* 用 CLI 串成 agent 迴圈；messages 自管
+├─ lib/                 可單獨呼叫的小原語（每個 <50 行）
+│  ├─ skills-json       掃 skills/ → 印 OpenAI tools JSON（「發現」）
+│  ├─ ds-chat           stdin{messages,tools} → 一次 DeepSeek 呼叫 → stdout message（「腦」）
+│  ├─ run-skill <name>  stdin=參數 → exec skills/<name>/run → stdout 結果（「手」）
+│  └─ mem-append        stdin=一筆 record → append memory/log.ndjson（「記憶」）
+├─ prompt/system.md     system prompt（資料，不是碼）
 ├─ skills/              技能庫（每個子資料夾＝一個工具）
 │  ├─ shell/            範例技能「手」：skill.json + run（sh -c 執行命令）
 │  └─ create_skill/     自我擴展：skill.json + run（寫出新的 skills/<name>/）
 └─ memory/             記憶（log.ndjson，runtime、不進版控）
 ```
+
+每個 `lib/*` 都能自己跑、自己測，例如 `./lib/skills-json`、`echo '{"command":"ls"}' | ./lib/run-skill shell`。`hermy` 迴圈＝`skills-json` → 迴圈{ `ds-chat` → 若有 tool_calls 逐個 `run-skill` → 回饋 } → `mem-append`。
 
 **技能契約**：`skills/<name>/skill.json`＝`{"name","description","parameters":<JSON schema>}`；`skills/<name>/run`＝可執行，**從 stdin 收 JSON 參數、印結果於 stdout**。`_` 開頭資料夾忽略。agent 用 `create_skill` 產出的新技能下一步即可呼叫。
 

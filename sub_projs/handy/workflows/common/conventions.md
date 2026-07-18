@@ -31,7 +31,8 @@
 | `wf` | Fennel（單檔住戶）| **兩層任務派發器**：解析前置旗標（`-b`/`-a`/`-i`/`--`）；argv＝任務、pipe＝上下文。路由順序＝**強制旗標 ＞ `heuristic-route`（關鍵詞 `AGENT-PATS`/`BRAIN-PATS` 比對，免 LLM）＞ `classify`（`llme <ep> --max-tokens 16`，只有前兩者沒定案才呼叫）**；BRAIN→`llme <ep> --stream`，AGENT→`claude -p --permission-mode <WF_PERMISSION>`，`-i`→轉同層 `mail send`（task/ctx 分開傳）。`capture` 用 `io.popen` 收分類輸出。 |
 | `mail` | Fennel（單檔住戶）| **inbox 協議**：子命令 `send`/`list`/`run`。信箱＝`INBOX_DIR`（預設同層 `inbox/`）＋`done/`。`slugify`（UTF-8 安全 `utf8.offset` 限 16 字）＋`unique-path`（撞名補 -n）；`run` 逐封讀信→`claude -p`→退出碼 0 才 `os.rename` 進 `done/`。與 `wf` 共用 `WF_CLAUDE`/`WF_PERMISSION`。 |
 | `inbox/` | 資料（runtime）| mail 的信箱：頂層＝待處理、`done/`＝已處理。`.gitignore` 擋 `*.md`、留 `.gitkeep` 骨架。 |
-| `hermy/hermy` | Python（資料夾型住戶）| hermes 復刻的 **agent loop**：`discover_skills`（掃 `skills/*/skill.json`）→ `tools_payload` → 直打 DeepSeek `/chat/completions`（自管 messages，多輪帶 tool 結果）→ `run_skill`（shell-out `skills/<n>/run`，JSON 參數餵 stdin）→ 迴圈；`memory/log.ndjson` append。 |
-| `hermy/skills/<n>/` | 資料＋腳本 | folder-as-callable 技能：`skill.json`（tool 宣告）＋`run`（收 JSON on stdin、印結果）。種子＝`shell`（手）、`create_skill`（自我擴展，寫新技能）。`_` 開頭忽略。 |
+| `hermy/hermy` | Python（<50 行編排器）| 把 `lib/*` 用 CLI 串成 agent loop：`skills-json` → 迴圈{`ds-chat` → tool_calls 逐個 `run-skill` → 回饋} → `mem-append`。messages 自管（多輪帶 tool 結果）。 |
+| `hermy/lib/*` | Python（各 <50 行、可單獨 CLI 呼叫）| `skills-json`（掃 skills→tools JSON）、`ds-chat`（stdin{messages,tools}→一次 DeepSeek→message）、`run-skill <n>`（shell-out `skills/<n>/run`）、`mem-append`（append `memory/log.ndjson`）。刻意拆小、unix-composition。 |
+| `hermy/skills/<n>/` | 資料＋腳本 | folder-as-callable 技能：`skill.json`（tool 宣告）＋`run`（收 JSON on stdin、印結果）。種子＝`shell`（手）、`create_skill`（自我擴展，寫新技能）。`_` 開頭忽略。`prompt/system.md`＝system prompt（資料）。 |
 
 > 新住戶落地後在此表加列。目前住戶少、一個檔就夠；大了按住戶拆成 `common/code-map/` 多份子 index。
