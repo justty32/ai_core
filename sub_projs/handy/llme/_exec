@@ -13,6 +13,12 @@
 ;; 環境變數：
 ;;   LLME_LLM         覆寫要轉呼的 llm 執行檔（預設 "llm"；測試設 echo 可看轉出的參數）
 ;;   LLME_CONFIG_DIR  覆寫 config 目錄（預設＝本 script 同層的 configs/）
+;;   <自動注入 api key>  呼叫 <endpoint> 時，若使用者沒自帶 --api-key，依序找：
+;;                      ① LLME_KEY_<EP>（llme 專屬覆寫）
+;;                      ② <EP>_API_KEY（通用 provider 慣例，如 DEEPSEEK_API_KEY）
+;;                      找到就自動補 --api-key <值>；<EP>＝endpoint 名大寫、非英數轉 _。
+;;                      本地免 key 的 endpoint（沒設對應 env）不受影響；使用者自帶
+;;                      --api-key 則一律尊重、不覆寫（keyless config 的 secret 不落版控）。
 
 (fn getenv-nonempty [k]
   (let [v (os.getenv k)]
@@ -77,8 +83,33 @@
 
 (local llm (or (getenv-nonempty "LLME_LLM") "llm"))
 
-;; 組轉發命令：llm --config <cfg> <argv[2..]>
+;; endpoint 名 → env 慣例的大寫識別子（非英數→_，如 deep-seek → DEEP_SEEK）
+(fn env-stem [s] (: (s:upper) :gsub "[^%w]" "_"))
+
+;; 使用者是否已自帶 --api-key（含 --api-key=… 形式）？有就不自動注入、尊重之。
+(fn user-gave-api-key? []
+  (var found false)
+  (for [i 2 (length arg)]
+    (let [a (. arg i)]
+      (when (or (= a "--api-key") (a:match "^%-%-api%-key="))
+        (set found true))))
+  found)
+
+;; 自動注入的 api key：LLME_KEY_<EP> ＞ <EP>_API_KEY（皆 nonempty 才算）。
+(fn auto-api-key [ep]
+  (let [stem (env-stem ep)]
+    (or (getenv-nonempty (.. "LLME_KEY_" stem))
+        (getenv-nonempty (.. stem "_API_KEY")))))
+
+;; 組轉發命令：llm --config <cfg> [--api-key <env>] <argv[2..]>
+;; 自動 --api-key 放在使用者參數「之前」——即便真跑到重複，命令列後者覆寫前者
+;; （設定來源：config → 旗標，後蓋前），使用者顯式帶的仍最終生效。
 (local parts [(shquote llm) "--config" (shquote cfg)])
+(when (not (user-gave-api-key?))
+  (let [k (auto-api-key ep)]
+    (when k
+      (table.insert parts "--api-key")
+      (table.insert parts (shquote k)))))
 (for [i 2 (length arg)]
   (table.insert parts (shquote (. arg i))))
 
