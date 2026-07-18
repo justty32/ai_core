@@ -2,15 +2,17 @@
 
 handy = **路徑一（把 OS 當 AI agent）的落地試驗田——一組靈活的小腳本／小程式集，拿現成程式（尤其 [cllm](../cllm/AGENTS.md) 與其 tool）用腳本包裝、按慣例組合**。北極星＝**整個作業系統變成一個 AI agent**（工具集，非單體）。本檔是最頂層路由器：只指向下一層，durable 細節不寫這裡。
 
-## 定位：兩塊共存的試驗田
+## 定位：一塊試驗田，陸續往裡丟小程式
 
-本專案內有兩塊**平行、互不隸屬**的試驗田（可共存、各試各的）：
+**handy 本身就是那一塊試驗田**——一個資料夾，之後往裡面放**一大堆小程式／小腳本**。不預先分格、不搞子田；每個小東西各自成一攤，用同一套方法組合。
+
+頭兩個要住進來的（只是起手，不是全部）：
 
 ```
 handy/
-├─ llme/    試驗田 A：cllm 之上的多 endpoint dispatcher
+├─ llme     cllm 之上的多 endpoint dispatcher
 │           （資料夾＝callable：_exec ＋各 endpoint config，外面 llme.sh 轉發）
-└─ daemon/  試驗田 B：常駐 server，client 注入命令
+└─ daemon   常駐 server，client 注入命令
             （開新 agent＝claude -p；操縱活 agent＝讓它自己 poll 檔案讀命令）
 ```
 
