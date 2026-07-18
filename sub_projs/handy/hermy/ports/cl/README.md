@@ -23,8 +23,10 @@
   - `skills-json` / `mem-append` / `hermy` 的 messages 增修全走 `jq`。
 - **messages 陣列存成 JSON 字串**，用 `jq` 增修（`. + [$msg]`、`--argjson` 帶入），大陣列一律走 **stdin**
   餵 jq（避開 Linux 單一 argv 128KB 上限）。
-- **共用碼抽到 `src/util.lisp`**：各檔 `(load)` 它，用 `*load-truename*` 定位（**自動解 symlink**）。
-  提供 `run`（shell-out）/`jq`/`env`/`slurp`/`read-file`/`emit`/`iso-now` 等。
+- **CLI 薄殼各 5 行、邏輯全在庫**：每個可執行檔（`hermy`＋`lib/*`）只做「載入 `src/util.lisp`＋
+  呼叫一個 main」，**≤10 行**；所有邏輯（含各工具的 main 與 `run`/`jq`/`env`/I/O 助手）都在
+  `src/util.lisp` 的 **`package hermy`**（195 行，不限）。庫**自己**從 `*load-truename*` 算出 `*root*`
+  （**自動解 symlink**），故 CLI 不必設路徑。要重用就 `(load …/util.lisp)` 後 `(hermy:orchestrate)` 等。
 - **UTF-8 全程**：`sb-impl::*default-external-format* = :utf-8`、`run-program :external-format :utf-8`，
   argv／檔名／stdin／stdout／子行程輸出皆不亂碼（已驗中文與 emoji）。
 - **細節偏差**：`iso-now` 為秒級 UTC（原版 Python `isoformat()` 帶微秒）；`run-skill` 未套原版的
@@ -42,17 +44,20 @@ echo "把 37 度攝氏轉華氏" | ./hermy
 
 ```
 ports/cl/
-├─ hermy                編排器：把 lib/* 用 CLI 串成 agent 迴圈；messages 以 JSON 字串＋jq 自管
-├─ lib/                 可單獨呼叫的小原語
-│  ├─ skills-json       掃 skills/ → 印 OpenAI tools JSON（「發現」）
-│  ├─ ds-chat           stdin{messages,tools} → curl 一次 DeepSeek 呼叫 → stdout message（「腦」）
-│  ├─ run-skill <name>  stdin=參數 → exec skills/<name>/run → stdout 結果（「手」）
-│  └─ mem-append        stdin=一筆 record → append memory/log.ndjson（「記憶」）
-├─ src/util.lisp        共用碼（shell-out/jq/env/I/O/路徑；各檔 load）
+├─ hermy                CLI 薄殼（5 行）→ (hermy:orchestrate)：agent 迴圈
+├─ lib/                 CLI 薄殼（各 5 行），可單獨呼叫
+│  ├─ skills-json       → (hermy:skills-json)  掃 skills/ → OpenAI tools JSON（「發現」）
+│  ├─ ds-chat           → (hermy:ds-chat)      stdin{messages,tools} → curl 一次 DeepSeek → message（「腦」）
+│  ├─ run-skill <name>  → (hermy:run-skill)    stdin=參數 → exec skills/<name>/run（「手」）
+│  └─ mem-append        → (hermy:mem-append)   stdin=record → append memory/log.ndjson（「記憶」）
+├─ src/util.lisp        ★ 庫（package hermy，195 行）：所有邏輯 + shell-out/jq/env/I/O 助手
 ├─ prompt/system.md     system prompt（資料）
 ├─ skills/              技能庫（種子 shell/、create_skill/ 沿用原版，run 可為任何語言）
 └─ memory/             記憶（log.ndjson，runtime、不進版控）
 ```
+
+> **設計**：CLI 是純入口（≤10 行），邏輯集中在庫、需要才 `(load)`。這正是把「可重用的東西抽出來、
+> 有需要再 import」推到極致——換掉某個 main 的行為只改庫、不動 CLI。
 
 單獨測（免 API）：`./lib/skills-json`、`echo '{"command":"ls"}' | ./lib/run-skill shell`。
 

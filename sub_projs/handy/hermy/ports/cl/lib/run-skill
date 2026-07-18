@@ -1,21 +1,5 @@
 #!/usr/bin/sbcl --script
-;; run-skill <name> — stdin=參數 JSON → exec <skills>/<name>/run → stdout=結果（截斷保護）。
-;; 「手」的最小單元：shell-out 呼叫一個 folder-as-callable 技能。
-(defparameter *root* (make-pathname :directory (butlast (pathname-directory *load-truename*))))
-(load (merge-pathnames "src/util.lisp" *root*))
-
-(let* ((name (second sb-ext:*posix-argv*))
-       (runp (and name (merge-pathnames "run"
-                         (merge-pathnames (format nil "~a/" name) (skills-dir))))))
-  (if (or (not name) (not (probe-file runp)))
-      (progn (emit (format nil "[找不到技能 ~a]" (or name ""))) (sb-ext:exit :code 0))
-      (let ((args (slurp)))
-        (handler-case
-            (multiple-value-bind (o e c) (run (namestring runp) '() :input args)
-              (let ((out (trim o)))
-                (when (/= c 0)
-                  (let ((es (trim e)))
-                    (setf out (format nil "[退出碼 ~a] ~a" c (if (plusp (length es)) es out)))))
-                (emit (if (plusp (length out)) (subseq out 0 (min 8000 (length out)))
-                          "（技能無輸出）"))))
-          (error (x) (emit (format nil "[技能執行失敗] ~a" x)))))))
+;; run-skill <name> — 薄殼：載入庫、跑 hermy:run-skill（exec skills/<name>/run）。
+(load (merge-pathnames "src/util.lisp"
+        (make-pathname :directory (butlast (pathname-directory *load-truename*)))))
+(hermy:run-skill)
