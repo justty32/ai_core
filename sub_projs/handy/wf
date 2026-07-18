@@ -11,9 +11,11 @@
 ;;   cat foo.py | wf 幫我改、加型別註記        pipe＝附給任務的上下文
 ;;   wf -b <任務>                            強制 BRAIN（走 llme，跳過分類）
 ;;   wf -a <任務>                            強制 AGENT（走 claude，跳過分類）
+;;   wf -i <任務>                            非同步投遞 inbox（轉 `mail send`，不當場等）
 ;;   wf < TASK.md                            無參數＝整個 stdin 當任務
 ;;
-;; 太複雜、要跨 session 交接的 → 未來走 inbox 協議（見 WORKFLOWS.md Phase 2）。
+;; 三模式：-b 只需腦(llme) / -a 當場動手(claude) / -i 非同步交接(inbox，由 `mail run` 之後 drain)。
+;; auto（不給旗標）只在 brain/agent 之間分類；「太複雜、不想當場等」時自己用 -i 投 inbox。
 ;;
 ;; 環境變數（handy 慣例，改行為不改碼）：
 ;;   WF_ENDPOINT    llme 的 endpoint（預設 "deepseek"；BRAIN 執行與路由分類都用它）
@@ -32,6 +34,10 @@
 (fn shquote [s] (.. "'" (s:gsub "'" "'\\''") "'"))
 (fn trim [s] (or (s:match "^%s*(.-)%s*$") s))
 (fn upper [s] (s:upper))
+
+(fn dirname [path] (or (path:match "(.*)/[^/]*$") "."))
+(fn abspath [path] (if (path:match "^/") path (.. (or (os.getenv "PWD") ".") "/" path)))
+(fn script-dir [] (dirname (abspath (. arg 0))))
 
 ;; stdin 被 pipe / 重導才讀（test -t 0 不讀位元組、安全），避免互動卡等 EOF。
 (fn stdin-piped? []
@@ -52,6 +58,7 @@
         (table.insert words a)
         (or (= a "-b") (= a "--brain")) (set force "brain")
         (or (= a "-a") (= a "--agent")) (set force "agent")
+        (or (= a "-i") (= a "--inbox")) (set force "inbox")
         (= a "--") (set stop true)
         (or (= a "-h") (= a "--help"))
           (do (io.stderr:write "用法：wf [-b|-a] <任務...>；或 … | wf <任務>；或 wf < TASK.md\n"
@@ -106,7 +113,20 @@
 (local route (or force (classify prompt)))
 (io.stderr:write (.. "[wf] 路由：" route (if force "（強制）" (.. "（llme 分類，endpoint=" endpoint "）")) "\n"))
 
-;; ── 執行 ────────────────────────────────────────────────────────────
+;; inbox 模式：非同步投遞，轉呼同層 mail send（task 與 ctx 分開傳，slug 才乾淨），
+;; 不當場等（之後 `mail run` drain）。
+(when (= route "inbox")
+  (let [mail (.. (script-dir) "/mail")
+        send-task (if (< 0 (length task)) task (or ctx ""))
+        base (table.concat [(shquote mail) "send" (shquote send-task)] " ")
+        ;; 有 argv task 且另有 pipe 上下文 → 把 ctx 經 stdin 餵給 mail（它會分欄記）
+        cmd (if (and has-ctx (< 0 (length task)))
+                (.. "printf %s " (shquote ctx) " | " base)
+                base)
+        (_ _ code) (os.execute cmd)]
+    (os.exit (or code 0))))
+
+;; ── 執行（brain / agent 當場跑）──────────────────────────────────────
 (local parts
   (if (= route "brain")
       ;; 只需腦 → llme（DeepSeek）直接答，串流吐出

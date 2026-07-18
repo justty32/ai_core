@@ -1,0 +1,3 @@
+# inbox 投遞區的信件是 runtime 產物，不進版控（狀態靠位置：頂層＝待處理、done/＝已處理）
+*.md
+!.gitkeep

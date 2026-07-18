@@ -1,0 +1,156 @@
+#!/usr/bin/env fennel
+;; mail — inbox 協議的可執行版（工具＝mail、信箱＝inbox/）：把「太複雜、不想當場等」的
+;;        任務寫成一封信投進 inbox/，之後由 `mail run` 逐封 spawn claude code 這類成熟 agent 去做。
+;;
+;; 這是 workflows repo `template/workflows/inbox`（email 式非同步交接）的**可執行復刻**：
+;; 寄出就好、慢一點或沒馬上處理都無妨；狀態靠位置（inbox/ 頂層＝待處理、done/＝已處理）。
+;; 與 `wf` 的差別：wf 是**當場**同步派發（等結果）；mail 是**非同步**投遞（不等，之後 drain）。
+;; （工具不叫 inbox 是因信箱資料夾已佔用 inbox/ 這個路徑；mail↔inbox 正好對上 email 心智。）
+;;
+;;   mail send <任務...>        寫一封信到 inbox/<slug>.md，印出路徑，立即返回
+;;     cat ctx | mail send <任務>   pipe 當上下文寫進信
+;;   mail list                  列出 inbox/ 頂層待處理的信（done/ 不列）
+;;   mail run [slug]            處理：對每封（或指定 slug）spawn claude -p 跑，成功 mv 到 done/
+;;   mail run --dry             只列會處理哪些、不真跑
+;;
+;; 環境變數：
+;;   INBOX_DIR      投遞區（預設＝本 script 同層的 inbox/）
+;;   WF_CLAUDE      claude 執行檔（預設 "claude"；測試設 echo）  ← 與 wf 共用
+;;   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"）← 與 wf 共用
+
+(fn getenv-nonempty [k]
+  (let [v (os.getenv k)]
+    (if (and v (not= v "")) v nil)))
+
+(fn shquote [s] (.. "'" (s:gsub "'" "'\\''") "'"))
+(fn trim [s] (or (s:match "^%s*(.-)%s*$") s))
+(fn gsub1 [s pat rep] (let [(r _) (s:gsub pat rep)] r))
+
+(fn dirname [path] (or (path:match "(.*)/[^/]*$") "."))
+(fn abspath [path]
+  (if (path:match "^/") path (.. (or (os.getenv "PWD") ".") "/" path)))
+(fn script-dir [] (dirname (abspath (. arg 0))))
+
+(fn file-exists? [p]
+  (let [f (io.open p "r")] (if f (do (f:close) true) false)))
+
+(fn read-file [p]
+  (with-open [f (io.open p "r")] (if f (f:read "*a") nil)))
+
+(fn write-file [p body]
+  (with-open [f (io.open p "w")] (f:write body)))
+
+(fn stdin-piped? [] (not (os.execute "test -t 0")))
+
+;; 掃某目錄頂層的 <name>.md（不遞迴、done/ 不含）。借 ls（只讀）。
+(fn list-md [dir]
+  (let [out []]
+    (with-open [p (io.popen (.. "ls -1 " (shquote dir) " 2>/dev/null"))]
+      (each [line (p:lines)]
+        (let [stem (line:match "^(.+)%.md$")]
+          (when stem (table.insert out stem)))))
+    out))
+
+(local inbox-dir (or (getenv-nonempty "INBOX_DIR") (.. (script-dir) "/inbox")))
+(local done-dir (.. inbox-dir "/done"))
+
+(fn ensure-dirs [] (os.execute (.. "mkdir -p " (shquote done-dir))))
+
+;; 取前 n 個「字元」（UTF-8 安全，不切半個字）；無 utf8 庫則退回估算 byte 數。
+(fn utf8-head [s n]
+  (if (and _G.utf8 _G.utf8.offset)
+      (let [cut (_G.utf8.offset s (+ n 1))]
+        (if cut (string.sub s 1 (- cut 1)) s))
+      (string.sub s 1 (* n 3))))
+
+;; slug：任務前段轉 kebab、去掉檔名不安全字元、限 16 字（UTF-8 安全）；撞名補 -2/-3…
+(fn slugify [task]
+  (var t (trim task))
+  (set t (gsub1 t "%s+" "-"))
+  (set t (gsub1 t "[/\\:*?\"'<>|]" ""))
+  (set t (gsub1 t "%-+" "-"))
+  (set t (gsub1 t "^%-" ""))
+  (set t (utf8-head t 16))
+  (set t (gsub1 t "%-$" ""))
+  (if (= t "") "task" t))
+
+(fn unique-path [slug]
+  (var p (.. inbox-dir "/" slug ".md"))
+  (var n 2)
+  (while (file-exists? p)
+    (set p (.. inbox-dir "/" slug "-" n ".md"))
+    (set n (+ n 1)))
+  p)
+
+;; ── 子命令 ──────────────────────────────────────────────────────────
+(local sub (. arg 1))
+
+(fn do-send []
+  (let [words []]
+    (for [i 2 (length arg)] (table.insert words (. arg i)))
+    (let [task (table.concat words " ")
+          ctx (if (stdin-piped?) (trim (io.read "*a")) nil)
+          has-ctx (and ctx (< 0 (length ctx)))]
+      (when (and (= 0 (length task)) (not has-ctx))
+        (io.stderr:write "用法：mail send <任務...>（或 … | mail send <任務>）\n")
+        (os.exit 2))
+      (let [real-task (if (< 0 (length task)) task ctx)
+            slug (slugify real-task)
+            path (unique-path slug)
+            body (.. "# " slug "\n\n## 任務\n" real-task "\n\n## 上下文\n"
+                     (if (and has-ctx (< 0 (length task))) ctx "（無）") "\n\n"
+                     "---\n（此信由 handy inbox 投遞；請完整完成信中的任務。處理者會於完成後將本信歸檔到 done/。）\n")]
+        (ensure-dirs)
+        (write-file path body)
+        (io.write (.. "已投遞：" path "\n"))
+        (os.exit 0)))))
+
+(fn do-list []
+  (let [pending (list-md inbox-dir)]
+    (if (= 0 (length pending))
+        (io.write "（inbox 空：沒有待處理的信）\n")
+        (do (io.write (.. "待處理的信（" (length pending) "）：\n"))
+            (each [_ s (ipairs pending)] (io.write (.. "  " s "\n")))))
+    (os.exit 0)))
+
+(fn do-run []
+  (let [claude (or (getenv-nonempty "WF_CLAUDE") "claude")
+        permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits")
+        arg2 (. arg 2)
+        dry (= arg2 "--dry")
+        only (if (and arg2 (not dry)) arg2 nil)
+        pending (if only [only] (list-md inbox-dir))]
+    (when (= 0 (length pending))
+      (io.write "（inbox 空：無事可做）\n") (os.exit 0))
+    (ensure-dirs)
+    (var failed 0)
+    (each [_ slug (ipairs pending)]
+      (let [path (.. inbox-dir "/" slug ".md")]
+        (if (not (file-exists? path))
+            (do (io.stderr:write (.. "跳過（找不到）：" slug "\n")) (set failed (+ failed 1)))
+            (let [letter (or (read-file path) "")
+                  prompt (.. "以下是一封待處理的任務信，請完整完成信中的任務：\n\n" letter)]
+              (io.write (.. "\n=== 處理：" slug " ===\n"))
+              (if dry
+                  (io.write "  [--dry] 略過不跑\n")
+                  (let [cmd (table.concat
+                              [(shquote claude) "-p" "--permission-mode" (shquote permission)
+                               "--" (shquote prompt)] " ")
+                        (_ _ code) (os.execute cmd)]
+                    (if (or (= code 0) (= code nil))
+                        (let [dst (.. done-dir "/" slug ".md")]
+                          (os.rename path dst)
+                          (io.write (.. "  ✓ 完成，歸檔 → done/" slug ".md\n")))
+                        (do (io.stderr:write (.. "  ✗ claude 退出碼 " (tostring code) "，保留在 inbox（未歸檔）\n"))
+                            (set failed (+ failed 1))))))))))
+    (os.exit (if (> failed 0) 1 0))))
+
+(if (or (= sub "send"))            (do-send)
+    (or (= sub "list") (= sub "ls")) (do-list)
+    (= sub "run")                  (do-run)
+    (do (io.stderr:write
+          "用法：mail <send|list|run>\n"
+          "  send <任務...>   投遞一封信到 inbox/（… | mail send <任務> 可帶上下文）\n"
+          "  list             列出待處理的信\n"
+          "  run [slug|--dry] 逐封 spawn claude 處理，成功歸檔到 done/\n")
+        (os.exit (if (= sub nil) 2 0))))

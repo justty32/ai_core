@@ -12,6 +12,7 @@
 | 「用 llme 換 endpoint／加一個 endpoint config」 | **llme** | [llme/README.md](llme/README.md) |
 | 「調 zhtw／照 zhtw 做一個新人格薄包裝」 | **zhtw**（範例住戶）| `zhtw` 檔頭註解 |
 | 「**把一個任務丟給 agent 去做**（問答/生成 or 動手改程式）」 | **wf** | `wf` 檔頭註解 |
+| 「**非同步交接複雜任務**／看信箱／drain inbox」 | **inbox 協議（`mail`）** | [workflows/inbox.md](workflows/inbox.md) |
 | 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 | 「開發環境 / 後端 / build / fresh clone 要做什麼」 | **dev-env** | [workflows/dev-env.md](workflows/dev-env.md) |
 
@@ -38,7 +39,7 @@
 [`~/repo/workflows`](/home/lorkhan/repo/workflows) 那套是**給人開的 Claude Code 照著跑的 markdown 提示**。handy 用**可執行工具集復刻其功能**、且**基於自己的 stack**：
 
 - **`wf`（可用・MVP）**：`./wf <任務>` **兩層派發**——先用 **llme(DeepSeek) 當路由腦**判「要不要動手」：只需腦（問答/翻譯/生成）→ **llme** 直接答（便宜、純 handy stack）；要動手（改檔/跑指令）→ **claude -p** headless agent 在當前目錄動手。`-b`/`-a` 強制。入口＝`wf` 檔頭。
-- **inbox 協議（未做）**：太複雜、要跨 session 交接的任務走 email 式交接給更成熟的 agent（見 workflows repo `template/workflows/inbox`）——由 `wf` 在複雜任務時採用。**待動手**，見 [SESSION-LOG](SESSION-LOG.md)。
+- **inbox 協議（可用・MVP）**：太複雜、要跨 session 交接的任務走 email 式非同步交接——工具 `mail`（`send`/`list`/`run`）＋信箱 `inbox/`，`mail run` 逐封 spawn claude code 處理、成功歸檔 `done/`；`wf -i` 亦可投遞。細節 [workflows/inbox.md](workflows/inbox.md)。
 
 > 上面的 markdown 定期工作流（tick/routines/schedule）是**給 agent session 照著跑的形式**；`wf` 是**讓派發變裸命令**的執行檔，兩者並存不衝突。
 

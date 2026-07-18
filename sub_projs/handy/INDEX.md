@@ -14,7 +14,10 @@
 |------|------|
 | `llme/` | 住戶①：cllm 之上的**多 endpoint dispatcher**（資料夾＝callable）。入口 [llme/README.md](llme/README.md)。內：`_exec`（shell shim 入口）→ `_exec.fnl`（Fennel 本體）＋ `configs/<endpoint>.json`；外殼 `llme.sh` 轉發。 |
 | `zhtw` | 住戶②：**薄包裝範例**（單檔 Fennel）——固定取樣參數＋system＋前置，轉呼 `llme deepseek`（繁中翻譯人格）。入口＝檔頭註解。 |
-| `workflows/` | 工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）：`new-resident.md`、`dev-env.md`、定期 `tick`/`routines`/`schedule`、`common/`（`gotchas.md`＋`conventions.md` code map）。 |
+| `wf` | 住戶：**兩層任務派發器**（單檔 Fennel）——llme 路由腦判 brain/agent、`-i` 投 inbox。入口＝檔頭註解。 |
+| `mail` | 住戶：**inbox 協議執行檔**（單檔 Fennel）——`send`/`list`/`run`，非同步交接。入口＝檔頭註解＋[workflows/inbox.md](workflows/inbox.md)。 |
+| `inbox/` | mail 的**信箱**（投遞區）＋ `done/`（歸檔）。信件是 runtime 產物、不進版控。 |
+| `workflows/` | 工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）：`new-resident.md`、`dev-env.md`、`inbox.md`、定期 `tick`/`routines`/`schedule`、`common/`（`gotchas.md`＋`conventions.md` code map）。 |
 | `.claude/commands/` | slash 指令（[`/wf-tick`](.claude/commands/wf-tick.md) 驅動定期心跳）|
 
 > 某住戶內部複雜就在它自己的資料夾放 README/INDEX，本檔只留一句話＋連結——本檔永遠只描述「頂層」。
@@ -25,8 +28,9 @@
 |------|------|--------|------|
 | **llme** | 可用・已驗真後端 | 換 endpoint 名＝換模型；auto-inject api key | [llme/README.md](llme/README.md) |
 | **zhtw** | 可用 | 繁中翻譯薄包裝；stdin 管線公民 | 檔頭註解 |
-| **wf** | 可用（MVP）| **兩層任務派發器**：llme(DeepSeek) 當路由腦判「要不要動手」→ 只需腦走 `llme`、要動手走 `claude -p`。`-b`/`-a` 強制。 | `wf` 檔頭註解 |
-| **daemon** | 待動手 | 常駐小程式，client 寫命令進檔/socket → `claude -p` headless run | 見 [dev-env](workflows/dev-env.md)「daemon 觸發條件」＋ [SESSION-LOG](SESSION-LOG.md) |
+| **wf** | 可用（MVP）| **兩層任務派發器**：llme(DeepSeek) 當路由腦判「要不要動手」→ 只需腦走 `llme`、要動手走 `claude -p`；`-b`/`-a`/`-i` 三模式。 | `wf` 檔頭註解 |
+| **mail** | 可用（MVP）| **inbox 協議執行檔**：`send`/`list`/`run`，非同步交接複雜任務給 claude code | `mail` 檔頭＋[workflows/inbox.md](workflows/inbox.md) |
+| **daemon** | 待動手 | 常駐小程式，client 寫命令進檔/socket → `claude -p` headless run；可常駐 drain inbox | 見 [dev-env](workflows/dev-env.md)「daemon 觸發條件」＋ [SESSION-LOG](SESSION-LOG.md) |
 
 ## 不重造（本專案吃現成、別憑記憶重建）
 
