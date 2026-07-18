@@ -131,7 +131,7 @@ footer .mono{color:var(--ink)}
   <p class="thesis">一組 folder-as-callable 的小工具——拿現成程式用腳本薄殼包裝、按慣例組合。
     LLM 只是其中一個工具；後端換到 DeepSeek。這一輪，它從兩支薄包裝長成一套會自我擴展的 agent 工具集。</p>
   <div class="meta"><span>更新 <b>2026-07-18</b></span><span>住戶 <b>5</b></span>
-    <span>本輪 commit <b>14</b></span><span>語言 <b>Fennel · Python · C++ · Lua · CL</b></span></div>
+    <span>本輪 commit <b>16</b></span><span>語言 <b>Fennel · Python · C++ · Lua · CL · s7</b></span></div>
 </div></header>
 
 <div class="wrap">
@@ -215,12 +215,13 @@ footer .mono{color:var(--ink)}
 <b>lib/ds-chat</b>      stdin{messages,tools} → 一次 DeepSeek → message <span class="c">（腦）</span>
 <b>lib/run-skill</b>    exec skills/&lt;n&gt;/run              <span class="c">（手）</span>
 <b>lib/mem-append</b>   append memory/log.ndjson         <span class="c">（記憶）</span></pre>
-  <p class="lead" style="margin-top:18px">同一套拆解移植到四語言（<code>ports/{cpp,lua,cl,fennel}/</code>），統一用
+  <p class="lead" style="margin-top:18px">同一套拆解移植到五語言（<code>ports/{cpp,lua,cl,fennel,s7}/</code>），統一用
     <b>curl</b>（HTTP）＋<b>jq</b>（JSON）當現成引擎、語言只當 glue。各版都用真 DeepSeek 驗過：
     工具迴圈算出 <code>3^4=81</code>、自我擴展當場自寫 <code>rev</code> 技能把 <code>handy</code> 反轉成 <code>ydnah</code>。</p>
-  <p class="lead" style="margin-top:6px">Lisp 家族（<code>cl</code>／<code>fennel</code>，「load 即定義」）更把每個 CLI 收成
-    <b>5–6 行薄殼</b>——只「載入庫＋呼叫一個 main」，邏輯全推進庫（<code>util.lisp</code> 195 行／<code>util.fnl</code> 203 行），
-    庫自己從載入路徑算根、CLI 連路徑都不必管。</p>
+  <p class="lead" style="margin-top:6px">Lisp 家族（<code>cl</code>／<code>fennel</code>／<code>s7</code>）把每個 CLI 收成
+    <b>5–6 行薄殼</b>——邏輯全推進庫（<code>util.lisp</code> 195／<code>util.fnl</code> 203／<code>util.scm</code> 288）。
+    <code>cl</code>／<code>fennel</code> 靠載入路徑自算根、薄殼是該語言本身；<code>s7</code> 拿不到自身路徑，薄殼改用
+    <b>shell shim</b>（算根＋跑 cllm 的 <code>llm-s7</code>）——正是 handy「拿現成用薄殼包」的一貫手法。</p>
 </section>
 
 <section>
@@ -288,6 +289,7 @@ mail send 幫我重構 utils.py  →  mail list  →  mail run
     <li><span class="h">9dceab4</span> <span class="d">CL 版 CLI 收成 5 行薄殼</span> <small>邏輯全進 util.lisp 庫</small></li>
     <li><span class="h">12332eb</span> <span class="d">overview.html 速覽</span> <small>（就是本頁）</small></li>
     <li><span class="h">e65ea50</span> <span class="d">hermy Fennel 版</span> <small>薄殼各 6 行＋util.fnl 庫</small></li>
+    <li><span class="h">d52b0ee</span> <span class="d">hermy s7 版</span> <small>6 行 shell shim＋util.scm 庫（llm-s7）</small></li>
   </ol>
 </section>
 
