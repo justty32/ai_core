@@ -1,0 +1,6 @@
+#!/usr/bin/env fennel
+;; ds-chat — 薄殼：載入庫、跑 (util.ds-chat)（stdin{messages,tools} → curl 一次 DeepSeek → message）。
+(local fennel (require :fennel))
+(local here (: (. arg 0) :match "^(.*)/[^/]*$"))
+(set fennel.path (.. here "/src/?.fnl;" here "/../src/?.fnl;" fennel.path))
+((. (require :util) :ds-chat))

@@ -1,0 +1,6 @@
+#!/usr/bin/env fennel
+;; mem-append — 薄殼：載入庫、跑 (util.mem-append)（stdin=record → append memory/log.ndjson）。
+(local fennel (require :fennel))
+(local here (: (. arg 0) :match "^(.*)/[^/]*$"))
+(set fennel.path (.. here "/src/?.fnl;" here "/../src/?.fnl;" fennel.path))
+((. (require :util) :mem-append))

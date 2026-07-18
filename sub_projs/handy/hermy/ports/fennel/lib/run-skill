@@ -1,0 +1,6 @@
+#!/usr/bin/env fennel
+;; run-skill <name> — 薄殼：載入庫、跑 (util.run-skill)（stdin=參數 → exec skills/<name>/run）。
+(local fennel (require :fennel))
+(local here (: (. arg 0) :match "^(.*)/[^/]*$"))
+(set fennel.path (.. here "/src/?.fnl;" here "/../src/?.fnl;" fennel.path))
+((. (require :util) :run-skill))

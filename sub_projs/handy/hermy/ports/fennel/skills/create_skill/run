@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# create_skill 技能（自我擴展）：收 {name, description, parameters, run_code} 於 stdin，
+# 在 skills/<name>/ 寫出 skill.json + run（chmod +x），下一步 agent 即可呼叫。
+import json, os, re, stat, sys
+from pathlib import Path
+
+# 本技能位於 skills/create_skill/，其上層即技能總目錄。
+SKILLS_DIR = Path(__file__).resolve().parent.parent
+
+args = json.loads(sys.stdin.read() or "{}")
+name = (args.get("name") or "").strip()
+if not re.fullmatch(r"[A-Za-z0-9_]+", name):
+    print("[create_skill] name 需為英數與底線"); sys.exit(0)
+if name.startswith("_"):
+    print("[create_skill] name 不可用 _ 開頭"); sys.exit(0)
+run_code = args.get("run_code") or ""
+if not run_code.strip():
+    print("[create_skill] 缺 run_code"); sys.exit(0)
+
+d = SKILLS_DIR / name
+d.mkdir(parents=True, exist_ok=True)
+spec = {
+    "name": name,
+    "description": args.get("description", ""),
+    "parameters": args.get("parameters") or {"type": "object", "properties": {}},
+}
+(d / "skill.json").write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+run = d / "run"
+run.write_text(run_code, encoding="utf-8")
+run.chmod(run.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+print(f"已建立技能 {name} → {d}（下一步即可呼叫）")
