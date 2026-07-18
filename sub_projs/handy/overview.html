@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>handy — 速覽</title>
+<style>
+:root{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --serif:"Songti TC","Noto Serif TC","Source Han Serif TC",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+    --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+    --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+  --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+  --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;
+}
+:root[data-theme="light"]{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.65;font-size:16px;letter-spacing:.01em}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600}
+
+/* header */
+header{border-bottom:1px solid var(--border);background:
+  linear-gradient(180deg,var(--surface),var(--bg));padding:56px 0 40px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2rem,5vw,3rem);margin:.4em 0 .1em;
+  text-wrap:balance;letter-spacing:.01em}
+.thesis{color:var(--muted);font-size:1.08rem;max-width:60ch;margin:.5em 0 0}
+.meta{margin-top:20px;font-family:var(--mono);font-size:.8rem;color:var(--muted);
+  display:flex;gap:18px;flex-wrap:wrap}
+.meta b{color:var(--ink);font-weight:600}
+
+/* tldr */
+.tldr{background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;
+  padding:20px 24px;margin:34px 0;font-size:1.02rem}
+.tldr .eyebrow{display:block;margin-bottom:8px}
+
+section{padding:38px 0;border-top:1px solid var(--rule)}
+h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:.2em 0 .1em;text-wrap:balance}
+.lead{color:var(--muted);margin:.3em 0 1.3em;max-width:64ch}
+
+/* resident cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;
+  display:flex;flex-direction:column;gap:7px}
+.card .name{font-family:var(--mono);font-weight:700;font-size:1.02rem}
+.card p{margin:0;color:var(--muted);font-size:.92rem;flex:1}
+.card .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px}
+.tag{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:999px;
+  letter-spacing:.03em;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.plan{background:var(--plan-bg);color:var(--plan)}
+
+/* concept row */
+.concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:6px}
+.concept{border-left:2px solid var(--accent);padding:2px 0 2px 16px}
+.concept h3{margin:0 0 4px;font-size:1rem;font-family:var(--mono);font-weight:700}
+.concept p{margin:0;color:var(--muted);font-size:.9rem}
+
+/* map / mapping table */
+.map{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;background:var(--surface)}
+.map>div{padding:12px 16px;border-bottom:1px solid var(--border)}
+.map>div:nth-child(odd){background:var(--surface2);font-family:var(--mono);font-size:.86rem;font-weight:600}
+.map>div:nth-child(4n-1),.map>div:nth-child(4n){border-bottom:1px solid var(--border)}
+.map .h{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);background:var(--surface)!important}
+@media(max-width:560px){.map{grid-template-columns:1fr}.map>div:nth-child(odd){border-bottom:none}}
+
+/* code */
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;
+  overflow-x:auto;font-family:var(--mono);font-size:.86rem;line-height:1.7;margin:0}
+pre .c{color:var(--muted)}
+pre b{color:var(--accent);font-weight:600}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--rule)}
+.tl li{position:relative;padding:0 0 18px 22px}
+.tl li::before{content:"";position:absolute;left:-7px;top:6px;width:10px;height:10px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--bg)}
+.tl .h{font-family:var(--mono);font-size:.78rem;color:var(--accent);font-weight:600}
+.tl .d{color:var(--ink)}
+.tl small{color:var(--muted)}
+
+/* open items */
+ul.open{margin:0;padding-left:1.1em;color:var(--ink)}
+ul.open li{margin:.35em 0}
+ul.open li::marker{color:var(--plan)}
+
+footer{border-top:1px solid var(--border);padding:28px 0 56px;color:var(--muted);font-size:.9rem}
+footer .mono{color:var(--ink)}
+
+.toggle{position:fixed;top:14px;right:14px;font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:999px;
+  padding:6px 12px;cursor:pointer}
+.toggle:hover{color:var(--accent);border-color:var(--accent)}
+@media(prefers-reduced-motion:no-preference){
+  section,.card,.tldr{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<button class="toggle" id="tg" aria-label="切換深淺色">◐ 主題</button>
+
+<header><div class="wrap">
+  <span class="eyebrow">路徑一 · OS 當 AI agent 的試驗田</span>
+  <h1>handy 生長記</h1>
+  <p class="thesis">一組 folder-as-callable 的小工具——拿現成程式用腳本薄殼包裝、按慣例組合。
+    LLM 只是其中一個工具；後端換到 DeepSeek。這一輪，它從兩支薄包裝長成一套會自我擴展的 agent 工具集。</p>
+  <div class="meta"><span>更新 <b>2026-07-18</b></span><span>住戶 <b>5</b></span>
+    <span>本輪 commit <b>11</b></span><span>語言 <b>Fennel · Python · C++ · Lua · CL</b></span></div>
+</div></header>
+
+<div class="wrap">
+
+<div class="tldr">
+  <span class="eyebrow">一句話</span>
+  handy 這一輪：① 資料夾改成<b>分層工作流</b>骨架；② 四個薄工具（<code>llme</code> · <code>zhtw</code> ·
+  <code>wf</code> · <code>mail</code>）都接上 DeepSeek；③ 用 handy 思想<b>復刻 hermes-agent</b> 成
+  <code>hermy</code>——一個會自寫技能的 agent，再把它拆成每檔 &lt;50 行的 CLI 小檔、移植到 C++/Lua/CL。
+</div>
+
+<section>
+  <span class="eyebrow">住戶地圖</span>
+  <h2>五個住戶，各自一攤</h2>
+  <p class="lead">每個都是獨立可跑、可單獨測的小程式；彼此用 CLI 串連。狀態與載體如下。</p>
+  <div class="grid">
+    <div class="card"><span class="name">llme</span>
+      <p>多 endpoint dispatcher：<code>llme &lt;endpoint&gt;</code> 換名＝換模型，缺 key 時自動從環境注入。</p>
+      <div class="foot"><span class="tag">Fennel · 118 行</span><span class="pill ok">可用</span></div></div>
+    <div class="card"><span class="name">zhtw</span>
+      <p>繁中翻譯薄包裝：把取樣參數＋人格烤死，只留輸入。有位置參數用參數、否則讀 stdin（管線公民）。</p>
+      <div class="foot"><span class="tag">Fennel · 54 行</span><span class="pill ok">可用</span></div></div>
+    <div class="card"><span class="name">wf</span>
+      <p>兩層任務派發器：先啟發式判「要不要動手」，只需腦走 <code>llme</code>、要動手走 <code>claude</code>、
+        非同步走 <code>mail</code>。</p>
+      <div class="foot"><span class="tag">Fennel · 181 行</span><span class="pill ok">可用</span></div></div>
+    <div class="card"><span class="name">mail</span>
+      <p>inbox 協議：把太複雜、不想當場等的任務寫成信投遞，<code>mail run</code> 之後逐封交給 claude 處理。</p>
+      <div class="foot"><span class="tag">Fennel · 156 行</span><span class="pill ok">可用</span></div></div>
+    <div class="card"><span class="name">hermy</span>
+      <p>hermes-agent 的 handy 化復刻：DeepSeek 當腦、技能資料夾當手、會用 <code>create_skill</code> 自寫新技能。</p>
+      <div class="foot"><span class="tag">Python · 46 行 + lib</span><span class="pill ok">可用 MVP</span></div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">地基</span>
+  <h2>三條照抄的慣例</h2>
+  <p class="lead">新住戶站在這三條上，不必每次重想。</p>
+  <div class="concepts">
+    <div class="concept"><h3>folder-as-callable</h3>
+      <p>一個資料夾＝一個可呼叫物：固定名入口＋各自的 config／腳本。技能、endpoint、住戶都是這形狀。</p></div>
+    <div class="concept"><h3>stdin 管線公民</h3>
+      <p>無位置參數就讀 stdin，讓每個工具都能進 unix 管線：<code>cat x | zhtw</code>、<code>… | wf</code>。</p></div>
+    <div class="concept"><h3>部分求值</h3>
+      <p>能用固定腳本判斷／輸出的環節就別呼叫 LLM。<code>wf</code> 用關鍵詞先判路由，清楚的任務 0 個 LLM call。</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">骨架化</span>
+  <h2>資料夾改成分層工作流</h2>
+  <p class="lead">AGENTS.md 從臃腫瘦成薄路由器（69→42 行），durable 知識分層下放——要什麼順著樹往下走。</p>
+<pre><span class="c"># 最頂層只做路由，細節都在下一層</span>
+<b>AGENTS.md</b>        薄路由器：一句話定位 + 鐵律 + 指向下層
+  ├─ <b>WORKFLOWS.md</b>   依意圖派發到各住戶/工作流
+  ├─ <b>INDEX.md</b>       repo 結構地圖 + 住戶表 + 不重造清單
+  ├─ <b>SESSION-LOG</b>    進度（只列 open）   <b>WAIT_USER</b>  待使用者
+  ├─ <b>DEV-GUIDE.md</b>   結構整理原則（膨脹即拆，被動參考）
+  └─ <b>workflows/</b>
+       ├─ common/  gotchas 踩坑 · conventions <span class="c">←含 code map</span>
+       ├─ dev-env · new-resident（加住戶方法論）
+       └─ tick · routines · schedule（定期喚醒）
+<span class="c"># 另：llme 的 _exec 拆成 shell 薄殼 → _exec.fnl（讓 .fnl 拿語法高亮）</span></pre>
+</section>
+
+<section>
+  <span class="eyebrow">hermy</span>
+  <h2>用 handy 思想復刻 hermes-agent</h2>
+  <p class="lead">不抄它三千個檔，抓本質用 handy 的方式落地：一個會從經驗長出技能的 agent，後端 DeepSeek。</p>
+  <div class="map">
+    <div class="h">hermes 核心</div><div class="h">hermy 的 handy 化</div>
+    <div>Skills（腳本包成工具、能 create_skill 自產）</div><div>folder-as-callable：<code>skills/&lt;n&gt;/</code>＝<code>skill.json</code>＋<code>run</code>；<code>create_skill</code>＝AI 自我擴展</div>
+    <div>對話迴圈（模型→工具→結果→迴圈）</div><div>DeepSeek function-calling 迴圈＋shell-out 執行技能</div>
+    <div>記憶（對話後同步、檔案化）</div><div><code>memory/log.ndjson</code> append-log</div>
+    <div>LLM provider</div><div>DeepSeek（<code>deepseek-chat</code>）</div>
+  </div>
+  <p class="lead" style="margin-top:22px">再拆成每檔 &lt;50 行、可單獨 CLI 呼叫的小檔（unix-composition）：</p>
+<pre><b>hermy</b>            編排器（46 行）：把 lib/* 用 CLI 串成迴圈
+<b>lib/skills-json</b>  掃 skills/ → OpenAI tools JSON   <span class="c">（發現）</span>
+<b>lib/ds-chat</b>      stdin{messages,tools} → 一次 DeepSeek → message <span class="c">（腦）</span>
+<b>lib/run-skill</b>    exec skills/&lt;n&gt;/run              <span class="c">（手）</span>
+<b>lib/mem-append</b>   append memory/log.ndjson         <span class="c">（記憶）</span></pre>
+  <p class="lead" style="margin-top:18px">同一套拆解移植到三語言（<code>ports/{cpp,lua,cl}/</code>），統一用
+    <b>curl</b>（HTTP）＋<b>jq</b>（JSON）當現成引擎、語言只當 glue。三版都用真 DeepSeek 驗過：
+    工具迴圈算出 <code>3^4=81</code>、自我擴展當場自寫 <code>rev</code> 技能把 <code>handy</code> 反轉成 <code>ydnah</code>。</p>
+</section>
+
+<section>
+  <span class="eyebrow">另一批</span>
+  <h2>cllm-apps 多語言移植</h2>
+  <p class="lead">handy 四工具（<code>llme/zhtw/wf/mail</code>）以 shell-out 方式移植到 Python／C++／Common Lisp，
+    並照 cllm-apps 房規整合 cllm 周邊工具（anthropic-proxy／llm-login）。放在
+    <code>~/code/cllm-apps/&lt;lang&gt;-handy/</code>，<b>本機保留、不收版控</b>（依你決定）。</p>
+  <div class="grid">
+    <div class="card"><span class="name">python-handy</span><p>stdlib、<code>shlex.quote</code>、天然 UTF-8。</p><div class="foot"><span class="tag">參考版</span><span class="pill ok">驗綠</span></div></div>
+    <div class="card"><span class="name">cpp-handy</span><p>g++16／clang++22 雙編過（C++23）。</p><div class="foot"><span class="tag">C++</span><span class="pill ok">驗綠</span></div></div>
+    <div class="card"><span class="name">lisp-handy</span><p>sbcl 免 quicklisp；中文抗 <code>LANG=C</code>。</p><div class="foot"><span class="tag">Common Lisp</span><span class="pill ok">驗綠</span></div></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">怎麼跑</span>
+  <h2>回家開一個 shell 就能試</h2>
+<pre><span class="c"># 前置：設 DeepSeek 金鑰（handy 各工具 auto-inject）</span>
+export DEEPSEEK_API_KEY=sk-...
+
+<span class="c"># 翻譯 · endpoint 換模型 · 管線</span>
+./zhtw Hello world              <span class="c"># → 你好，世界</span>
+echo "..." | ./zhtw
+llme deepseek 用一句話介紹你自己
+
+<span class="c"># 派任務：wf 自己判要不要動手（-b 腦 / -a claude / -i 投 inbox）</span>
+wf 解釋什麼是 mmap              <span class="c"># 判 brain → llme 直接答</span>
+wf 幫我把 foo.py 的錯誤處理補上  <span class="c"># 判 agent → claude 動手</span>
+
+<span class="c"># inbox 非同步交接</span>
+mail send 幫我重構 utils.py  →  mail list  →  mail run
+
+<span class="c"># hermy：會自寫技能的 agent（cd hermy 後）</span>
+./hermy 用 shell 技能算 2 的 10 次方</pre>
+</section>
+
+<section>
+  <span class="eyebrow">還沒做</span>
+  <h2>待長</h2>
+  <ul class="open">
+    <li><b>真 agent 動手端到端驗收</b>：<code>wf -a</code>／<code>mail run</code>／<code>hermy</code> 會 spawn 真 claude 用 <code>acceptEdits</code> 動手改檔——等你點頭實跑驗收。</li>
+    <li><b>hermy Curator</b>：閒置定期自我維護技能（活躍/陳舊/封存、合併、出 patch），對接 <code>tick</code>。</li>
+    <li><b>hermy 記憶預取／壓縮</b>：對話前 grep 注入相關記憶、超長時迭代摘要。</li>
+    <li><b>daemon</b>：常駐自動 drain inbox＋跨呼叫共享狀態。</li>
+    <li><b>權限守衛</b>：<code>shell</code> 技能目前無限制，之後加 allowlist／pre-tool 核准。</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">本輪進度</span>
+  <h2>11 個 commit（已推 main）</h2>
+  <ol class="tl">
+    <li><span class="h">08bff7b</span> <span class="d">zhtw stdin 慣例</span>——薄包裝當管線公民</li>
+    <li><span class="h">a16781c</span> <span class="d">llme auto-inject api key</span> <small>＋DeepSeek endpoint 測綠</small></li>
+    <li><span class="h">02df80d</span> <span class="d">預設後端改 deepseek</span> <small>（本地 LM Studio 關掉省電）</small></li>
+    <li><span class="h">5fcd5fd</span> <span class="d">keyless deepseek.json 收版控</span>——可跨機</li>
+    <li><span class="h">efb7917</span> <span class="d">資料夾改分層工作流</span> <small>＋_exec 拆 shell 殼/.fnl</small></li>
+    <li><span class="h">28edc34</span> <span class="d">wf 兩層任務派發器</span>——llme 當路由腦、動手才升 claude</li>
+    <li><span class="h">32e0348</span> <span class="d">mail inbox 協議</span>——非同步交接＋<code>wf -i</code></li>
+    <li><span class="h">4b9d25c</span> <span class="d">wf 啟發式路由</span>——減少 LLM 呼叫（部分求值）</li>
+    <li><span class="h">b2213dc</span> <span class="d">hermy：復刻 hermes-agent</span>——自我改進技能型 agent</li>
+    <li><span class="h">012e176</span> <span class="d">hermy 拆成 &lt;50 行 CLI 小檔</span></li>
+    <li><span class="h">7e8e7fb</span> <span class="d">hermy 三語言移植</span> <small>ports/{cpp,lua,cl}，curl+jq</small></li>
+  </ol>
+</section>
+
+</div>
+
+<footer><div class="wrap">
+  文字文檔（durable）入口：<span class="mono">handy/AGENTS.md</span> → <span class="mono">INDEX.md</span> ·
+  進度 <span class="mono">SESSION-LOG.md</span> · hermy <span class="mono">hermy/README.md</span>。
+  本頁是速覽，權威以 repo 為準。
+</div></footer>
+
+<script>
+(function(){
+  var b=document.getElementById("tg"), r=document.documentElement;
+  b.addEventListener("click",function(){
+    var cur=r.getAttribute("data-theme");
+    if(!cur){cur=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+    r.setAttribute("data-theme",cur==="dark"?"light":"dark");
+  });
+})();
+</script>
+</body>
+</html>
