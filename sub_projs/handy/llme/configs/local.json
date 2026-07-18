@@ -1,5 +1,5 @@
 {
   "endpoint": "http://localhost:1234/v1/chat/completions",
-  "model": "qwen/qwen3.5-9b",
+  "model": "google/gemma-4-e4b",
   "timeout_ms": 120000
 }

@@ -49,6 +49,7 @@ handy/
   - **要免重載重狀態** → 掛 **daemon** 當瘦 client（見下）。
   - 呼叫 cllm：cllm 已有 Lua＋Fennel 綁定；LuaJIT 還能 **FFI 直接 call `libcllm.so`**（連綁定都省）。
 - **daemon（`--serve`）暫緩，但要記對觸發條件**〔洞見・2026-07-18〕：**不是**為了省啟動——LLM 呼叫的載入環境時間 vs token 吐出延遲差幾個數量級，那幾 ms 是雜訊，為此做 daemon 不划算。daemon 的**真正觸發＝需要跨呼叫的共享狀態**（`llm_entry` 的 `RateMeter` 跨請求累計、LLM 當單一資源循序佇列化、活 agent 保 context）。→ Q1「操縱活 agent」就是這類，那才是 daemon 正主。
+- **本地測試後端**〔決定・2026-07-18〕：一律用 **gemma**，且**只用 `google/gemma-4-e4b`（小・快，不要 31b）**——`llme local`（`llme/configs/local.json` 的 model）已釘成它。要跑真後端測試就 `llme local …`／`./zhtw …`（需 LM Studio 在 `localhost:1234`）。
 - **驗證**：目前**尚無**程式碼、無驗證指令（開田期）；有第一片可跑物後再補。
 
 ## 主工作流（進度與待測）
