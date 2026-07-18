@@ -142,6 +142,14 @@ std::string build_body(const llm_client_t *c, const llm_request_t *req) {
       b.seed = c->seed;
   }
 
+  // system role（若給）排在最前：OpenAI 慣例 system→user。內容永遠是純文字（不夾媒體）。
+  if (req->system && *req->system) {
+    ReqMessage sys;
+    sys.role = "system";
+    sys.content = glz::raw_json{to_json(std::string(req->system), "\"\"")};
+    b.messages.push_back(std::move(sys));
+  }
+
   ReqMessage msg;
   msg.content = build_content(req);
   b.messages.push_back(std::move(msg));

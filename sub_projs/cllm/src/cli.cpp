@@ -74,8 +74,8 @@ int run(const std::vector<std::string> &args) {
   std::vector<std::string> image_paths;          // --image（可重複）
   std::vector<std::string> tool_paths;           // --tool（可重複）
   std::vector<std::string> modality_specs;       // --modality（可重複；「名」或「名=設定檔」）
-  std::string schema_path, config_path, media_out_dir;
-  bool has_schema = false, has_config = false, stream = false;
+  std::string schema_path, config_path, media_out_dir, system_text;
+  bool has_schema = false, has_config = false, has_system = false, stream = false;
   bool no_more_flags = false; // 見到 "--" 後，其餘 argv 一律當 prompt（unix 慣例）
 
   // 需要吃下一個 argv 的取值小工具：缺值即報錯。
@@ -111,6 +111,12 @@ int run(const std::vector<std::string> &args) {
       if (!need_value(i, a, schema_path))
         return kExitUsage;
       has_schema = true;
+      continue;
+    }
+    if (a == "--system") { // system role 文字（字面值；長文用 --system "$(cat persona.txt)"）
+      if (!need_value(i, a, system_text))
+        return kExitUsage;
+      has_system = true;
       continue;
     }
     if (a == "--config") {
@@ -212,6 +218,8 @@ int run(const std::vector<std::string> &args) {
   llm::abi::Request req;
   req.prompt = prompt;
   req.stream = stream;
+  if (has_system)
+    req.system = system_text;
   if (has_schema) {
     std::string body, err;
     if (!config::read_file(schema_path, body, err)) {

@@ -2,7 +2,7 @@
 
 ← [docs 索引](README.md)｜[技術入口 README](../README.md)｜[C++ 鏡像](cpp-mirror-reference.md)｜[CLI 手冊](cli-manual.md)
 
-`libcllm.so` 的**對外 C ABI**——純 C 客戶端 `#include "cabi.h"`、連結 `-lcllm` 即用。整套 ABI 收成**唯一入口 `llm_ask`**：一次吃 prompt＋schema＋tools＋media＋modalities＋stream，輸出全走 handlers。
+`libcllm.so` 的**對外 C ABI**——純 C 客戶端 `#include "cabi.h"`、連結 `-lcllm` 即用。整套 ABI 收成**唯一入口 `llm_ask`**：一次吃 prompt＋system＋schema＋tools＋media＋modalities＋stream，輸出全走 handlers。
 
 本檔＝**總覽 + 統一入口**；型別參考拆兩半：
 - **[C ABI · 輸入型](c-abi-input.md)** — 呼叫端設定（`llm_client_t`／`field_mask`）＋請求輸入（schema／tool_def／media_in／modality／request）。

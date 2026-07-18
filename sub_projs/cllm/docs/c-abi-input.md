@@ -73,6 +73,7 @@ llm_client_set_field(&c, LLM_FIELD_TEMPERATURE, 1);   /* 或 c.field_mask |= LLM
 ```c
 typedef struct llm_request_t {
   const char *prompt;                 /* 必填 */
+  const char *system;                 /* NULL/"" = 不送；非空 = 在 user 訊息前插一則 system role 訊息 */
   const llm_schema_t   *schema;       /* NULL = 不用結構化輸出 */
   const llm_tool_def_t *tools;
   size_t                tools_count;

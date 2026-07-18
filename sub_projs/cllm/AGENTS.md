@@ -23,7 +23,7 @@ AGENTS.md（本檔，最頂）→ README.md（技術入口）/ WORKFLOWS.md / IN
 
 ## 鐵律（always-on，任何工作流任何時候都遵守）
 
-1. **改動程式碼後跑驗證確認行為不變**：快速驗證＝`cmake --build --preset linux-debug && bash test/cli_smoke.sh`（離線黑箱，31/31 綠）。
+1. **改動程式碼後跑驗證確認行為不變**：快速驗證＝`cmake --build --preset linux-debug && bash test/cli_smoke.sh`（離線黑箱，35/35 綠）。
 2. **未經確認不 push、不開新工作**（commit 到主分支是慣例，push 先確認）。
 3. **對外 C ABI（`src/cabi.h`）是穩定介面**：改扁平結構／`llm_ask` 簽章會震到所有 C 客戶端與 `llm` CLI——動之前先想相容性。
 4. **回覆、註解、留檔用繁體中文**；程式碼識別子、shell 指令、技術名詞保留原文。

@@ -60,6 +60,7 @@ void print_usage() {
       "        git diff | llm 把 - 寫成 commit 訊息 # 「-」明指 stdin 插入點\n"
       "        llm --stream -- --開頭的-prompt      # -- 之後一律當 prompt（unix 分隔符）\n"
       "\n固定旗標：\n"
+      "  --system <文字>        system role 指示（字面文字；長文用 --system \"$(cat persona.txt)\"）\n"
       "  --stream               串流逐段吐 stdout（布林，無值）\n"
       "  --image <檔>           夾帶輸入媒體（可重複；mime 由副檔名推）\n"
       "  --schema <檔>          JSON Schema 檔，要求結構化輸出\n"

@@ -47,6 +47,7 @@ typedef struct llm_modality_t {
  * text/schema/media 皆可串流，tool_calls 一律拼完整才交給 on_tool，不受 stream 影響）。*/
 typedef struct llm_request_t {
   const char *prompt;          /* 必填 */
+  const char *system;          /* NULL/""＝不送 system role；非空＝在 user 訊息前插一則 system 訊息 */
   const llm_schema_t *schema;  /* NULL＝不用結構化輸出 */
   const llm_tool_def_t *tools;
   size_t tools_count;

@@ -88,6 +88,7 @@ struct Modality {
 // 一次發問的輸入（對應 llm_request_t）。schema／tools／media／modalities 可任意組合。
 struct Request {
   std::string prompt;
+  std::string system;  // 空 = 不送；非空 = 在 user 訊息前插一則 system role 訊息
   std::optional<Schema>   schema;
   std::vector<ToolDef>    tools;
   std::vector<MediaIn>    media;

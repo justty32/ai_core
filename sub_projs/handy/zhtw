@@ -3,14 +3,13 @@
 ;;
 ;; 一個「人格」單檔（不用資料夾）：把一組設定烤死，使用者只給要翻的文字。
 ;;   zhtw <要翻譯的文字...>
-;;     → llme local --temperature 0.2 --top-p 0.9 --max-tokens 1024 -- <system+前置+文字>
+;;     → llme local --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
 ;;
 ;; 這就是 handy 的「薄包裝」：站在 llme 上，把 endpoint／取樣參數／人格烤死，
 ;; 只留使用者輸入這個變數。改最上面那幾個常數即換一個人格。
 ;;
-;; ⚠ 限制：llm CLI 沒有 --system（底層無 system role）。故 SYSTEM 是「折進
-;;   user prompt 最前面」的近似，不是真 system-role 訊息。要真 system role
-;;   需改 cllm（加 --system → cabi system message），非本層能做。
+;; SYSTEM 走 llm CLI 的 --system（真 system-role 訊息，2026-07-18 起 cllm 支援）——
+;; 不再折進 user prompt 開頭。llme 原樣轉發 --system 給 llm。
 
 ;; ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
 (local ENDPOINT "local")
@@ -32,11 +31,13 @@
   (io.stderr:write "用法：zhtw <要翻譯的文字...>\n")
   (os.exit 2))
 
-(local prompt (.. SYSTEM "\n\n" PREFIX (table.concat words " ")))
+(local prompt (.. PREFIX (table.concat words " ")))
 
-;; 組：llme <ENDPOINT> <FLAGS...> -- <prompt>
+;; 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
 (local parts [(shquote "llme") (shquote ENDPOINT)])
 (each [_ f (ipairs FLAGS)] (table.insert parts (shquote f)))
+(table.insert parts (shquote "--system"))
+(table.insert parts (shquote SYSTEM))
 (table.insert parts (shquote "--"))
 (table.insert parts (shquote prompt))
 

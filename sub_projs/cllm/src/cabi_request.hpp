@@ -32,6 +32,7 @@ struct Modality {
 // stream 與 tools 正交——text/schema/media 皆可串流，tool_calls 一律拼完整才交給 on_tool。
 struct Request {
   std::string prompt;
+  std::string system; // 空＝不送；非空＝在 user 訊息前插一則 system role 訊息
   std::optional<Schema> schema;
   std::vector<ToolDef> tools;
   std::vector<MediaIn> media;

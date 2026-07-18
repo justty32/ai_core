@@ -68,6 +68,7 @@ public:
 
     llm_request_t r{};
     r.prompt = req.prompt.c_str();
+    r.system = req.system.empty() ? nullptr : req.system.c_str();
     r.stream = req.stream ? 1 : 0;
     if (req.schema) {
       sc.name = req.schema->name.c_str();

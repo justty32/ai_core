@@ -51,6 +51,19 @@ expect_out() {
     fi
 }
 
+# expect_body <期望子字串> <說明> -- <指令...>：LLM_DUMP_BODY=1 跑指令、驗印到 stderr 的請求 JSON
+#   含子字串且退出碼 0（用來黑箱檢查組出去的 body——file:// 假回應不看 body，只能靠 dump 觀察）。
+expect_body() {
+    local needle="$1" desc="$2"; shift 2
+    [ "$1" = "--" ] && shift
+    local err; err="$(LLM_DUMP_BODY=1 "$@" 2>&1 >/dev/null)"; local got=$?
+    if [ "$got" = 0 ] && printf '%s' "$err" | grep -qF -- "$needle"; then
+        printf '  [PASS] %s\n' "$desc"; pass=$((pass+1))
+    else
+        printf '  [FAIL] exit=%s body=<%s>  %s\n' "$got" "$err" "$desc" >&2; fail=$((fail+1))
+    fi
+}
+
 echo "== llm CLI 離線煙霧測試 =="
 echo "binary: $BIN"
 
@@ -73,6 +86,20 @@ expect_out "才不是為你回答的" "-- 分隔符（旗標在前 -- prompt）"
 printf '{"type":"object"}' > "$TMP/sc.json"
 expect_out '"name":"星野"' "--schema 結構化輸出" \
     -- "$BIN" 給我角色 --schema "$TMP/sc.json" --endpoint "$FX/fake_json/chat/completions"
+
+# ── (1c) --system：在 user 前插一則真 system role 訊息（驗組出去的 body）──
+echo "-- system role --"
+expect_body '"role":"system","content":"你是傲嬌貓"' "--system → body 首則為 system 訊息" \
+    -- "$BIN" --system 你是傲嬌貓 你好 --endpoint "$FX/fake/chat/completions"
+expect_body '"role":"user"' "--system 後仍保留 user 訊息" \
+    -- "$BIN" --system 你是傲嬌貓 你好 --endpoint "$FX/fake/chat/completions"
+# 沒給 --system → body 不得出現 system 訊息（用 expect_out 反向：抓不到才算對，故改直接斷言）
+if LLM_DUMP_BODY=1 "$BIN" 你好 --endpoint "$FX/fake/chat/completions" 2>&1 >/dev/null \
+    | grep -qF '"role":"system"'; then
+    printf '  [FAIL] 未給 --system 卻插了 system 訊息\n' >&2; fail=$((fail+1))
+else
+    printf '  [PASS] 未給 --system → body 無 system 訊息\n'; pass=$((pass+1))
+fi
 
 # ── (1b) tools / modalities：--tool 吐 JSON 行、--media-out 落檔 ──
 echo "-- tools / modalities --"
@@ -112,6 +139,7 @@ expect_exit 1 "缺 prompt（stdin 空）" -- sh -c "'$BIN' </dev/null"
 expect_exit 1 "「-」但 stdin 空（拼完仍空）" -- sh -c "'$BIN' - </dev/null"
 expect_exit 1 "--config 讀不到" -- "$BIN" 你好 --config /no/such.json
 expect_exit 1 "--schema 檔讀不到" -- "$BIN" 你好 --schema /no/such.json
+expect_exit 1 "--system 缺值" -- "$BIN" 你好 --system
 printf '{bad json' > "$TMP/bad.json"
 expect_exit 1 "config JSON 壞" -- "$BIN" 你好 --config "$TMP/bad.json"
 expect_exit 1 "--tool 檔讀不到" -- "$BIN" 你好 --tool /no/such.json
