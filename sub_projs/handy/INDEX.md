@@ -17,6 +17,7 @@
 | `wf` | 住戶：**兩層任務派發器**（單檔 Fennel）——llme 路由腦判 brain/agent、`-i` 投 inbox。入口＝檔頭註解。 |
 | `mail` | 住戶：**inbox 協議執行檔**（單檔 Fennel）——`send`/`list`/`run`，非同步交接。入口＝檔頭註解＋[workflows/inbox.md](workflows/inbox.md)。 |
 | `inbox/` | mail 的**信箱**（投遞區）＋ `done/`（歸檔）。信件是 runtime 產物、不進版控。 |
+| `hermy/` | 住戶（資料夾型，**Python**）：hermes-agent 的 handy 化復刻——agent loop＋`skills/`（folder-as-callable 技能）＋`create_skill` 自我擴展＋`memory/` append-log。入口 [hermy/README.md](hermy/README.md)。 |
 | `workflows/` | 工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）：`new-resident.md`、`dev-env.md`、`inbox.md`、定期 `tick`/`routines`/`schedule`、`common/`（`gotchas.md`＋`conventions.md` code map）。 |
 | `.claude/commands/` | slash 指令（[`/wf-tick`](.claude/commands/wf-tick.md) 驅動定期心跳）|
 
@@ -30,6 +31,7 @@
 | **zhtw** | 可用 | 繁中翻譯薄包裝；stdin 管線公民 | 檔頭註解 |
 | **wf** | 可用（MVP）| **兩層任務派發器**：llme(DeepSeek) 當路由腦判「要不要動手」→ 只需腦走 `llme`、要動手走 `claude -p`；`-b`/`-a`/`-i` 三模式。 | `wf` 檔頭註解 |
 | **mail** | 可用（MVP）| **inbox 協議執行檔**：`send`/`list`/`run`，非同步交接複雜任務給 claude code | `mail` 檔頭＋[workflows/inbox.md](workflows/inbox.md) |
+| **hermy** | 可用（MVP）| 用 handy 思想復刻 hermes-agent：DeepSeek function-calling 迴圈＋**技能＝folder-as-callable**＋`create_skill` 自我擴展。Python。| [hermy/README.md](hermy/README.md) |
 | **daemon** | 待動手 | 常駐小程式，client 寫命令進檔/socket → `claude -p` headless run；可常駐 drain inbox | 見 [dev-env](workflows/dev-env.md)「daemon 觸發條件」＋ [SESSION-LOG](SESSION-LOG.md) |
 
 ## 不重造（本專案吃現成、別憑記憶重建）
