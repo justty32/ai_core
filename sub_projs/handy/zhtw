@@ -4,7 +4,7 @@
 ;; 一個「人格」單檔（不用資料夾）：把一組設定烤死，使用者只給要翻的文字。
 ;;   zhtw <要翻譯的文字...>          位置參數當輸入
 ;;   echo ... | zhtw / zhtw < file  無位置參數時讀 stdin（管線公民）
-;;     → llme local --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
+;;     → llme deepseek --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
 ;;
 ;; 這就是 handy 的「薄包裝」：站在 llme 上，把 endpoint／取樣參數／人格烤死，
 ;; 只留使用者輸入這個變數。改最上面那幾個常數即換一個人格。
@@ -13,7 +13,7 @@
 ;; 不再折進 user prompt 開頭。llme 原樣轉發 --system 給 llm。
 
 ;; ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
-(local ENDPOINT "local")
+(local ENDPOINT "deepseek")
 (local SYSTEM
   "你是專業翻譯引擎。把使用者提供的文字翻成自然、道地的繁體中文。只輸出譯文本身，不要加任何解釋、引號或前後綴。")
 (local PREFIX "翻譯以下內容：\n")
