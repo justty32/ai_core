@@ -1,0 +1,44 @@
+#!/usr/bin/env fennel
+;; zhtw — 薄包裝範例：固定取樣參數 ＋ system prompt ＋ prompt 前置，轉呼 llme。
+;;
+;; 一個「人格」單檔（不用資料夾）：把一組設定烤死，使用者只給要翻的文字。
+;;   zhtw <要翻譯的文字...>
+;;     → llme local --temperature 0.2 --top-p 0.9 --max-tokens 1024 -- <system+前置+文字>
+;;
+;; 這就是 handy 的「薄包裝」：站在 llme 上，把 endpoint／取樣參數／人格烤死，
+;; 只留使用者輸入這個變數。改最上面那幾個常數即換一個人格。
+;;
+;; ⚠ 限制：llm CLI 沒有 --system（底層無 system role）。故 SYSTEM 是「折進
+;;   user prompt 最前面」的近似，不是真 system-role 訊息。要真 system role
+;;   需改 cllm（加 --system → cabi system message），非本層能做。
+
+;; ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
+(local ENDPOINT "local")
+(local SYSTEM
+  "你是專業翻譯引擎。把使用者提供的文字翻成自然、道地的繁體中文。只輸出譯文本身，不要加任何解釋、引號或前後綴。")
+(local PREFIX "翻譯以下內容：\n")
+;; ⚠ max-tokens 要給夠：qwen3.5/gemma 等會 <think> 的 reasoning 模型，思考鏈
+;;   與答案共用 max-tokens 預算，給小值（如 1024）會偶爾被思考吃光→content 空。
+;;   翻譯設 4096 綽綽有餘。（top-p 與 temperature 慣例二擇一，這裡兩者都示範。）
+(local FLAGS ["--temperature" "0.2" "--top-p" "0.9" "--max-tokens" "4096"])
+;; ────────────────────────────────────────────────────────────────
+
+(fn shquote [s] (.. "'" (s:gsub "'" "'\\''") "'"))
+
+;; 使用者的話＝所有位置參數併成一句
+(local words [])
+(for [i 1 (length arg)] (table.insert words (. arg i)))
+(when (= 0 (length words))
+  (io.stderr:write "用法：zhtw <要翻譯的文字...>\n")
+  (os.exit 2))
+
+(local prompt (.. SYSTEM "\n\n" PREFIX (table.concat words " ")))
+
+;; 組：llme <ENDPOINT> <FLAGS...> -- <prompt>
+(local parts [(shquote "llme") (shquote ENDPOINT)])
+(each [_ f (ipairs FLAGS)] (table.insert parts (shquote f)))
+(table.insert parts (shquote "--"))
+(table.insert parts (shquote prompt))
+
+(local (_ _ code) (os.execute (table.concat parts " ")))
+(os.exit (or code 0))
