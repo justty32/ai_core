@@ -4,6 +4,12 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 
 > 暫名，可改。本檔是**最頂層入口**：只指向設計真源與當前狀態，durable 細節不堆這裡。
 
+## 先讀哪裡
+
+- **想一頁掌握全貌** → [OVERVIEW.md](OVERVIEW.md)（全景文）或 [overview.html](overview.html)（瀏覽器開的視覺速覽）。
+- **想懂為什麼這樣設計** → ai_core 筆記鏈（見下方「設計真源」）。
+- **想動手跑** → 本檔「當前狀態」各 step 的跑法，或 OVERVIEW.md「怎麼跑」。
+
 ## 定位（與 handy 的分工）
 
 - [handy](../handy/AGENTS.md) ＝「**拿現成程式用腳本包裝**、資料夾＝callable」——較上層。

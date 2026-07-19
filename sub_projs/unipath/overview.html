@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>unipath — 速覽</title>
+<style>
+:root{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --serif:"Songti TC","Noto Serif TC","Source Han Serif TC",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+  --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+  --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;}}
+:root[data-theme="dark"]{
+  --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+  --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+  --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;}
+:root[data-theme="light"]{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.65;font-size:16px;letter-spacing:.01em}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600}
+header{border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--surface),var(--bg));padding:52px 0 38px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2rem,5vw,3rem);margin:.3em 0 .1em;
+  text-wrap:balance;letter-spacing:.01em}
+.thesis{color:var(--muted);font-size:1.08rem;max-width:64ch;margin:.5em 0 0}
+.meta{margin-top:20px;font-family:var(--mono);font-size:.8rem;color:var(--muted);
+  display:flex;gap:18px;flex-wrap:wrap}
+.meta b{color:var(--ink);font-weight:600}
+.tldr{background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;
+  padding:20px 24px;margin:34px 0;font-size:1.02rem}
+.tldr .eyebrow{display:block;margin-bottom:8px}
+section{padding:34px 0;border-top:1px solid var(--rule)}
+h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:.2em 0 .6em;text-wrap:balance}
+h2 .n{font-family:var(--mono);font-size:.8rem;color:var(--accent);margin-right:.6em}
+p{margin:.5em 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h3{margin:.1em 0 .3em;font-size:1rem;font-family:var(--sans)}
+.card p{color:var(--muted);font-size:.92rem;margin:.2em 0 0}
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.step{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.badge{font-family:var(--mono);font-size:.74rem;font-weight:700;padding:3px 9px;border-radius:20px;
+  background:var(--ok-bg);color:var(--ok);white-space:nowrap;align-self:center}
+.step h3{margin:0 0 .2em;font-size:1.02rem}
+.step .desc{color:var(--muted);font-size:.93rem}
+.step .file{font-family:var(--mono);font-size:.82rem;color:var(--accent);margin-top:.35em}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.85rem;line-height:1.5}
+pre .c{color:var(--muted)}
+.diagram{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:18px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.55;white-space:pre;color:var(--ink)}
+ul{margin:.4em 0;padding-left:1.3em}
+li{margin:.3em 0}
+.note{background:var(--plan-bg);border:1px solid var(--border);border-left:3px solid var(--plan);
+  border-radius:8px;padding:12px 16px;font-size:.92rem;color:var(--ink)}
+.tag{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:2px 8px;border-radius:5px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--muted);margin:2px 4px 2px 0}
+footer{padding:30px 0 60px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule)}
+.toggle{position:fixed;top:14px;right:14px;font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;
+  padding:5px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="var r=document.documentElement;r.dataset.theme=(r.dataset.theme==='dark'?'light':'dark')">☾ / ☀</button>
+<header><div class="wrap">
+  <span class="eyebrow">ai_core · sub_projs · 階段一基材</span>
+  <h1>unipath</h1>
+  <p class="thesis">「先歸一於路徑、後成局」願景的階段一落地——採 <b>Plan 9 思想 ＋ 9P 協議</b>，以 FUSE 起步，把一個<b>正在跑的 process 的執行態環境</b>暴露成一棵可 walk 的路徑樹。</p>
+  <div class="meta">
+    <span>方案 <b>A</b>（Plan 9＋9P 蓋在 Linux）</span>
+    <span>載體 <b>Python</b>（原型優先）</span>
+    <span>進度 <b>step 1–4 全綠</b></span>
+    <span><b>2026-07-19</b></span>
+  </div>
+</div></header>
+
+<div class="wrap">
+
+<div class="tldr">
+  <span class="eyebrow">一句話</span>
+  外部用 <code>ls</code> / <code>cat</code> / <code>echo</code> 就能 walk、讀、寫「另一個正在執行的 process」的活狀態——因為它的執行態環境被暴露成路徑樹，且說的是<b>真 9P</b>，故可被 Linux 核心直接掛載、跨機器通聯。
+</div>
+
+<section>
+  <h2><span class="n">01</span>為什麼這樣做</h2>
+  <p>推導出的「歸一於路徑」，其實就是 <b>Plan 9</b> 已做完的事——貝爾實驗室做 Unix 那批人，把「一切皆檔案」貫徹到 Unix 沒膽貫徹處。決定 <b>方案 A</b>：偷它的模型與 9P 協議，蓋在 Linux 上（FUSE/9P），保留現有生態；<b>不</b> boot Plan 9 本體（留作以後逃生門）。設計脈絡在筆記鏈：</p>
+  <p><span class="tag">世界（OS-as-game）篇</span><span class="tag">兩層底座重解篇</span><span class="tag">實作路線規劃篇</span></p>
+</section>
+
+<section>
+  <h2><span class="n">02</span>核心概念</h2>
+  <div class="cards">
+    <div class="card"><h3>歸一於路徑</h3><p>不只靜態檔案；連正在執行的東西、呼叫方式都收斂成路徑可尋。</p></div>
+    <div class="card"><h3>9P ＝通用協議</h3><p>規範層從「你得是某語言」變「你得會講 9P」——天生語言中立。</p></div>
+    <div class="card"><h3>ctl / data / status</h3><p>每個元素是目錄，含三約定檔：data 讀寫、ctl 寫命令（取代 ioctl）、status 讀狀態。</p></div>
+    <div class="card"><h3>兩種索引皆落成路徑</h3><p>list→數字子路徑 <code>/0 /1</code>（0-based）；dict→字串鍵 <code>/name /hp</code>。</p></div>
+    <div class="card"><h3>執行態非快照</h3><p>讀到的是此刻狀態；發布端在 tick，同路徑不同時刻不同值；echo 改的是活物件本身。</p></div>
+    <div class="card"><h3>/proc 是祖師爺</h3><p>「把執行中 process 掛成路徑」是 /proc 既有範式，unipath 是它的最小自造版。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>四刀進度</h2>
+  <div class="steps">
+    <div class="step"><span class="badge">✅ done</span><div>
+      <h3>step 1 · 假靜態樹</h3>
+      <div class="desc">Python＋FUSE 掛一棵寫死的 0-based 數字樹，證明 mount 管線通：<code>ls</code> walk（含巢狀）、<code>cat</code> 讀、<code>echo&gt;</code> 寫、<code>ctl</code> 命令皆通。</div>
+      <div class="file">unipath_fs.py</div></div></div>
+    <div class="step"><span class="badge">✅ done</span><div>
+      <h3>step 2 · 自身執行態</h3>
+      <div class="desc">暴露<b>本 process</b> 的活物件圖：背景 thread 推 counter → 讀值隨時間變（執行態非快照）；echo write-through 改活物件；ctl append/set/del。</div>
+      <div class="file">unipath_live.py</div></div></div>
+    <div class="step"><span class="badge">✅ done</span><div>
+      <h3>step 3 · 跨 process 暴露</h3>
+      <div class="desc">拆成發布端（持有活 env＋監聽 socket）＋薄 FUSE 客戶端（無 world 狀態、每操作轉 9P 形狀 RPC）。獨立第三方確認：改的是<b>發布端 process 本身</b>。＝歸一於路徑第二類完成。</div>
+      <div class="file">unipath_env.py · unipath_pub.py · unipath_mount.py</div></div></div>
+    <div class="step"><span class="badge">✅ done</span><div>
+      <h3>step 4 · 真 9P2000 線格式</h3>
+      <div class="desc">逐位元組真協議（Tversion/Tattach/Twalk/Topen/Tread〔含目錄 stat 項〕/Twrite/Tclunk/Tstat）。獨立真 9P client 自測互通。<b>規範「講 9P」坐實</b>，可被核心 v9fs 掛載、網路透明＝兩世界通聯。</div>
+      <div class="file">unipath_9p.py</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>架構</h2>
+  <div class="diagram">step 2（自掛）
+  ┌─────────────────────────────┐
+  │ Python process              │
+  │  活 env + 背景 tick  ──FUSE──┼──▶  mnt/
+  └─────────────────────────────┘   同一 process 既持 env 又當 FS
+
+step 3（跨 process）
+  ┌ 發布端 process ┐          ┌ 掛載端 process ┐
+  │ 活 env + tick  │◀─9P 形狀─│ 薄 FUSE 客戶端  │──FUSE──▶ mnt/
+  │ 監聽 unix sock │  JSON-RPC │ （無 world 狀態）│
+  └────────────────┘          └─────────────────┘
+
+step 4（真 9P）
+  ┌ 發布端 process ┐              ┌ 核心 v9fs ┐
+  │ 活 env + tick  │◀─真 9P2000──│ mount -t 9p│──▶ ls/cat/echo
+  │ 監聽 TCP:5640  │   線格式     │（脫離 FUSE）│
+  └────────────────┘              └────────────┘</div>
+  <p style="margin-top:12px"><code>unipath_env.py</code> ＝執行態環境的純邏輯（無 FUSE/socket 依賴），被 step 3/4 共用。一路「介面照 9P 慣例擺」，故 step 3→4 是平滑升級。</p>
+</section>
+
+<section>
+  <h2><span class="n">05</span>怎麼跑</h2>
+  <p style="color:var(--muted);font-size:.9rem">指令都在 <code>sub_projs/unipath/</code> 下；<code>.venv</code> 已建、裝好 fusepy。</p>
+  <pre><span class="c"># step 2 自掛（最簡）</span>
+.venv/bin/python unipath_live.py mnt
+cat mnt/0/data ; cat mnt/0/data      <span class="c"># 兩次不同 → 執行態</span>
+echo 999 &gt; mnt/2/hp/data ; cat mnt/2/data
+fusermount -u mnt
+
+<span class="c"># step 3 跨 process（三個終端）</span>
+.venv/bin/python unipath_pub.py /tmp/unipath.sock
+.venv/bin/python unipath_mount.py /tmp/unipath.sock mnt
+ls mnt ; echo 777 &gt; mnt/2/hp/data ; fusermount -u mnt
+
+<span class="c"># step 4 真 9P + 核心掛載（mount 需 root，自己跑）</span>
+.venv/bin/python unipath_9p.py serve 5640
+.venv/bin/python unipath_9p.py selftest 5640   <span class="c"># 獨立 9P client 自測</span>
+sudo modprobe 9pnet_fd 9p
+sudo mount -t 9p -o trans=tcp,port=5640,version=9p2000,uname=$USER 127.0.0.1 /tmp/umnt
+ls /tmp/umnt ; cat /tmp/umnt/0/data ; sudo umount /tmp/umnt</pre>
+</section>
+
+<section>
+  <h2><span class="n">06</span>界線與下一步</h2>
+  <div class="note">
+    <b>誠實標註：</b>step 3 是 9P 的「形狀」（JSON-over-socket），step 4 才是真線格式。真 9P 掛載需 root（mount 天生特權）；讀一定通，透過核心 mount 寫入涉及 9P uid 權限。暫忽略 CPU 週期（僅限慢世界）。Python 只是參考實作，規範層（講 9P）才是重點。
+  </div>
+  <ul style="margin-top:14px">
+    <li><b>C 接 tick</b>：把 <code>tick(env, 影響) → 下個狀態</code> 落成真回合制轉移（現只有背景 +1 雛形）。</li>
+    <li><b>D 往階段二</b>：在這副 9P 基材上搭 os-as-game 玩具。</li>
+    <li>真 9P 寫入 uid/權限、9P2000.L 擴充、發布端接真實 process 狀態（非示範 world）。</li>
+  </ul>
+</section>
+
+<footer><div>unipath · ai_core/sub_projs · 全景文見 <a href="OVERVIEW.md">OVERVIEW.md</a> · 路由見 <a href="AGENTS.md">AGENTS.md</a> · 設計真源＝workflows/notes 筆記鏈</div></footer>
+
+</div>
+</body>
+</html>
