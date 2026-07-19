@@ -9,7 +9,11 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 - **想一頁掌握全貌** → [OVERVIEW.md](OVERVIEW.md)（全景文）或 [overview.html](overview.html)（瀏覽器開的視覺速覽）。
 - **想懂為什麼這樣設計** → ai_core 筆記鏈（見下方「設計真源」）。
 - **想動手跑** → 本檔「當前狀態」各 step 的跑法，或 OVERVIEW.md「怎麼跑」。
-- **補先驗知識** → [docs/](docs/)：[背景-fuse與vfs.md](docs/背景-fuse與vfs.md)、[背景-檔案動詞與process與mmap.md](docs/背景-檔案動詞與process與mmap.md)、[背景-fd操作三組.md](docs/背景-fd操作三組.md)、[背景-inode與pipe與socket.md](docs/背景-inode與pipe與socket.md)。
+- **補先驗知識** → [docs/](docs/)：
+  - [背景-fuse與vfs.md](docs/背景-fuse與vfs.md) · [背景-inode與pipe與socket.md](docs/背景-inode與pipe與socket.md) · [背景-fd操作三組.md](docs/背景-fd操作三組.md)
+  - [背景-檔案動詞與process與mmap.md](docs/背景-檔案動詞與process與mmap.md) · [背景-page-cache.md](docs/背景-page-cache.md)
+  - [背景-mount命名空間與bind.md](docs/背景-mount命名空間與bind.md) · [背景-ptrace與proc-mem.md](docs/背景-ptrace與proc-mem.md)
+  - [背景-9p訊息格式.md](docs/背景-9p訊息格式.md)（拿 `unipath_9p.py` 當活教材）
 
 ## 定位（與 handy 的分工）
 
@@ -47,7 +51,12 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
   已用**獨立真 9P client** 自測互通：`./unipath_9p.py serve 5640` ＋ `./unipath_9p.py selftest 5640`（讀活 counter、讀目錄、write-through 皆通）。
   **核心 v9fs 掛載（需 root，使用者自跑）**：`sudo modprobe 9pnet_fd 9p` 後
   `sudo mount -t 9p -o trans=tcp,port=5640,version=9p2000,uname=me 127.0.0.1 <mnt>`。
-- **Step 5 待議**：接 **tick** 狀態轉移語意／往階段二 os-as-game。
+- **Step 5 完成 ✅**（tick 回合制轉移原型）：`unipath_tick.py` 把 env 的背景 `+1` 升級成真回合制轉移——
+  `tick(world, influences)` 一回合＝吸收使用者影響→拍全樹快照→依各元素 `kind` 規則同步更新（cellular-automaton 式）。
+  示範四元素（counter/guard NPC/well 資源/echo 抄鄰居）；`run(N)`＝Δt 回合數；使用者影響用 pending 佇列於回合邊界吸收。
+  跑：`./.venv/bin/python unipath_tick.py`。**建在 `Env(tick=False)` 上、借 `env.lock`，可直接被 step 3/4 發布端暴露。**
+- **Step 6 待議**：①把「使用者影響」從旁路佇列改走**路徑樹寫入**（`echo>…/data`），讓「借樹＝影響」合一（見 tick agent 疑點 2）；
+  ②巢狀 tick（上層目錄驅動下層多次）；③規則從硬編 `kind` 表換成**可定址腳本**（NPC＝腳本）＝往階段二。
 - 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
 
 ## 鐵律
