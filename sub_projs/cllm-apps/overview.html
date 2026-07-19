@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cllm-apps — 速覽</title>
+<style>
+:root{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --serif:"Songti TC","Noto Serif TC","Source Han Serif TC",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+  --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+  --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;}}
+:root[data-theme="dark"]{
+  --bg:#101413; --surface:#181e1c; --surface2:#1f2725; --ink:#e6ece9; --muted:#96a29e;
+  --accent:#54c1b8; --accent-soft:#183430; --border:#28312e; --rule:#2c3633;
+  --ok:#5cbc84; --ok-bg:#152a20; --plan:#d3a54a; --plan-bg:#2b2413;}
+:root[data-theme="light"]{
+  --bg:#f5f7f6; --surface:#ffffff; --surface2:#eef1f0; --ink:#19201e; --muted:#586461;
+  --accent:#1c7a75; --accent-soft:#d7ebe9; --border:#e1e6e4; --rule:#cfd6d3;
+  --ok:#2f8f5b; --ok-bg:#e4f2ea; --plan:#b07d1f; --plan-bg:#f6ecd6;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.65;font-size:16px;letter-spacing:.01em}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600}
+header{border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--surface),var(--bg));padding:52px 0 38px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2rem,5vw,3rem);margin:.3em 0 .1em;
+  text-wrap:balance;letter-spacing:.01em}
+.thesis{color:var(--muted);font-size:1.08rem;max-width:64ch;margin:.5em 0 0}
+.meta{margin-top:20px;font-family:var(--mono);font-size:.8rem;color:var(--muted);
+  display:flex;gap:18px;flex-wrap:wrap}
+.meta b{color:var(--ink);font-weight:600}
+.tldr{background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;
+  padding:20px 24px;margin:34px 0;font-size:1.02rem}
+.tldr .eyebrow{display:block;margin-bottom:8px}
+section{padding:34px 0;border-top:1px solid var(--rule)}
+h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:.2em 0 .6em;text-wrap:balance}
+h2 .n{font-family:var(--mono);font-size:.8rem;color:var(--accent);margin-right:.6em}
+p{margin:.5em 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card h3{margin:.1em 0 .3em;font-size:1rem;font-family:var(--sans)}
+.card h3 .lang{font-family:var(--mono);font-size:.74rem;color:var(--accent);font-weight:600}
+.card p{color:var(--muted);font-size:.92rem;margin:.2em 0 0}
+.pill{display:inline-block;font-family:var(--mono);font-size:.68rem;font-weight:700;
+  padding:2px 8px;border-radius:20px;margin-top:8px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.early{background:var(--plan-bg);color:var(--plan)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.92rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td code{background:var(--surface2);padding:1px 5px;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.5;margin:12px 0}
+.flow{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;overflow-x:auto}
+.flow pre{border:0;background:transparent;padding:0;margin:0;color:var(--ink)}
+ul{margin:.4em 0;padding-left:1.3em}
+li{margin:.28em 0}
+li b{color:var(--ink)}
+.tool{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-top:10px}
+.tool .name{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:.95rem}
+.tool p{margin:0;color:var(--muted);font-size:.92rem}
+.note{color:var(--muted);font-size:.9rem}
+footer{border-top:1px solid var(--border);padding:28px 0 60px;color:var(--muted);font-size:.85rem}
+.toggle{position:fixed;top:14px;right:14px;font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  padding:6px 11px;border-radius:20px;cursor:pointer;z-index:10}
+.toggle:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="(function(){var r=document.documentElement,d=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',d==='dark'?'light':'dark')})()">◑ 深/淺</button>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">sub_projs · cllm-apps</span>
+    <h1>handy 多語言移植 + cllm 周邊整合</h1>
+    <p class="thesis">同一套 handy 四工具（llme / zhtw / wf / mail），換不同語言各寫一遍——真正的「手」仍轉呼外部命令，各語言只重寫膠水。真相源＝handy 的 Fennel 原型，行為 1:1 對齊。</p>
+    <div class="meta">
+      <span><b>納入</b> 2026-07-19（原 ~/code/cllm-apps）</span>
+      <span><b>契約</b> HANDY-PORT-SPEC.md</span>
+      <span><b>入口</b> README.md</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="tldr">
+    <span class="eyebrow">TL;DR</span>
+    這裡有<b>兩群</b>東西：<b>A 群 <code>*-handy/</code></b>＝四工具的 shell-out 移植（主線，python/cpp/lisp/janet，全綠）；<b>B 群 <code>*-try-1/</code></b>＝更早的「用 cllm binding 打 Anthropic + 整合周邊工具」最小應用（房規源頭）。別搞混。
+  </div>
+
+  <section>
+    <h2><span class="n">A</span>四工具 shell-out 移植（主線）</h2>
+    <p>「<b>同一套 handy 工具，換個語言長怎樣？</b>」各語言只重寫 dispatcher／膠水，真正的「手」轉呼外部命令（<code>llm</code> cllm CLI、<code>claude</code>、同語言 sibling）——<b>不用 cllm binding</b>。行為契約權威＝ <code>HANDY-PORT-SPEC.md</code>。</p>
+    <div class="cards">
+      <div class="card">
+        <h3>python-handy <span class="lang">Python</span></h3>
+        <p>純 stdlib，<code>#!/usr/bin/env python3</code>。</p>
+        <span class="pill ok">✓ dry-run 全綠</span>
+      </div>
+      <div class="card">
+        <h3>cpp-handy <span class="lang">C++20/23</span></h3>
+        <p>標準庫＋POSIX，<code>build.sh</code> 編執行檔。</p>
+        <span class="pill ok">✓ dry-run 全綠</span>
+      </div>
+      <div class="card">
+        <h3>lisp-handy <span class="lang">Common Lisp</span></h3>
+        <p>SBCL 2.6，<code>#!/usr/bin/sbcl --script</code>。</p>
+        <span class="pill ok">✓ dry-run 全綠</span>
+      </div>
+      <div class="card">
+        <h3>janet-handy <span class="lang">Janet 1.41</span></h3>
+        <p><code>#!/usr/bin/env janet</code>，共用膠水抽 src/util.janet。</p>
+        <span class="pill ok">✓ dry-run 全綠</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">B</span>cllm binding 最小應用（早期探索）</h2>
+    <p>「<b>怎麼用 cllm binding ＋ 周邊工具打通一條真後端？</b>」比 A 群早，各寫一支最小應用：透過 <b>cllm binding</b> 打 <b>Anthropic API</b>，整合 <b>anthropic-proxy</b>（轉發代理）＋ <b>llm-login</b>（帳號登入）。本房的 <code>scripts/{up.sh,vendor.sh}</code> 房規就源自這裡（尤其 janet-try-1）。</p>
+    <div class="cards">
+      <div class="card"><h3>cpp-try-1 <span class="lang">C++23</span></h3><p>走 <code>&lt;cllm/llm.hpp&gt;</code> binding。</p><span class="pill early">早期探索</span></div>
+      <div class="card"><h3>janet-try-1 <span class="lang">Janet</span></h3><p>jpm 骨架；房規藍本。</p><span class="pill early">早期探索</span></div>
+      <div class="card"><h3>lisp-try-1 <span class="lang">Common Lisp</span></h3><p>janet-try-1 的 CL 版。</p><span class="pill early">早期探索</span></div>
+      <div class="card"><h3>lua-try-1 <span class="lang">Lua</span></h3><p>janet-try-1 的 Lua 版。</p><span class="pill early">早期探索</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>四工具是什麼</h2>
+    <div class="flow"><pre>  zhtw ─┐                                            ┌─▶ llm (cllm CLI) ──▶ endpoint
+        ├─▶ llme &lt;endpoint&gt; ──(--config &lt;cfg&gt;.json)──┤
+  wf ───┤        （多 endpoint dispatcher）           └─▶（configs/anthropic.json）
+        │                                                    │ OpenAI+Bearer
+  wf -a ┼─▶ claude -p（headless agent，當場動手）              ▼
+  wf -i ┘                                            anthropic-proxy(127.0.0.1:8787)
+        └─▶ mail send ──▶ inbox/&lt;slug&gt;.md                     │ x-api-key
+                  mail run ──▶ claude -p ──▶ done/             ▼
+                                                        api.anthropic.com</pre></div>
+    <div class="tool"><span class="name">llme</span><p>多 endpoint dispatcher：<code>&lt;endpoint&gt;</code> → <code>configs/&lt;endpoint&gt;.json</code>，轉呼 <code>llm --config …</code>；沒帶 <code>--api-key</code> 時依序找 <code>LLME_KEY_&lt;EP&gt;</code>／<code>&lt;EP&gt;_API_KEY</code> 自動注入。</p></div>
+    <div class="tool"><span class="name">zhtw</span><p>繁中翻譯薄包裝：烤死 deepseek＋翻譯人格＋取樣參數，轉呼 sibling <code>llme</code>。</p></div>
+    <div class="tool"><span class="name">wf</span><p>兩層任務派發器：啟發式關鍵詞（免 LLM）＞ LLM 分類，判 brain（llme 直接答）或 agent（claude 動手）；<code>-i</code> 走非同步 inbox。</p></div>
+    <div class="tool"><span class="name">mail</span><p>inbox 協議：<code>send</code> 投信／<code>list</code> 列信／<code>run</code> 逐封 spawn claude 處理後歸檔 <code>done/</code>。</p></div>
+  </section>
+
+  <section>
+    <h2>怎麼跑</h2>
+    <p class="note">離線 dry-run（不觸網，把外部命令換成 echo）—— 每個 <code>*-handy</code> app 通用：</p>
+    <pre>cd python-handy   # 或 cpp-handy / lisp-handy / janet-handy（cpp 先 ./build.sh）
+LLME_LLM=echo ./llme deepseek --stream hi              # → --config …/deepseek.json --stream hi
+DEEPSEEK_API_KEY=FAKE LLME_LLM=echo ./llme deepseek hi # → 追加 --api-key FAKE
+WF_LLME=echo WF_CLAUDE=echo ./wf 幫我修改 foo.py &lt;/dev/null   # [wf] 路由：agent（啟發式・免 LLM）
+ZHTW_LLME=echo ./zhtw 測試                             # 轉呼 sibling llme 的完整形狀
+./mail send 測試任務 ; ./mail list ; WF_CLAUDE=echo ./mail run   # 投遞→列出→歸檔 done/</pre>
+    <p class="note">真後端 DeepSeek：<code>export DEEPSEEK_API_KEY=sk-…</code> 後 <code>./llme deepseek --stream 你好</code>（llme 自動注入 key）。</p>
+    <p class="note">經 proxy 打 Anthropic：<code>./scripts/vendor.sh</code> 備二進位 → <code>ANTHROPIC_API_KEY=sk-ant-… ./scripts/up.sh &lt;prompt&gt;</code>（起 proxy sidecar＋備憑證＋<code>exec llme anthropic</code>）。</p>
+  </section>
+
+  <section>
+    <h2>房規（每個 <code>&lt;lang&gt;-handy/</code> 都遵守）</h2>
+    <ul>
+      <li><b>shell-out，不 link libcllm</b>：真正的「手」轉呼 <code>llm</code>/<code>claude</code>/sibling，各語言只寫膠水。</li>
+      <li><b>sibling 解析</b>：工具互呼預設解到同語言同層 sibling，env（<code>ZHTW_LLME</code>/<code>WF_LLME</code>/<code>WF_MAIL</code>）可覆寫。</li>
+      <li><b>configs/</b>：<code>deepseek.json</code>（keyless）＋<code>anthropic.json</code>（指本機 anthropic-proxy）＋<code>_template.json</code>；只放 Client 欄位、無註解鍵。真憑證 <code>config.json</code> 不進版控。</li>
+      <li><b>scripts/</b>：<code>vendor.sh</code>（vendored cllm tools）＋<code>up.sh</code>（proxy sidecar＋備憑證＋<code>exec llme anthropic</code>）。</li>
+      <li><b>build/vendor/.run</b> 一律 gitignore、可 regen。</li>
+    </ul>
+    <p class="note">與 handy Fennel 原型的差異：sibling 解析改為「預設同層、env 可覆寫」（原型寫死裸名）；其餘（關鍵詞清單、分類系統提示、取樣參數、信件模板、exit code、api-key 注入、stdin 非-tty 才讀）皆逐字對齊。各語言細微偏差記在該 app README。</p>
+  </section>
+
+  <section>
+    <h2>設計脈絡</h2>
+    <table>
+      <tr><th>要素</th><th>在哪</th></tr>
+      <tr><td>四工具真相源（Fennel 原型）</td><td><code>../handy/{llme,zhtw,wf,mail}</code></td></tr>
+      <tr><td>cllm 周邊（proxy / login / llm CLI / binding）</td><td><code>../cllm/</code></td></tr>
+      <tr><td>行為契約 + 房規（權威）</td><td><code>HANDY-PORT-SPEC.md</code></td></tr>
+      <tr><td>上層路由</td><td><code>../README.md</code></td></tr>
+    </table>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    cllm-apps · handy 多語言移植 + cllm 周邊整合 · 2026-07-19 納入 repo。細節見 <code>README.md</code> 與各 app 的 README、契約見 <code>HANDY-PORT-SPEC.md</code>。
+  </div>
+</footer>
+</body>
+</html>
