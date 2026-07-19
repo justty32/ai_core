@@ -1,0 +1,3 @@
+# jpm build 產物
+/build/
+*.jimage

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Janet 速查表 · janet-lab</title>
+<style>
+  :root{
+    --bg:#fafaf9; --panel:#fff; --ink:#1c1917; --muted:#78716c; --line:#e7e5e4;
+    --accent:#0d9488; --accent-soft:#ccfbf1; --code-bg:#f5f5f4; --kw:#7c3aed;
+    --str:#0f766e; --com:#a8a29e; --num:#c2410c; --warn-bg:#fef3c7; --warn-line:#f59e0b;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c0a09; --panel:#1c1917; --ink:#f5f5f4; --muted:#a8a29e; --line:#292524;
+      --accent:#2dd4bf; --accent-soft:#134e4a; --code-bg:#141210; --kw:#c4b5fd;
+      --str:#5eead4; --com:#57534e; --num:#fdba74; --warn-bg:#3a2e0a; --warn-line:#a16207;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#fafaf9; --panel:#fff; --ink:#1c1917; --muted:#78716c; --line:#e7e5e4;
+    --accent:#0d9488; --accent-soft:#ccfbf1; --code-bg:#f5f5f4; --kw:#7c3aed;
+    --str:#0f766e; --com:#a8a29e; --num:#c2410c; --warn-bg:#fef3c7; --warn-line:#f59e0b;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c0a09; --panel:#1c1917; --ink:#f5f5f4; --muted:#a8a29e; --line:#292524;
+    --accent:#2dd4bf; --accent-soft:#134e4a; --code-bg:#141210; --kw:#c4b5fd;
+    --str:#5eead4; --com:#57534e; --num:#fdba74; --warn-bg:#3a2e0a; --warn-line:#a16207;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Noto Sans CJK TC","Microsoft JhengHei",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  header{padding:2rem 1.25rem 1rem;max-width:1200px;margin:0 auto}
+  h1{margin:0 0 .25rem;font-size:1.7rem;letter-spacing:-.01em}
+  h1 .v{color:var(--accent);font-weight:700}
+  .sub{color:var(--muted);margin:0}
+  nav{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:.6rem 1.25rem;margin-bottom:1rem}
+  nav .wrap{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:.4rem}
+  nav a{font-size:.82rem;text-decoration:none;color:var(--muted);padding:.25rem .6rem;
+    border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+  nav a:hover{color:var(--accent);border-color:var(--accent)}
+  main{max-width:1200px;margin:0 auto;padding:0 1.25rem 4rem;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:1rem;align-items:start}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:1.1rem 1.15rem;overflow:hidden}
+  section.wide{grid-column:1/-1}
+  h2{margin:.1rem 0 .8rem;font-size:1.08rem;display:flex;align-items:center;gap:.5rem}
+  h2 .n{font-size:.72rem;background:var(--accent-soft);color:var(--accent);font-weight:700;
+    padding:.12rem .5rem;border-radius:6px}
+  h3{margin:1rem 0 .35rem;font-size:.9rem;color:var(--muted);font-weight:600}
+  h3:first-of-type{margin-top:.2rem}
+  pre{margin:.35rem 0;background:var(--code-bg);border:1px solid var(--line);border-radius:9px;
+    padding:.65rem .75rem;overflow-x:auto;font-size:.82rem;line-height:1.5}
+  code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre code{white-space:pre}
+  :not(pre)>code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;
+    padding:.05rem .35rem;font-size:.85em}
+  .kw{color:var(--kw)} .str{color:var(--str)} .com{color:var(--com)} .num{color:var(--num)}
+  .cmt{color:var(--com);font-style:italic}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.4rem 0}
+  th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:.76rem;text-transform:uppercase;letter-spacing:.03em}
+  td code{font-size:.9em}
+  .warn{background:var(--warn-bg);border-left:3px solid var(--warn-line);border-radius:0 8px 8px 0;
+    padding:.55rem .7rem;font-size:.82rem;margin:.6rem 0}
+  .warn b{color:var(--ink)}
+  footer{max-width:1200px;margin:0 auto;padding:1rem 1.25rem 3rem;color:var(--muted);font-size:.8rem}
+  .toggle{position:fixed;bottom:1rem;right:1rem;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);border-radius:999px;padding:.5rem .8rem;font-size:.8rem;cursor:pointer;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <h1>Janet 速查表 <span class="v">1.41.2</span></h1>
+  <p class="sub">janet-lab · 語言核心 + 你最常用的 spork/json 與 spork/argparse，一頁看完。分篇細節在 <code>docs/</code>。</p>
+</header>
+
+<nav><div class="wrap">
+  <a href="#basics">語言核心</a>
+  <a href="#brackets">括號 ()[]{}</a>
+  <a href="#data">資料結構</a>
+  <a href="#json">JSON</a>
+  <a href="#cli">CLI argparse</a>
+  <a href="#fiber">fiber</a>
+  <a href="#macro">macro</a>
+  <a href="#cffi">C 互通</a>
+  <a href="#proc">行程/信號</a>
+  <a href="#print">印 / 除錯</a>
+  <a href="#jpm">jpm / REPL</a>
+  <a href="#traps">地雷</a>
+</div></nav>
+
+<main>
+
+<section id="basics">
+  <h2><span class="n">01</span> 語言核心</h2>
+  <h3>綁定</h3>
+  <pre><code><span class="kw">(def</span> x <span class="num">10</span>)          <span class="cmt"># 不可變</span>
+<span class="kw">(var</span> y <span class="num">20</span>) <span class="kw">(set</span> y <span class="num">30</span>)  <span class="cmt"># 可變</span>
+<span class="kw">(let</span> [a <span class="num">1</span> b <span class="num">2</span>] (+ a b)) <span class="cmt"># 區域 => 3</span></code></pre>
+  <h3>函式</h3>
+  <pre><code><span class="kw">(defn</span> add [a b] (+ a b))
+<span class="kw">(defn</span> greet [&opt who]        <span class="cmt"># 可選參數</span>
+  <span class="kw">(default</span> who <span class="str">"world"</span>)
+  <span class="kw">(string</span> <span class="str">"Hi, "</span> who))
+<span class="kw">(defn</span> sum [& xs] (reduce + <span class="num">0</span> xs)) <span class="cmt"># 變長</span>
+<span class="kw">(map</span> |(* $ <span class="num">2</span>) @[<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>]) <span class="cmt"># |(..) $=首參</span></code></pre>
+  <h3>條件</h3>
+  <pre><code><span class="kw">(if</span> (> x <span class="num">5</span>) <span class="str">"big"</span> <span class="str">"small"</span>)
+<span class="kw">(when</span> (> x <span class="num">5</span>) (print <span class="str">"big"</span>)) <span class="cmt"># 只真、多句</span>
+<span class="kw">(cond</span> (< x <span class="num">0</span>) <span class="str">"neg"</span>  (= x <span class="num">0</span>) <span class="str">"zero"</span>  <span class="str">"pos"</span>)
+<span class="kw">(case</span> x <span class="num">10</span> <span class="str">"ten"</span> <span class="str">"other"</span>)</code></pre>
+  <p class="sub" style="font-size:.8rem">真假：只有 <code>nil</code> 與 <code>false</code> 是假，<code>0</code>／<code>""</code>／空集合都算真。</p>
+  <h3>迴圈 / 推導</h3>
+  <pre><code><span class="kw">(loop</span> [i :range [<span class="num">0</span> <span class="num">3</span>]] (prin i)) <span class="cmt"># 副作用 012</span>
+<span class="kw">(each</span> v @[:a :b] (prin v))       <span class="cmt"># 走訪值</span>
+<span class="kw">(seq</span> [i :range [<span class="num">0</span> <span class="num">5</span>] :when (odd? i)]
+  (* i <span class="num">10</span>))  <span class="cmt">;=> @[10 30]  推導回陣列</span></code></pre>
+</section>
+
+<section id="brackets">
+  <h2><span class="n">✦</span> 括號家族 <code>() [] {} @</code></h2>
+  <p class="sub" style="font-size:.83rem;margin-top:0"><b><code>()</code> 是「呼叫」，<code>[]</code>/<code>{}</code> 是「資料」。</b>這是 Janet 跟傳統 Lisp 最不同、也是它 JSON 很順的根本。</p>
+  <pre><code>(+ <span class="num">1</span> <span class="num">2</span>)           <span class="cmt">;() 當呼叫 => 3</span>
+[<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>]          <span class="cmt">;[] => tuple（不可變），內容會求值</span>
+[(+ <span class="num">1</span> <span class="num">1</span>) <span class="num">2</span>]     <span class="cmt">;=> (2 2)</span>
+{:a (+ <span class="num">40</span> <span class="num">2</span>)}    <span class="cmt">;{} => struct => {:a 42}</span></code></pre>
+  <table>
+    <tr><th>寫法</th><th>型別</th><th>可變</th></tr>
+    <tr><td><code>[1 2]</code></td><td>tuple</td><td>✗</td></tr>
+    <tr><td><code>@[1 2]</code></td><td>array</td><td>✓</td></tr>
+    <tr><td><code>{:a 1}</code></td><td>struct</td><td>✗</td></tr>
+    <tr><td><code>@{:a 1}</code></td><td>table</td><td>✓</td></tr>
+  </table>
+  <p class="sub" style="font-size:.8rem"><code>{:a 1 :b [1 2 3]}</code> 這種「像 JSON 的東西」就是合法 Janet 字面資料，可內含計算值。</p>
+</section>
+
+<section id="data">
+  <h2><span class="n">02</span> 資料結構</h2>
+  <p class="sub" style="font-size:.82rem;margin-top:0"><b>可變加 <code>@</code></b>：<code>@[]</code> array · <code>@{}</code> table；沒 <code>@</code> 的 <code>[]</code> tuple · <code>{}</code> struct 不可變。</p>
+  <h3>陣列 <code>@[…]</code></h3>
+  <pre><code><span class="kw">(def</span> a @[<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>])
+<span class="kw">(array/push</span> a <span class="num">4</span>)      <span class="cmt">;=> @[1 2 3 4] 原地</span>
+(a <span class="num">0</span>)                <span class="cmt">;=> 1  索引當函式</span>
+<span class="kw">(array/slice</span> a <span class="num">1</span> <span class="num">3</span>) <span class="cmt">;=> @[2 3]</span>
+<span class="kw">(map</span> |(* $ $) a)     <span class="cmt">;=> @[1 4 9 16]</span>
+<span class="kw">(filter</span> even? a)     <span class="cmt">;=> @[2 4]</span>
+<span class="kw">(reduce</span> + <span class="num">0</span> a)      <span class="cmt">;=> 10</span></code></pre>
+  <h3>雜湊表 <code>@{…}</code></h3>
+  <pre><code><span class="kw">(def</span> t @{:name <span class="str">"Alice"</span> :age <span class="num">30</span>})
+<span class="kw">(put</span> t :city <span class="str">"Taipei"</span>) <span class="cmt"># 原地寫</span>
+(t :name)              <span class="cmt">;=> "Alice"</span>
+<span class="kw">(get</span> t :age :none)    <span class="cmt"># 第三參 = 預設</span>
+<span class="kw">(has-key?</span> t :city)    <span class="cmt">;=> true</span>
+<span class="kw">(update</span> t :age inc)   <span class="cmt"># 用函式更新</span>
+<span class="kw">(keys</span> t) <span class="kw">(values</span> t) <span class="kw">(pairs</span> t)</code></pre>
+  <h3>巢狀 & 合併</h3>
+  <pre><code><span class="kw">(get-in</span> n [:user :names <span class="num">0</span>]) <span class="cmt"># 鑽多層</span>
+<span class="kw">(put-in</span> n [:user :age] <span class="num">5</span>)
+<span class="kw">(merge</span> {:a <span class="num">1</span>} {:b <span class="num">2</span>})     <span class="cmt">;=> @{:a 1 :b 2}</span></code></pre>
+</section>
+
+<section id="json">
+  <h2><span class="n">03</span> JSON · <code>spork/json</code></h2>
+  <pre><code><span class="kw">(import</span> spork/json)
+<span class="kw">(def</span> d @{:name <span class="str">"Bob"</span> :n <span class="num">3</span>})
+
+<span class="kw">(json/encode</span> d)          <span class="cmt">;=> {"name":"Bob","n":3}</span>
+<span class="kw">(json/encode</span> d <span class="str">"  "</span> <span class="str">"\n"</span>) <span class="cmt"># 縮排好讀版</span>
+
+<span class="kw">(json/decode</span> s)          <span class="cmt"># key 是「字串」</span>
+<span class="kw">(json/decode</span> s <span class="kw">true</span>)     <span class="cmt"># ★ key 轉 keyword（建議）</span></code></pre>
+  <p class="sub" style="font-size:.82rem"><b>永遠傳 <code>true</code></b>，解回來就能 <code>(d :name)</code> 用 keyword 取值，跟自己寫的 Janet 一致。</p>
+  <h3>檔案 round-trip</h3>
+  <pre><code><span class="kw">(spit</span> <span class="str">"c.json"</span> (json/encode d <span class="str">"  "</span> <span class="str">"\n"</span>))
+<span class="kw">(def</span> back (json/decode (slurp <span class="str">"c.json"</span>) <span class="kw">true</span>))</code></pre>
+  <table>
+    <tr><th>JSON</th><th>Janet</th></tr>
+    <tr><td>object / array</td><td><code>@{}</code> / <code>@[]</code></td></tr>
+    <tr><td>string / number / bool</td><td>同名</td></tr>
+    <tr><td>null</td><td>keyword <code>:null</code>（decode 傳 3ⁿᵈ true → <code>nil</code>）</td></tr>
+  </table>
+  <h3>巢狀取 / 改</h3>
+  <pre><code><span class="kw">(get-in</span> j [:a :b <span class="num">1</span>])          <span class="cmt"># 取（別用 (j :a :b)）</span>
+<span class="kw">(update-in</span> j [:a :b <span class="num">1</span>] |(* $ <span class="num">100</span>)) <span class="cmt"># 改</span>
+<span class="kw">(map</span> |($ :n) users)          <span class="cmt"># decode 出來就是普通 array/table</span></code></pre>
+  <div class="warn"><b>坑</b>：開 <code>nils=true</code> 時值為 <code>null</code> 的鍵會<b>整個消失</b>（table 存不了 nil）。</div>
+</section>
+
+<section id="cli">
+  <h2><span class="n">04</span> CLI · <code>spork/argparse</code></h2>
+  <pre><code><span class="kw">(import</span> spork/argparse :as ap)
+<span class="kw">(def</span> res
+  <span class="kw">(ap/argparse</span> <span class="str">"說明"</span>
+    <span class="str">"name"</span>  {:kind :accumulate :short <span class="str">"n"</span>}
+    <span class="str">"upper"</span> {:kind :flag       :short <span class="str">"u"</span>}
+    <span class="str">"level"</span> {:kind :option     :default <span class="str">"1"</span>}
+    :default {:kind :accumulate})) <span class="cmt"># 位置參數</span>
+<span class="kw">(unless</span> res (os/exit <span class="num">1</span>)) <span class="cmt"># nil = 失敗/印過help</span></code></pre>
+  <p class="sub" style="font-size:.8rem">給 <code>-n Alice --name Bob --upper p1 p2</code>：</p>
+  <pre><code>(res <span class="str">"name"</span>)   <span class="cmt">;=> @["Alice" "Bob"]</span>
+(res <span class="str">"upper"</span>)  <span class="cmt">;=> true</span>
+(res <span class="str">"level"</span>)  <span class="cmt">;=> "1"  (預設)</span>
+(res :default) <span class="cmt">;=> @["p1" "p2"]</span></code></pre>
+  <table>
+    <tr><th>:kind</th><th>意思</th><th>型別</th></tr>
+    <tr><td><code>:flag</code></td><td>開關</td><td>bool</td></tr>
+    <tr><td><code>:multi</code></td><td>可多次、數次數</td><td>int</td></tr>
+    <tr><td><code>:option</code></td><td>帶一值</td><td>string</td></tr>
+    <tr><td><code>:accumulate</code></td><td>帶值可多次</td><td>array</td></tr>
+  </table>
+  <p class="sub" style="font-size:.8rem"><code>:option</code>/<code>:accumulate</code> 取回都是<b>字串</b>，要數字用 <code>:map scan-number</code>。<code>--help</code> 自動生成。</p>
+</section>
+
+<section id="fiber">
+  <h2><span class="n">09</span> Fiber 協程</h2>
+  <p class="sub" style="font-size:.82rem;margin-top:0">一段可暫停/恢復的執行流。generator、例外、非同步都是它。</p>
+  <h3>generator</h3>
+  <pre><code><span class="kw">(def</span> f (fiber/new (fn [] (yield <span class="num">1</span>) (yield <span class="num">2</span>))))
+(resume f) (resume f)   <span class="cmt">;=> 1 然後 2</span>
+<span class="cmt"># 直接走訪：</span>
+<span class="kw">(each</span> x (fiber/new (fn [] (for i <span class="num">0</span> <span class="num">4</span> (yield (* i i)))))
+  (prin x <span class="str">" "</span>))       <span class="cmt">;=> 0 1 4 9</span></code></pre>
+  <h3>錯誤處理（其實也是 fiber）</h3>
+  <pre><code><span class="kw">(try</span> (error <span class="str">"boom"</span>) ([e] (string <span class="str">"抓到:"</span> e)))
+<span class="kw">(protect</span> (error <span class="str">"bad"</span>)) <span class="cmt">;=> (false "bad")</span>
+<span class="kw">(protect</span> (+ <span class="num">1</span> <span class="num">2</span>))     <span class="cmt">;=> (true 3)</span></code></pre>
+  <h3>ev：非同步（單執行緒協作）</h3>
+  <pre><code><span class="kw">(ev/spawn</span> (print <span class="str">"背景"</span>))  <span class="cmt"># 丟去背景跑</span>
+<span class="kw">(ev/sleep</span> <span class="num">0</span>)              <span class="cmt"># 讓排程器運轉</span>
+<span class="cmt"># 寫起來像同步、沒有 async 染色</span></code></pre>
+</section>
+
+<section id="macro">
+  <h2><span class="n">08</span> 巨集 macro</h2>
+  <table>
+    <tr><th>符號</th><th>意思</th></tr>
+    <tr><td><code>~</code></td><td>quasiquote：引用程式、可挖洞</td></tr>
+    <tr><td><code>,</code></td><td>unquote：挖洞，這裡求值</td></tr>
+    <tr><td><code>,;</code></td><td>unquote-splice：挖洞並攤平</td></tr>
+    <tr><td><code>'</code></td><td>quote：純引用不求值</td></tr>
+  </table>
+  <pre><code><span class="kw">(defmacro</span> my-when [c & body]
+  ~(if ,c (do ,;body)))
+<span class="kw">(macex1</span> '(my-when x (foo))) <span class="cmt"># 看展開！</span>
+<span class="cmt">;=> (if x (do (foo)))</span>
+
+<span class="cmt"># 衛生：用 with-syms 生不撞名的臨時變數</span>
+<span class="kw">(defmacro</span> swap [a b]
+  (with-syms [t]
+    ~(let [,t ,a] (set ,a ,b) (set ,b ,t))))</code></pre>
+  <p class="sub" style="font-size:.8rem">能用函式就別用巨集；只在「要延遲求值/看未求值結構」時出手。</p>
+</section>
+
+<section id="cffi">
+  <h2><span class="n">10</span> 與 C 互通</h2>
+  <table>
+    <tr><th>方式</th><th>編 C?</th><th>用途</th></tr>
+    <tr><td>FFI</td><td>不用</td><td>直呼現成 <code>.so</code></td></tr>
+    <tr><td>native 模組</td><td>jpm 編</td><td>用 C 寫 Janet 函式</td></tr>
+    <tr><td>嵌入</td><td>編 C</td><td>C 程式內跑 Janet</td></tr>
+  </table>
+  <h3>FFI（不編譯，直呼）</h3>
+  <pre><code><span class="kw">(def</span> m (ffi/native <span class="str">"libm.so.6"</span>))
+<span class="kw">(def</span> sig (ffi/signature :default :double :double))
+<span class="kw">(ffi/call</span> (ffi/lookup m <span class="str">"cos"</span>) sig <span class="num">0.0</span>) <span class="cmt">;=> 1.0</span></code></pre>
+  <h3>嵌入（C 裡跑 Janet）</h3>
+  <pre><code><span class="com">// C</span>
+janet_init();
+JanetTable *e = janet_core_env(NULL);
+janet_dostring(e, <span class="str">"(+ 2 3)"</span>, <span class="str">"m"</span>, &out);</code></pre>
+  <p class="sub" style="font-size:.78rem">連結：<code>-I~/.local/include/janet ~/.local/lib/libjanet.a -lm -ldl -lpthread -lrt -rdynamic</code>。細節見 <code>docs/10</code> 與 <code>examples/</code>。</p>
+</section>
+
+<section id="proc">
+  <h2><span class="n">11</span> 行程 / 管線 / 信號</h2>
+  <pre><code><span class="kw">(os/execute</span> [<span class="str">"echo"</span> <span class="str">"hi"</span>] :p) <span class="cmt"># exit code；:p=用PATH :x=非零報錯</span>
+<span class="kw">(import</span> spork/sh)
+<span class="kw">(sh/exec-slurp</span> <span class="str">"git"</span> <span class="str">"rev-parse"</span> <span class="str">"HEAD"</span>) <span class="cmt"># 抓輸出</span></code></pre>
+  <h3>管線</h3>
+  <pre><code><span class="cmt"># 法一：Janet 中轉（好控制）</span>
+<span class="kw">(def</span> p (os/spawn [<span class="str">"sort"</span>] :p {:in :pipe :out :pipe}))
+(:write (p :in) <span class="str">"b\na\n"</span>) (:close (p :in))
+(:read (p :out) :all) <span class="cmt">;=> "a\nb"</span>
+<span class="cmt"># 法二：多段交給 shell</span>
+<span class="kw">(os/execute</span> [<span class="str">"sh"</span> <span class="str">"-c"</span> <span class="str">"a | b | c"</span>] :p)</code></pre>
+  <div class="warn"><b>坑</b>：別把 proc1 的 <code>:out</code> 直接接 proc2 的 <code>:in</code>——<code>:pipe</code> 是非阻塞 fd，對方讀會 <code>EAGAIN</code>。用上面兩法之一。</div>
+  <h3>信號</h3>
+  <pre><code><span class="kw">(os/proc-kill</span> child false :term) <span class="cmt"># signal 是 keyword</span>
+<span class="kw">(os/sigaction</span> :int (fn [] (print <span class="str">"bye"</span>)))
+<span class="cmt"># ★ handler 要有 ev loop 在跑才會觸發</span></code></pre>
+  <p class="sub" style="font-size:.78rem">signal：<code>:term :int :hup :kill :usr1 :usr2 :quit</code>。</p>
+</section>
+
+<section id="print">
+  <h2><span class="n">✦</span> 印 / 除錯</h2>
+  <div class="warn"><b>最常踩</b>：<code>print</code> 對 array/table 只印位址 <code>&lt;array 0x…&gt;</code>，<b>不是內容</b>。</div>
+  <pre><code>(pp @[<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>])        <span class="cmt"># pretty-print 內容</span>
+(printf <span class="str">"%q"</span> x)      <span class="cmt"># 內嵌字串：可讀表示</span>
+(prin ...) (print ...) <span class="cmt"># 不換行 / 換行</span>
+(doc defn)          <span class="cmt"># REPL 查文件</span></code></pre>
+  <div class="warn"><code>%q</code>/<code>%p</code>/<code>%j</code>/<code>%n</code> 都印 <b>Janet 表示法</b>（<code>%j</code> 是單行，<b>不是 JSON</b>）。真 JSON 只有 <code>(print (json/encode x))</code>。</div>
+</section>
+
+<section id="jpm">
+  <h2><span class="n">05</span> jpm / REPL</h2>
+  <table>
+    <tr><th>指令</th><th>做什麼</th></tr>
+    <tr><td><code>janet f.janet</code></td><td>跑腳本（開發主循環，秒回）</td></tr>
+    <tr><td><code>janet -e '…'</code></td><td>一行求值</td></tr>
+    <tr><td><code>jpm test</code></td><td>跑 <code>test/</code></td></tr>
+    <tr><td><code>jpm build</code></td><td>編獨立執行檔 <code>build/</code></td></tr>
+    <tr><td><code>jpm deps</code></td><td>裝 project.janet 的依賴</td></tr>
+    <tr><td><code>jpm install &lt;名/git&gt;</code></td><td>裝套件到 <code>~/.local</code></td></tr>
+  </table>
+  <h3>nvim · Conjure REPL</h3>
+  <table>
+    <tr><th>鍵</th><th>動作</th></tr>
+    <tr><td><code>,ee</code></td><td>求值游標 form</td></tr>
+    <tr><td><code>,er</code></td><td>求值最外層 form</td></tr>
+    <tr><td><code>,eb</code></td><td>求值整個 buffer</td></tr>
+    <tr><td><code>,ls</code> / <code>,lv</code></td><td>開 REPL log</td></tr>
+  </table>
+  <p class="sub" style="font-size:.8rem">開 <code>.janet</code> 檔即自動起 <code>janet -n -s</code> REPL。parinfer + 彩虹括號已就緒。</p>
+</section>
+
+<section id="traps" class="wide">
+  <h2><span class="n">⚠</span> 地雷合輯</h2>
+  <table>
+    <tr><th>症狀</th><th>原因 / 正解</th></tr>
+    <tr><td><code>(print arr)</code> 印出 <code>&lt;array 0x…&gt;</code></td><td>用 <code>(pp arr)</code> 或 <code>(printf "%q" arr)</code>；<code>print</code> 不格式化容器。</td></tr>
+    <tr><td><code>(t :a :b)</code> 想取巢狀卻拿到怪值</td><td>第二參數是<b>預設值</b>不是下一層 key。巢狀用 <code>(get-in t [:a :b])</code>。</td></tr>
+    <tr><td>JSON 解回來 <code>(d :name)</code> 拿到 nil</td><td><code>decode</code> 沒傳 <code>true</code>，key 是字串。傳 <code>true</code> 轉 keyword。</td></tr>
+    <tr><td>argparse <code>--level 5</code> 拿到 <code>"5"</code> 不能算術</td><td>取回是字串。用 <code>scan-number</code> 或選項加 <code>:map scan-number</code>。</td></tr>
+    <tr><td>想改集合卻報錯</td><td>忘了 <code>@</code>：不可變 <code>[]</code>/<code>{}</code> 不能改，要 <code>@[]</code>/<code>@{}</code>。</td></tr>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  完整分篇：<code>docs/00</code> ～ <code>docs/11</code>（環境·語言·資料·JSON·CLI·jpm·編輯器·REPL·macro·fiber·C互通·行程信號）。
+  可跑範例：<code>examples/</code>（ffi·subcommands·fibers·pipeline·native-module·embed）。
+  本頁所有程式碼都在 Janet 1.41.2 跑過。
+</footer>
+
+<button class="toggle" onclick="(function(){var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));r.setAttribute('data-theme',d==='dark'?'light':'dark');})()">◑ 切換亮／暗</button>
+</body>
+</html>

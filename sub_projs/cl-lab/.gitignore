@@ -1,0 +1,4 @@
+# 獨立執行檔／SBCL image（scripts/run.sh build 重生，45M）
+/build/
+# fasl 編譯快取
+*.fasl

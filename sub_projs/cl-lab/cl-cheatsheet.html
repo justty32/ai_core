@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Common Lisp 速查表 · cl-lab</title>
+<style>
+  :root{
+    --bg:#faf9f7; --panel:#fff; --ink:#1c1613; --muted:#78716c; --line:#e7e2dc;
+    --accent:#b45309; --accent-soft:#fef3c7; --code-bg:#f5f2ee; --kw:#9333ea;
+    --str:#15803d; --com:#a8a29e; --num:#c2410c; --warn-bg:#fef3c7; --warn-line:#d97706;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0d0b08; --panel:#1a1613; --ink:#f5f0ea; --muted:#a8a29e; --line:#2a231d;
+      --accent:#fbbf24; --accent-soft:#3a2e0a; --code-bg:#14100c; --kw:#d8b4fe;
+      --str:#86efac; --com:#57534e; --num:#fdba74; --warn-bg:#3a2e0a; --warn-line:#a16207;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#faf9f7; --panel:#fff; --ink:#1c1613; --muted:#78716c; --line:#e7e2dc;
+    --accent:#b45309; --accent-soft:#fef3c7; --code-bg:#f5f2ee; --kw:#9333ea;
+    --str:#15803d; --com:#a8a29e; --num:#c2410c; --warn-bg:#fef3c7; --warn-line:#d97706;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d0b08; --panel:#1a1613; --ink:#f5f0ea; --muted:#a8a29e; --line:#2a231d;
+    --accent:#fbbf24; --accent-soft:#3a2e0a; --code-bg:#14100c; --kw:#d8b4fe;
+    --str:#86efac; --com:#57534e; --num:#fdba74; --warn-bg:#3a2e0a; --warn-line:#a16207;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Noto Sans CJK TC","Microsoft JhengHei",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  header{padding:2rem 1.25rem 1rem;max-width:1200px;margin:0 auto}
+  h1{margin:0 0 .25rem;font-size:1.7rem;letter-spacing:-.01em}
+  h1 .v{color:var(--accent);font-weight:700}
+  .sub{color:var(--muted);margin:0}
+  nav{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:.6rem 1.25rem;margin-bottom:1rem}
+  nav .wrap{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:.4rem}
+  nav a{font-size:.82rem;text-decoration:none;color:var(--muted);padding:.25rem .6rem;
+    border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+  nav a:hover{color:var(--accent);border-color:var(--accent)}
+  main{max-width:1200px;margin:0 auto;padding:0 1.25rem 4rem;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:1rem;align-items:start}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:1.1rem 1.15rem;overflow:hidden}
+  section.wide{grid-column:1/-1}
+  h2{margin:.1rem 0 .8rem;font-size:1.08rem;display:flex;align-items:center;gap:.5rem}
+  h2 .n{font-size:.72rem;background:var(--accent-soft);color:var(--accent);font-weight:700;
+    padding:.12rem .5rem;border-radius:6px}
+  h3{margin:1rem 0 .35rem;font-size:.9rem;color:var(--muted);font-weight:600}
+  h3:first-of-type{margin-top:.2rem}
+  pre{margin:.35rem 0;background:var(--code-bg);border:1px solid var(--line);border-radius:9px;
+    padding:.65rem .75rem;overflow-x:auto;font-size:.82rem;line-height:1.5}
+  code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre code{white-space:pre}
+  :not(pre)>code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;
+    padding:.05rem .35rem;font-size:.85em}
+  .kw{color:var(--kw)} .str{color:var(--str)} .com{color:var(--com)} .num{color:var(--num)}
+  .cmt{color:var(--com);font-style:italic}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.4rem 0}
+  th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:.76rem;text-transform:uppercase;letter-spacing:.03em}
+  td code{font-size:.9em}
+  .warn{background:var(--warn-bg);border-left:3px solid var(--warn-line);border-radius:0 8px 8px 0;
+    padding:.55rem .7rem;font-size:.82rem;margin:.6rem 0}
+  .warn b{color:var(--ink)}
+  footer{max-width:1200px;margin:0 auto;padding:1rem 1.25rem 3rem;color:var(--muted);font-size:.8rem}
+  .toggle{position:fixed;bottom:1rem;right:1rem;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);border-radius:999px;padding:.5rem .8rem;font-size:.8rem;cursor:pointer;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <h1>Common Lisp 速查表 <span class="v">SBCL 2.6.6</span></h1>
+  <p class="sub">cl-lab · 語言核心 + jzon / clingon / cffi + 條件系統，一頁看完。分篇細節在 <code>docs/</code>。</p>
+</header>
+
+<nav><div class="wrap">
+  <a href="#basics">語言核心</a>
+  <a href="#data">資料結構</a>
+  <a href="#json">JSON</a>
+  <a href="#cli">CLI clingon</a>
+  <a href="#cond">條件系統</a>
+  <a href="#macro">macro</a>
+  <a href="#ffi">C FFI</a>
+  <a href="#repl">REPL / 工具鏈</a>
+  <a href="#traps">地雷</a>
+</div></nav>
+
+<main>
+
+<section id="basics">
+  <h2><span class="n">01</span> 語言核心</h2>
+  <h3>綁定 / 函式</h3>
+  <pre><code><span class="kw">(let</span>  ((a <span class="num">1</span>) (b <span class="num">2</span>)) (+ a b))  <span class="cmt">; 平行 => 3</span>
+<span class="kw">(let*</span> ((a <span class="num">1</span>) (b (* a <span class="num">10</span>))) b) <span class="cmt">; 循序 => 10</span>
+<span class="kw">(defparameter</span> *g* <span class="num">42</span>)          <span class="cmt">; 全域 *earmuffs*</span>
+<span class="kw">(defun</span> add (a b) (+ a b))         <span class="cmt">; (add 3 4)=>7</span>
+<span class="kw">(defun</span> greet (&optional (who <span class="str">"world"</span>)) ...)
+<span class="kw">(funcall</span> #'add <span class="num">1</span> <span class="num">2</span>)             <span class="cmt">; #' 取函式(Lisp-2)</span></code></pre>
+  <h3>條件</h3>
+  <pre><code><span class="kw">(if</span> (> <span class="num">3</span> <span class="num">2</span>) <span class="str">"big"</span> <span class="str">"small"</span>)
+<span class="kw">(when</span> c a b)  <span class="kw">(unless</span> c x)   <span class="cmt">; 真才做/假才做</span>
+<span class="kw">(cond</span> ((< <span class="num">3</span> <span class="num">0</span>) <span class="str">"neg"</span>) (t <span class="str">"pos"</span>)) <span class="cmt">; t=else</span>
+<span class="kw">(case</span> <span class="num">2</span> (<span class="num">1</span> <span class="str">"one"</span>) (<span class="num">2</span> <span class="str">"two"</span>) (t <span class="str">"?"</span>))</code></pre>
+  <p class="sub" style="font-size:.8rem">只有 <code>nil</code>(＝空串列)是假；其它全真。正典真值 <code>t</code>。</p>
+  <h3>loop</h3>
+  <pre><code><span class="kw">(loop</span> for i from <span class="num">0</span> below <span class="num">3</span> collect i)   <span class="cmt">;=>(0 1 2)</span>
+<span class="kw">(loop</span> for x in '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>) collect (* x x))
+<span class="kw">(loop</span> for i to <span class="num">5</span> when (oddp i) collect i) <span class="cmt">;=>(1 3 5)</span>
+<span class="kw">(dolist</span> (x l) ...) <span class="kw">(dotimes</span> (i <span class="num">3</span>) ...)</code></pre>
+  <h3>format</h3>
+  <pre><code><span class="kw">(format</span> t   <span class="str">"~a~%"</span> x)  <span class="cmt">; t=印出, ~a=給人看, ~%=換行</span>
+<span class="kw">(format</span> nil <span class="str">"~a"</span> x)     <span class="cmt">; nil=回傳字串</span>
+<span class="str">"~s"</span>=可讀 <span class="str">"~d"</span>=整數 <span class="str">"~,2f"</span>=2位小數 <span class="str">"~{~a ~}"</span>=走訪</code></pre>
+</section>
+
+<section id="data">
+  <h2><span class="n">02</span> 資料結構</h2>
+  <table>
+    <tr><th>容器</th><th>建立</th><th>取值</th></tr>
+    <tr><td>list 串列</td><td><code>'(1 2 3)</code></td><td><code>(first l)</code>/<code>(nth i l)</code></td></tr>
+    <tr><td>vector 向量</td><td><code>#(1 2 3)</code></td><td><code>(aref v i)</code> O(1)</td></tr>
+    <tr><td>hash-table</td><td><code>(make-hash-table)</code></td><td><code>(gethash k h)</code></td></tr>
+  </table>
+  <h3>list</h3>
+  <pre><code><span class="kw">(first</span> '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>)) <span class="kw">(rest</span> '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>))  <span class="cmt">;1  (2 3)</span>
+<span class="kw">(cons</span> <span class="num">0</span> '(<span class="num">1</span> <span class="num">2</span>))              <span class="cmt">;=>(0 1 2)</span>
+<span class="kw">(mapcar</span> #'1+ '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>))       <span class="cmt">;=>(2 3 4)</span>
+<span class="kw">(remove-if-not</span> #'evenp '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span>)) <span class="cmt">;=>(2 4) filter</span>
+<span class="kw">(reduce</span> #'+ '(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span>))     <span class="cmt">;=>10</span></code></pre>
+  <h3>vector（可長大）</h3>
+  <pre><code><span class="kw">(aref</span> #(<span class="num">10</span> <span class="num">20</span> <span class="num">30</span>) <span class="num">1</span>)         <span class="cmt">;=>20</span>
+<span class="kw">(defparameter</span> v (make-array <span class="num">0</span> :adjustable t :fill-pointer <span class="num">0</span>))
+<span class="kw">(vector-push-extend</span> <span class="num">99</span> v)        <span class="cmt">; v => #(99)</span></code></pre>
+  <h3>hash-table</h3>
+  <pre><code><span class="kw">(defparameter</span> h (make-hash-table :test 'equal))
+<span class="kw">(setf</span> (gethash <span class="str">"k"</span> h) <span class="str">"v"</span>)      <span class="cmt">; 寫入</span>
+<span class="kw">(gethash</span> <span class="str">"k"</span> h)               <span class="cmt">;=> "v", t</span>
+<span class="kw">(maphash</span> (lambda (k v) ...) h) <span class="kw">(remhash</span> <span class="str">"k"</span> h)</code></pre>
+  <p class="sub" style="font-size:.8rem">字串 key <b>一定</b>要 <code>:test 'equal</code>。<code>gethash</code> 回兩值：值＋有沒有找到。</p>
+</section>
+
+<section id="json">
+  <h2><span class="n">03</span> JSON · <code>jzon</code></h2>
+  <pre><code>(<span class="kw">ql:quickload</span> :com.inuoe.jzon)
+
+<span class="kw">(json:stringify</span> #(<span class="num">1</span> <span class="num">2</span> <span class="num">3</span>))          <span class="cmt">;=> "[1,2,3]"</span>
+<span class="kw">(json:stringify</span> h :pretty t)      <span class="cmt">; 縮排</span>
+<span class="kw">(json:parse</span> <span class="str">"{\"a\":1}"</span>)          <span class="cmt">;=> hash-table(equal)</span>
+<span class="kw">(json:parse</span> <span class="str">"[10,20]"</span>)            <span class="cmt">;=> #(10 20) vector!</span></code></pre>
+  <table>
+    <tr><th>CL</th><th>JSON</th></tr>
+    <tr><td>hash-table(equal,字串key)</td><td>object</td></tr>
+    <tr><td>list / vector（非空）</td><td>array</td></tr>
+    <tr><td><code>t</code> / <code>nil</code></td><td><code>true</code> / <code>false</code></td></tr>
+  </table>
+  <div class="warn"><b>nil 陷阱</b>：<code>nil</code>→<code>false</code>（不是空陣列）。空陣列用 <code>#()</code>、空物件用空 hash-table。取 JSON array 元素用 <code>(aref v i)</code>。</div>
+</section>
+
+<section id="cli">
+  <h2><span class="n">04</span> CLI · <code>clingon</code></h2>
+  <pre><code>(<span class="kw">clingon:make-command</span>
+  :name <span class="str">"greet"</span> :description <span class="str">"..."</span>
+  :options
+  (list (<span class="kw">clingon:make-option</span> :list :description <span class="str">"名字"</span>
+          :long-name <span class="str">"name"</span> :short-name #\n :key :name)
+        (<span class="kw">clingon:make-option</span> :flag :description <span class="str">"大寫"</span>
+          :long-name <span class="str">"upper"</span> :short-name #\u :key :upper))
+  :handler #'h)
+(<span class="kw">clingon:run</span> (cmd))   <span class="cmt">; 讀真正 argv、跑完會 exit</span></code></pre>
+  <p class="sub" style="font-size:.8rem">handler 內：<code>(clingon:getopt cmd :name)</code> 取選項、<code>(clingon:command-arguments cmd)</code> 取位置參數。</p>
+  <table>
+    <tr><th>kind</th><th>取出</th></tr>
+    <tr><td><code>:string</code> / <code>:integer</code></td><td>值</td></tr>
+    <tr><td><code>:flag</code></td><td>t/nil</td></tr>
+    <tr><td><code>:list</code></td><td>可重複→串列</td></tr>
+    <tr><td><code>:counter</code></td><td>-vvv→次數</td></tr>
+  </table>
+  <p class="sub" style="font-size:.8rem"><b>子命令</b>：頂層 <code>:sub-commands (list (add-cmd) ...)</code>，每個各有 <code>--help</code>，可任意巢狀（git submodule 風格）。<code>make-option</code> 也<b>必填</b> <code>:description</code>。</p>
+</section>
+
+<section id="cond">
+  <h2><span class="n">08</span> 條件系統 <span class="sub" style="font-size:.7rem">CL 靈魂</span></h2>
+  <pre><code><span class="cmt">; try/catch</span>
+<span class="kw">(handler-case</span> (error <span class="str">"x"</span>)
+  (error (e) (format nil <span class="str">"抓到 ~a"</span> e)))
+<span class="cmt">; 出錯回 nil (+條件)</span>
+<span class="kw">(ignore-errors</span> (error <span class="str">"x"</span>))    <span class="cmt">;=> nil, #&lt;error&gt;</span>
+<span class="cmt">; finally</span>
+<span class="kw">(unwind-protect</span> (work) (cleanup))</code></pre>
+  <h3>restart：發生與處理分離</h3>
+  <pre><code>(<span class="kw">defun</span> safe-div (a b)
+  (<span class="kw">restart-case</span> (if (zerop b) (error <span class="str">"/0"</span>) (/ a b))
+    (use-zero () <span class="num">0</span>)))          <span class="cmt">; 提供復原方案</span>
+(<span class="kw">handler-bind</span> ((error (lambda (c)
+                (<span class="kw">invoke-restart</span> 'use-zero))))
+  (safe-div <span class="num">1</span> <span class="num">0</span>))                 <span class="cmt">;=> 0（從錯誤點繼續）</span></code></pre>
+  <p class="sub" style="font-size:.8rem">高層決策(handler-bind)與低層復原(restart-case)解耦——這就是 SBCL debugger 的底層。</p>
+</section>
+
+<section id="macro">
+  <h2><span class="n">07</span> macro</h2>
+  <pre><code><span class="cmt">; ` 模板  , 取值  ,@ 攤平串列</span>
+(<span class="kw">defmacro</span> my-when (test &body body)
+  `(if ,test (progn ,@body)))
+
+(<span class="kw">defmacro</span> swap (a b)
+  (let ((tmp (gensym)))          <span class="cmt">; 避免變數捕捉</span>
+    `(let ((,tmp ,a)) (setf ,a ,b ,b ,tmp))))
+
+(<span class="kw">macroexpand-1</span> '(my-when x (foo)))  <span class="cmt">; 除錯關鍵</span>
+<span class="cmt">;=> (IF X (PROGN (FOO)))</span></code></pre>
+  <p class="sub" style="font-size:.8rem">函式處理值、macro 處理未求值的程式碼。要控制求值/新語法才用 macro，其餘用函式。</p>
+</section>
+
+<section id="ffi">
+  <h2><span class="n">09</span> C FFI · <code>cffi</code></h2>
+  <pre><code>(<span class="kw">ql:quickload</span> :cffi)
+(<span class="kw">cffi:load-foreign-library</span> <span class="str">"libm.so.6"</span>)
+(<span class="kw">cffi:defcfun</span> (<span class="str">"sqrt"</span> c-sqrt) :double (x :double))
+(c-sqrt <span class="num">2.0d0</span>)                   <span class="cmt">;=> 1.4142...</span>
+(<span class="kw">cffi:defcfun</span> (<span class="str">"strlen"</span> c-strlen) :unsigned-long (s :string))
+(c-strlen <span class="str">"hello"</span>)              <span class="cmt">;=> 5</span></code></pre>
+  <p class="sub" style="font-size:.8rem">型別：<code>:int :long :double :float :string(char*) :pointer :void :bool</code>。浮點用 <code>2.0d0</code>(double) 對上 C。</p>
+</section>
+
+<section id="repl">
+  <h2><span class="n">✦</span> REPL / 工具鏈</h2>
+  <table>
+    <tr><th>指令</th><th>做什麼</th></tr>
+    <tr><td><code>scripts/run.sh run …</code></td><td>跑 CLI</td></tr>
+    <tr><td><code>… test</code></td><td>fiveam 測試</td></tr>
+    <tr><td><code>… build</code></td><td>獨立執行檔 build/cl-lab</td></tr>
+    <tr><td><code>… repl</code></td><td>載入 cl-lab 的 REPL</td></tr>
+    <tr><td><code>… swank</code></td><td>起 swank 給 nvim 連</td></tr>
+  </table>
+  <h3>REPL 神器</h3>
+  <pre><code>(<span class="kw">describe</span> 'foo) (<span class="kw">inspect</span> obj) (<span class="kw">apropos</span> <span class="str">"json"</span>)
+(<span class="kw">documentation</span> 'f 'function)   * ** ***  <span class="cmt">; 前幾個結果</span></code></pre>
+  <h3>nvim Conjure（connect 模式）</h3>
+  <pre><code>scripts/run.sh swank   <span class="cmt"># 先起伺服器 :4005</span>
+,cc 連線  ,ee 求值 form  ,eb 整個 buffer  ,ls log</code></pre>
+</section>
+
+<section id="traps" class="wide">
+  <h2><span class="n">⚠</span> 地雷合輯</h2>
+  <table>
+    <tr><th>症狀</th><th>原因 / 正解</th></tr>
+    <tr><td><code>sbcl --script</code> 報 "Package QL does not exist"</td><td><code>--script</code> 不讀 <code>~/.sbclrc</code>，Quicklisp 沒載。腳本開頭 <code>(load .../quicklisp/setup.lisp)</code>。</td></tr>
+    <tr><td>把 <code>quickload</code> 和用到該套件符號的碼包在同一 form → 讀取錯誤</td><td>整塊在讀取期就解析、套件還沒載。<code>quickload</code> 要獨立成前面的 top-level form。</td></tr>
+    <tr><td>JSON 布林欄位塞 <code>nil</code> 卻變 <code>false</code>；空陣列變 <code>false</code></td><td>jzon：<code>nil</code>→<code>false</code>。空陣列用 <code>#()</code>、空物件用空 hash-table。</td></tr>
+    <tr><td>字串當 hash-table key 卻取不到</td><td>預設 <code>eql</code> 不比字串內容。<code>(make-hash-table :test 'equal)</code>。</td></tr>
+    <tr><td>取 JSON array 元素用 <code>nth</code> 失敗</td><td>jzon parse array → <b>vector</b> 不是 list。用 <code>(aref v i)</code>、<code>loop for x across v</code>。</td></tr>
+    <tr><td>clingon 報 "Must specify description"</td><td>每個 <code>make-option</code> 都必填 <code>:description</code>（不只 command）。</td></tr>
+    <tr><td>FFI 傳 <code>2.0</code> 給 <code>:double</code> 拿到垃圾</td><td>用 double 字面 <code>2.0d0</code>；型別要對上 C。</td></tr>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  完整分篇：<code>docs/00</code> ～ <code>docs/09</code>。實例：<code>src/main.lisp</code> 與 <code>examples/</code>。
+  本頁所有程式碼都在 SBCL 2.6.6 跑過。
+</footer>
+
+<button class="toggle" onclick="(function(){var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));r.setAttribute('data-theme',d==='dark'?'light':'dark');})()">◑ 切換亮／暗</button>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 ← [INDEX](../INDEX.md)
 
-本夾收各自成一攤的次級物：**半封存的舊實作版** `ver_1/`、**框架規劃地** `llm_forge/`、**動手實驗場** `galtxt/`、**獨立 C LLM 產物** `cllm/`、**舒適 CL 地基** `comfy/`、**OS-當-agent 試驗田** `handy/`、**歸一於路徑基材** `unipath/`、**handy 多語言移植** `cllm-apps/`、**cllm 綁定遊樂場** `cllm-lab/`。各目錄自帶入口，先讀入口再深入。
+本夾收各自成一攤的次級物：**半封存的舊實作版** `ver_1/`、**框架規劃地** `llm_forge/`、**動手實驗場** `galtxt/`、**獨立 C LLM 產物** `cllm/`、**舒適 CL 地基** `comfy/`、**OS-當-agent 試驗田** `handy/`、**歸一於路徑基材** `unipath/`、**handy 多語言移植** `cllm-apps/`、**cllm 綁定遊樂場** `cllm-lab/`、**Common Lisp 遊樂場** `cl-lab/`、**Janet 遊樂場** `janet-lab/`。各目錄自帶入口，先讀入口再深入。
 
 | 目錄 | 內容 | 入口 |
 |------|------|------|
@@ -15,3 +15,5 @@
 | [unipath/](unipath/) | **歸一於路徑基材（比 handy 更底層）**：「先歸一於路徑、後成局」願景的階段一落地——採 **Plan 9 思想＋9P 協議**、以 **FUSE 起步**，把活 process 的執行態環境暴露成可 walk 的路徑樹（`/proc` 式），`ls`/`cat`/`echo` 即可定址讀寫。控制/資料抄 Plan 9 `ctl`/`data`/`status` 慣例。**step 1–6 全綠**（假樹→執行態→跨 process→真 9P2000→tick 回合制→腳本化 NPC＋巢狀 tick，規則語言＝Janet）＋C++/Fennel 版跨語言 9P 互通（語言中立實證），核心 v9fs 真掛載驗過。已套分層工作流正規化、程式碼每檔 <100 行。附 8 篇作業系統背景 docs。設計真源＝ai_core 筆記鏈。 | [AGENTS.md](unipath/AGENTS.md) |
 | [cllm-apps/](cllm-apps/) | **handy 四工具多語言移植（原 `~/code/cllm-apps`，2026-07-19 納入）**：把 [handy](handy/AGENTS.md) 的 `llme`/`zhtw`/`wf`/`mail` 以 **shell-out 方式**移到各語言（真正的「手」仍轉呼 `llm`/`claude`/同語言 sibling，不用 cllm binding），行為 1:1 對齊 Fennel 原型。完成品 `python-handy/`／`cpp-handy/`／`lisp-handy/`／`janet-handy/`（四工具離線 dry-run 全綠）；早期探索 `*-try-1/`（cpp/janet/lisp/lua）。每 app 附 `configs/`（deepseek keyless＋anthropic-proxy）＋`scripts/{vendor.sh,up.sh}` 串接 cllm 周邊（anthropic-proxy／llm-login）。契約權威＝`HANDY-PORT-SPEC.md`。`build/`／`vendor/`／`.run/` 自帶 `.gitignore` 不進版控、可 regen。 | [HANDY-PORT-SPEC.md](cllm-apps/HANDY-PORT-SPEC.md) |
 | [cllm-lab/](cllm-lab/) | **cllm 綁定十語言遊樂場（原 `~/code/labs/cllm-lab`，2026-07-19 納入）**：用任何語言呼叫 LLM（`libcllm.so` 的 C ABI，唯一入口 `llm_ask`）。每語言一夾、`play.*` 是完整範例起手檔（ask／串流／schema／tools／media 全示範），改它即開發。真相源＝[cllm](cllm/AGENTS.md) 的 `bindings/<lang>/example.*`；lab 是遊樂場。上手教學見 `GUIDE.md`、一頁速查 `cheatsheet.html`。 | [README.md](cllm-lab/README.md) |
+| [cl-lab/](cl-lab/) | **Common Lisp 開發遊樂場（原 `~/code/labs/cl-lab`，2026-07-19 納入）**：能跑的 SBCL/ASDF 專案骨架＋中文速查（`cl-cheatsheet.html`）＋整套分層工作流（AGENTS/INDEX/DEV-GUIDE/SESSION-LOG）。支撐 [cllm-apps](cllm-apps/HANDY-PORT-SPEC.md) 的 lisp-handy 與 [comfy](comfy/README.md) 的 CL 線。獨立執行檔 `build/cl-lab`（45M SBCL image）走 `scripts/run.sh build` 重生、不進版控。 | [README.md](cl-lab/README.md) |
+| [janet-lab/](janet-lab/) | **Janet 開發遊樂場（原 `~/code/labs/janet-lab`，2026-07-19 納入）**：能跑的 jpm 專案（Janet 1.41.2＋spork＋janet-lsp，裝在 ~/.local）＋12 篇中文教學（`docs/` 含 fiber/macro/C 互通/pipeline-signal）＋單頁 cheatsheet。**是 [unipath](unipath/AGENTS.md) 換 Janet 規則語言的學習底本**。 | [README.md](janet-lab/README.md) |
