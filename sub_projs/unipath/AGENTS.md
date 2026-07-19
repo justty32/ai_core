@@ -26,8 +26,11 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 
 ## 當前狀態
 
-- **原型待動工**。第一刀候選：FUSE 最小 file server，把一個活 Python(/後續 LuaJIT) process 的環境暴露成 `/…/0/1`（0-based），`cat`/`echo` 可讀寫某元素。
-- **待使用者定**：第一刀先暴露**真執行態環境** vs 先做**假靜態樹**證明 mount 通路（見路線篇 §五 疑 3）。
+- **Step 1 完成 ✅**（假靜態樹證 mount 通路）：`unipath_fs.py`（Python＋fusepy）掛一棵 0-based 數字樹，
+  每個元素目錄含 `data`/`ctl`/`status` 約定檔。已驗：`ls` walk（含巢狀）、`cat` 讀、`echo >` 寫 data、
+  `ctl` 命令（`set`/`mkelem`/`rmelem`）皆通。跑法：`.venv/bin/python unipath_fs.py mnt`（前景），另開終端 `ls/cat/echo mnt/…`，`fusermount -u mnt` 卸載。
+- **Step 2 待做**：把假樹換成**真執行態環境**（暴露 Python process 自己的物件/env），觸及「執行態路徑化」核心。
+- 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
 
 ## 鐵律
 
