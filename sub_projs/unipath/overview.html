@@ -142,9 +142,9 @@ footer{padding:30px 0 60px;color:var(--muted);font-size:.85rem;border-top:1px so
       <div class="desc"><code>tick(當前狀態, 使用者影響) → 下個狀態</code>：每回合吸收使用者影響 → 拍全樹快照 → 依規則同步更新。Δt＝回合數；影響＝執行期注入。示範四元素（counter/guard/well/echo）皆驗通。時間軸落地。</div>
       <div class="file">unipath_tick.py · up_tick · up_tick_rules</div></div></div>
     <div class="step"><span class="badge">✅ done</span><div>
-      <h3>step 6 · 腳本化 NPC ＋ 巢狀 tick ＋ 影響走路徑樹 <span style="color:var(--accent)">（階段二種子）</span></h3>
-      <div class="desc"><b>規則本身住在路徑樹裡</b>：每個 NPC 帶一段住 <code>/idx/script/data</code> 的腳本，<code>cat</code> 看得到、<code>echo</code> 改它行為即刻生效（示範把 guard 從回血翻成流血）。<b>巢狀 tick</b>：town 每父回合跑 rate 拍。<b>影響走路徑樹</b>：<code>echo &gt; /0/hp/data</code>＝外部同一介面，無旁路佇列。NPC＝可定址的腳本 → 正式踏進階段二。</div>
-      <div class="file">unipath_world.py · up_tick_script</div></div></div>
+      <h3>step 6 · 腳本化 NPC（Janet）＋ 巢狀 tick ＋ 影響走路徑樹 <span style="color:var(--accent)">（階段二種子）</span></h3>
+      <div class="desc"><b>規則本身住在路徑樹裡</b>：每個 NPC 帶一段住 <code>/idx/script/data</code> 的 <b>Janet（嵌入式 Lisp）</b>腳本，<code>cat</code> 看得到、<code>echo</code> 改它行為即刻生效（示範把 guard 從回血翻成流血）；由獨立 janet 行程直譯＝天然沙箱，貼「規範層語言中立」。<b>巢狀 tick</b>：town 每父回合跑 rate 拍。<b>影響走路徑樹</b>：<code>echo &gt; /0/hp/data</code>＝外部同一介面，無旁路佇列。NPC＝可定址的腳本 → 正式踏進階段二。</div>
+      <div class="file">unipath_world.py · up_tick_janet（需 janet）</div></div></div>
   </div>
 </section>
 
@@ -220,7 +220,7 @@ ls /tmp/umnt ; cat /tmp/umnt/0/data ; sudo umount /tmp/umnt
     <b>誠實標註：</b>step 3 是 9P 的「形狀」（JSON-over-socket），step 4 才是真線格式。真 9P 掛載需 root（mount 天生特權）；讀一定通，透過核心 mount 寫入涉及 9P uid 權限。暫忽略 CPU 週期（僅限慢世界）。Python 只是參考實作，規範層（講 9P）才是重點。
   </div>
   <ul style="margin-top:14px">
-    <li><b>script 沙箱強化</b>：目前 <code>exec</code>＋白名單夠試驗田；收外來 world 要更嚴（受限 DSL / Lisp 表達式）。</li>
+    <li><b>Janet 引擎優化</b>：規則語言已換 <b>Janet</b>（嵌入式 Lisp，獨立行程沙箱）；每元素每回合起一個 janet 行程，日後換常駐 REPL / libjanet 提速。</li>
     <li><b>世界持久化</b>：world 存成真檔案樹（非記憶體物件），tick 讀寫磁碟 → 呼應「檔案分佈＝空間狀態」。</li>
     <li><b>多 NPC 互動 / LOD</b>：元素依 <code>peer</code> 互相影響、略圖規則（承世界篇 §十三）。</li>
     <li>真 9P 寫入 uid/權限、9P2000.L 擴充、ports 的 ctl 對齊。</li>

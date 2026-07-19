@@ -27,8 +27,10 @@ unipath = 「先歸一於路徑、後成局」階段一落地（Plan 9 思想＋
 | `up_tick.py` | `tick()` 轉移函數＋`TickWorld` 回合驅動器 |
 
 **進階 tick / 階段二種子（step 6）**
-| `up_tick_script.py` | 腳本化轉移引擎：NPC＝可定址 script、巢狀 tick、影響走路徑樹 |
-| `unipath_world.py` | step 6 示範入口（腳本住樹可 echo 改行為 + 巢狀 town + 影響寫樹） |
+| `up_tick_janet.py` | 腳本化轉移引擎：NPC 行為＝**Janet（嵌入式 Lisp）**腳本、巢狀 tick、影響走路徑樹。經 janet CLI＋JSON 交換（天然沙箱）|
+| `unipath_world.py` | step 6 示範入口（Janet 腳本住樹可 echo 改行為 + 巢狀 town + 影響寫樹） |
+
+> **依賴**：核心步驟需 `fusepy`（venv 內）；**step 6 額外需 `janet` CLI ＋ `spork/json`**（規則語言）。
 
 **step 薄入口**
 | `unipath_fs.py` | step 1 假樹（FUSE） · `unipath_live.py` step 2 執行態（FUSE） |

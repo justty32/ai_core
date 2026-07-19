@@ -36,7 +36,7 @@
 | **step 3** | **跨 process** 暴露 | 從外部 walk 另一 process 的 env、獨立第三方確認改到發布端本身 | `unipath_pub.py` + `unipath_mount.py` |
 | **step 4** | **真 9P2000 線格式** | 獨立真 9P client 自測互通；**✅ 已被核心 `v9fs` 真掛載驗證**（2026-07-19，`ls`/`cat` 透過核心讀活值）| `unipath_9p.py`（`up_ninep*`）|
 | **step 5** | **tick 回合制狀態轉移** | counter 累加、echo 抄鄰居、guard 傷害/回血/死亡、使用者影響於回合邊界吸收 | `unipath_tick.py`（`up_tick`/`up_tick_rules`）|
-| **step 6** | **腳本化 NPC＋巢狀 tick＋影響走路徑樹**（階段二種子）| NPC 行為＝住 `/idx/script/data` 的腳本、`echo` 改行為即生效；巢狀 town 每父回合跑 rate 拍；影響＝寫樹 | `unipath_world.py`（`up_tick_script`）|
+| **step 6** | **腳本化 NPC（Janet）＋巢狀 tick＋影響走路徑樹**（階段二種子）| NPC 行為＝住 `/idx/script/data` 的 **Janet（Lisp）**腳本、`echo` 改行為即生效；巢狀 town 每父回合跑 rate 拍；影響＝寫樹 | `unipath_world.py`（`up_tick_janet`，需 janet CLI）|
 
 **里程碑**：step 3 做完「歸一於路徑第二類」；step 4 坐實「規範＝講 9P」＋跨機器兩世界通聯；step 5 把時間軸落地（`tick(狀態, 影響) → 下個狀態`）；**step 6 讓「規則本身也住在路徑樹裡、可 `echo` 編輯」——NPC＝可定址的腳本，正式踏進階段二 os-as-game。**
 
@@ -140,7 +140,7 @@ sudo umount /tmp/umnt
 
 ## 下一步（roadmap，往階段二；詳見 [SESSION-LOG](SESSION-LOG.md)）
 
-- **script 沙箱強化**：目前 `exec`＋白名單夠試驗田；收外來 world 要更嚴（受限 DSL / Lisp 表達式）。
+- **Janet 引擎優化**：規則語言已換 **Janet**（嵌入式 Lisp，獨立行程沙箱）；目前每元素每回合起一個 janet 行程，日後換常駐 REPL / libjanet 嵌入以提速。
 - **世界持久化**：world 存成真檔案樹（非記憶體物件），tick 讀寫磁碟 → 呼應「檔案分佈＝空間狀態」。
 - **多 NPC 互動 / LOD**：元素依 `peer` 互相影響、略圖規則（承世界篇 §十三）。
 - 其他：真 9P 寫入的 uid/權限、9P2000.L 擴充、ports 的 ctl 對齊。
