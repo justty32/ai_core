@@ -26,14 +26,18 @@ unipath = 「先歸一於路徑、後成局」階段一落地（Plan 9 思想＋
 | `up_tick_rules.py` | 世界建構＋每種 kind 規則＋使用者影響 |
 | `up_tick.py` | `tick()` 轉移函數＋`TickWorld` 回合驅動器 |
 
+**進階 tick / 階段二種子（step 6）**
+| `up_tick_script.py` | 腳本化轉移引擎：NPC＝可定址 script、巢狀 tick、影響走路徑樹 |
+| `unipath_world.py` | step 6 示範入口（腳本住樹可 echo 改行為 + 巢狀 town + 影響寫樹） |
+
 **step 薄入口**
 | `unipath_fs.py` | step 1 假樹（FUSE） · `unipath_live.py` step 2 執行態（FUSE） |
 | `unipath_pub.py`＋`unipath_mount.py` | step 3 跨 process（9P 形狀 RPC） |
 | `unipath_9p.py` | step 4 真 9P（`serve` / `selftest`） · `unipath_tick.py` step 5 示範 |
 
-## 五步進度（全綠，全 commit）
+## 進度（全綠，全 commit）
 
-step 1 假樹 → step 2 自身執行態 → step 3 跨 process → step 4 真 9P2000 → step 5 tick 回合制。詳見 [OVERVIEW.md](OVERVIEW.md)。open 項見 [SESSION-LOG](SESSION-LOG.md)。
+step 1 假樹 → step 2 自身執行態 → step 3 跨 process → step 4 真 9P2000 → step 5 tick 回合制 → **step 6 腳本化 NPC＋巢狀 tick＋影響走路徑樹（階段二種子）**。詳見 [OVERVIEW.md](OVERVIEW.md)。open 項見 [SESSION-LOG](SESSION-LOG.md)。
 
 ## 其他頂層
 

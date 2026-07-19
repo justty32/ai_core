@@ -35,9 +35,10 @@
 | **step 2** | 暴露**自身** process 執行態 | counter 隨時間變（非快照）、`echo` write-through、`ctl` | `unipath_live.py`（`up_env`/`up_fuse`）|
 | **step 3** | **跨 process** 暴露 | 從外部 walk 另一 process 的 env、獨立第三方確認改到發布端本身 | `unipath_pub.py` + `unipath_mount.py` |
 | **step 4** | **真 9P2000 線格式** | 獨立真 9P client 自測互通；可被核心 `v9fs` 掛載 | `unipath_9p.py`（`up_ninep*`）|
-| **step 5** | **tick 回合制狀態轉移** | counter 累加、echo 落後一回合抄鄰居、guard 傷害/回血/死亡、使用者影響於回合邊界吸收 | `unipath_tick.py`（`up_tick`/`up_tick_rules`）|
+| **step 5** | **tick 回合制狀態轉移** | counter 累加、echo 抄鄰居、guard 傷害/回血/死亡、使用者影響於回合邊界吸收 | `unipath_tick.py`（`up_tick`/`up_tick_rules`）|
+| **step 6** | **腳本化 NPC＋巢狀 tick＋影響走路徑樹**（階段二種子）| NPC 行為＝住 `/idx/script/data` 的腳本、`echo` 改行為即生效；巢狀 town 每父回合跑 rate 拍；影響＝寫樹 | `unipath_world.py`（`up_tick_script`）|
 
-**里程碑**：step 3 做完「歸一於路徑第二類」（正在執行的東西、從外部定址）；step 4 坐實「規範＝講 9P」，帶來**網路透明＝跨機器＝兩世界通聯**；step 5 把時間軸落地——`tick(當前狀態, 使用者影響) → 下個狀態`。
+**里程碑**：step 3 做完「歸一於路徑第二類」；step 4 坐實「規範＝講 9P」＋跨機器兩世界通聯；step 5 把時間軸落地（`tick(狀態, 影響) → 下個狀態`）；**step 6 讓「規則本身也住在路徑樹裡、可 `echo` 編輯」——NPC＝可定址的腳本，正式踏進階段二 os-as-game。**
 
 ## 多語言 port：語言中立實證
 
@@ -131,12 +132,18 @@ sudo umount /tmp/umnt
 - **忽略 CPU 週期**：這套慢循環暫忽略效能（僅限「慢世界」；筆記裡的「快世界」那層不在此列）。
 - **Python 只是參考實作**：規範層才是重點（＝講 9P，語言中立）。
 
-## 下一步（roadmap，step 6；詳見 [SESSION-LOG](SESSION-LOG.md)）
+## 怎麼跑（step 6）
 
-- **使用者影響改走路徑樹寫入**：把 tick 的旁路 pending 佇列，改成直接吸收 `echo > …/data` 的樹寫入 → 「借樹＝影響」合一。
-- **巢狀 tick**：上層目錄的一個 tick 驅動下層元素多次 tick（承筆記 §4.3）。
-- **規則換可定址腳本**：tick 規則從硬編 `kind` 表換成路徑上可定址的腳本（NPC＝腳本）＝往**階段二 os-as-game**。
-- 其他：真 9P 寫入的 uid/權限、9P2000.L 擴充、發布端接真實 process 狀態（非示範 world）。
+```bash
+.venv/bin/python unipath_world.py   # 腳本化 NPC＋巢狀 tick＋影響走路徑樹
+```
+
+## 下一步（roadmap，往階段二；詳見 [SESSION-LOG](SESSION-LOG.md)）
+
+- **script 沙箱強化**：目前 `exec`＋白名單夠試驗田；收外來 world 要更嚴（受限 DSL / Lisp 表達式）。
+- **世界持久化**：world 存成真檔案樹（非記憶體物件），tick 讀寫磁碟 → 呼應「檔案分佈＝空間狀態」。
+- **多 NPC 互動 / LOD**：元素依 `peer` 互相影響、略圖規則（承世界篇 §十三）。
+- 其他：真 9P 寫入的 uid/權限、9P2000.L 擴充、ports 的 ctl 對齊。
 
 ## 專案結構（正規化後）
 
