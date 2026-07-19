@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# llme — cllm 多 endpoint dispatcher（薄轉發器，Python 本體）
+#
+#   llme <endpoint> [llm 的其餘參數...]
+#     → 把 <endpoint> 翻成 <config_dir>/<endpoint>.json
+#     → 轉呼 `llm --config <那個檔> <其餘參數...>`
+#
+# 不 link libcllm、不重造任何東西——只是挑一個 cllm config 檔、原樣轉呼現成的
+# llm CLI（handy 方法論：拿現成程式薄殼包裝）。純 stdlib，無外部相依；runtime
+# 只要 llm 在 PATH。
+#
+# 環境變數：
+#   LLME_LLM         覆寫要轉呼的 llm 執行檔（預設 "llm"；測試設 echo 可看轉出的參數）
+#   LLME_CONFIG_DIR  覆寫 config 目錄（預設＝本 script 同層的 configs/）
+#   <自動注入 api key>  呼叫 <endpoint> 時，若使用者沒自帶 --api-key，依序找：
+#                      ① LLME_KEY_<EP>（llme 專屬覆寫）
+#                      ② <EP>_API_KEY（通用 provider 慣例，如 DEEPSEEK_API_KEY）
+#                      找到就自動補 --api-key <值>；<EP>＝endpoint 名大寫、非英數轉 _。
+
+import os
+import sys
+import shlex
+import subprocess
+from pathlib import Path
+
+
+def getenv_nonempty(k):
+    v = os.environ.get(k)
+    return v if v else None
+
+
+def script_dir():
+    # 解 symlink，取本執行檔所在目錄
+    return Path(__file__).resolve().parent
+
+
+def config_dir():
+    d = getenv_nonempty("LLME_CONFIG_DIR")
+    return Path(d) if d else (script_dir() / "configs")
+
+
+# 掃 config 目錄裡的 <name>.json（`_` 開頭視為模板/隱藏，不列）。
+def list_endpoints(d):
+    out = []
+    try:
+        for p in sorted(Path(d).glob("*.json")):
+            if not p.name.startswith("_"):
+                out.append(p.stem)
+    except OSError:
+        pass
+    return out
+
+
+def usage(d):
+    sys.stderr.write(
+        "用法：llme <endpoint> [llm 的其餘參數...]\n"
+        "  例：llme opus --stream 你好\n"
+        "  <endpoint> 對應 " + str(d) + "/<endpoint>.json（cllm config），\n"
+        "  其餘參數原樣轉給 llm CLI（--config <那個檔> 已自動帶上）。\n"
+        "  環境變數：LLME_LLM 覆寫 llm 執行檔；LLME_CONFIG_DIR 覆寫 config 目錄。\n"
+    )
+    eps = list_endpoints(d)
+    if len(eps) == 0:
+        sys.stderr.write("  （目前 " + str(d) + " 下沒有可用的 endpoint config）\n")
+    else:
+        sys.stderr.write("  可用 endpoint：" + " ".join(eps) + "\n")
+
+
+# endpoint 名 → env 慣例的大寫識別子（非英數→_，如 deep-seek → DEEP_SEEK）
+def env_stem(s):
+    up = s.upper()
+    return "".join(
+        ch if ("A" <= ch <= "Z" or "0" <= ch <= "9") else "_" for ch in up
+    )
+
+
+# 使用者是否已自帶 --api-key（含 --api-key=… 形式）？有就不自動注入、尊重之。
+def user_gave_api_key(rest):
+    for a in rest:
+        if a == "--api-key" or a.startswith("--api-key="):
+            return True
+    return False
+
+
+# 自動注入的 api key：LLME_KEY_<EP> ＞ <EP>_API_KEY（皆 nonempty 才算）。
+def auto_api_key(ep):
+    stem = env_stem(ep)
+    return getenv_nonempty("LLME_KEY_" + stem) or getenv_nonempty(stem + "_API_KEY")
+
+
+def main():
+    args = sys.argv[1:]
+    ep = args[0] if len(args) >= 1 else None
+    rest = args[1:]
+    d = config_dir()
+
+    if ep is None or ep == "--help" or ep == "-h":
+        usage(d)
+        sys.exit(2 if ep is None else 0)
+
+    cfg = d / (ep + ".json")
+    if not cfg.exists():
+        sys.stderr.write(
+            "llme：找不到 endpoint「" + ep + "」的 config（" + str(cfg) + "）\n"
+        )
+        usage(d)
+        sys.exit(2)
+
+    llm = getenv_nonempty("LLME_LLM") or "llm"
+
+    # 組轉發命令：llm --config <cfg> [--api-key <env>] <其餘參數...>
+    # 自動 --api-key 放在使用者參數「之前」——命令列後者覆寫前者，使用者顯式帶的仍最終生效。
+    parts = [shlex.quote(llm), "--config", shlex.quote(str(cfg))]
+    if not user_gave_api_key(rest):
+        k = auto_api_key(ep)
+        if k:
+            parts.append("--api-key")
+            parts.append(shlex.quote(k))
+    for a in rest:
+        parts.append(shlex.quote(a))
+
+    code = subprocess.call(" ".join(parts), shell=True)
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()

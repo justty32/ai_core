@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+# mail — inbox 協議的可執行版（工具＝mail、信箱＝inbox/）：把「太複雜、不想當場等」的
+#        任務寫成一封信投進 inbox/，之後由 `mail run` 逐封 spawn claude code 這類成熟 agent 去做。
+#
+#   mail send <任務...>        寫一封信到 inbox/<slug>.md，印出路徑，立即返回
+#     cat ctx | mail send <任務>   pipe 當上下文寫進信
+#   mail list                  列出 inbox/ 頂層待處理的信（done/ 不列）
+#   mail run [slug]            處理：對每封（或指定 slug）spawn claude -p 跑，成功 mv 到 done/
+#   mail run --dry             只列會處理哪些、不真跑
+#
+# 環境變數：
+#   INBOX_DIR      投遞區（預設＝本 script 同層的 inbox/）
+#   WF_CLAUDE      claude 執行檔（預設 "claude"；測試設 echo）  ← 與 wf 共用
+#   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"）← 與 wf 共用
+
+import os
+import sys
+import shlex
+import subprocess
+from pathlib import Path
+
+
+def getenv_nonempty(k):
+    v = os.environ.get(k)
+    return v if v else None
+
+
+def script_dir():
+    return Path(__file__).resolve().parent
+
+
+def stdin_piped():
+    return not sys.stdin.isatty()
+
+
+# 掃某目錄頂層的 <name>.md（不遞迴、done/ 不含）。
+def list_md(d):
+    out = []
+    try:
+        for p in sorted(Path(d).glob("*.md")):
+            if p.is_file():
+                out.append(p.stem)
+    except OSError:
+        pass
+    return out
+
+
+INBOX_DIR = getenv_nonempty("INBOX_DIR") or str(script_dir() / "inbox")
+DONE_DIR = str(Path(INBOX_DIR) / "done")
+
+
+def ensure_dirs():
+    Path(DONE_DIR).mkdir(parents=True, exist_ok=True)
+
+
+# 取前 n 個「字元」（Python 字串切片本就按字元＝UTF-8 安全，不切半個字）。
+def utf8_head(s, n):
+    return s[:n]
+
+
+# slug：任務前段轉 kebab、去掉檔名不安全字元、限 16 字（UTF-8 安全）；撞名補 -2/-3…
+def slugify(task):
+    t = task.strip()
+    t = "-".join(t.split())           # %s+ → "-"
+    bad = set('/\\:*?"\'<>|')          # [/\:*?"'<>|] → ""
+    t = "".join(ch for ch in t if ch not in bad)
+    while "--" in t:                   # %-+ → "-"
+        t = t.replace("--", "-")
+    if t.startswith("-"):              # ^%- → ""
+        t = t[1:]
+    t = utf8_head(t, 16)
+    if t.endswith("-"):               # %-$ → ""
+        t = t[:-1]
+    return t if t != "" else "task"
+
+
+def unique_path(slug):
+    p = Path(INBOX_DIR) / (slug + ".md")
+    n = 2
+    while p.exists():
+        p = Path(INBOX_DIR) / (slug + "-" + str(n) + ".md")
+        n += 1
+    return p
+
+
+def do_send():
+    words = sys.argv[2:]
+    task = " ".join(words)
+    ctx = sys.stdin.read().strip() if stdin_piped() else None
+    has_ctx = bool(ctx) and len(ctx) > 0
+
+    if len(task) == 0 and not has_ctx:
+        sys.stderr.write("用法：mail send <任務...>（或 … | mail send <任務>）\n")
+        sys.exit(2)
+
+    real_task = task if len(task) > 0 else ctx
+    slug = slugify(real_task)
+    path = unique_path(slug)
+    body = (
+        "# " + slug + "\n\n## 任務\n" + real_task + "\n\n## 上下文\n"
+        + (ctx if (has_ctx and len(task) > 0) else "（無）") + "\n\n"
+        + "---\n（此信由 handy inbox 投遞；請完整完成信中的任務。處理者會於完成後將本信歸檔到 done/。）\n"
+    )
+    ensure_dirs()
+    path.write_text(body, encoding="utf-8")
+    sys.stdout.write("已投遞：" + str(path) + "\n")
+    sys.exit(0)
+
+
+def do_list():
+    pending = list_md(INBOX_DIR)
+    if len(pending) == 0:
+        sys.stdout.write("（inbox 空：沒有待處理的信）\n")
+    else:
+        sys.stdout.write("待處理的信（" + str(len(pending)) + "）：\n")
+        for s in pending:
+            sys.stdout.write("  " + s + "\n")
+    sys.exit(0)
+
+
+def do_run():
+    claude = getenv_nonempty("WF_CLAUDE") or "claude"
+    permission = getenv_nonempty("WF_PERMISSION") or "acceptEdits"
+    arg2 = sys.argv[2] if len(sys.argv) >= 3 else None
+    dry = arg2 == "--dry"
+    only = arg2 if (arg2 and not dry) else None
+    pending = [only] if only else list_md(INBOX_DIR)
+
+    if len(pending) == 0:
+        sys.stdout.write("（inbox 空：無事可做）\n")
+        sys.exit(0)
+
+    ensure_dirs()
+    failed = 0
+    for slug in pending:
+        path = Path(INBOX_DIR) / (slug + ".md")
+        if not path.exists():
+            sys.stderr.write("跳過（找不到）：" + slug + "\n")
+            failed += 1
+            continue
+        letter = path.read_text(encoding="utf-8")
+        prompt = "以下是一封待處理的任務信，請完整完成信中的任務：\n\n" + letter
+        sys.stdout.write("\n=== 處理：" + slug + " ===\n")
+        if dry:
+            sys.stdout.write("  [--dry] 略過不跑\n")
+            continue
+        cmd = " ".join([
+            shlex.quote(claude), "-p", "--permission-mode", shlex.quote(permission),
+            "--", shlex.quote(prompt),
+        ])
+        code = subprocess.call(cmd, shell=True)
+        if code == 0:
+            dst = Path(DONE_DIR) / (slug + ".md")
+            os.rename(str(path), str(dst))
+            sys.stdout.write("  ✓ 完成，歸檔 → done/" + slug + ".md\n")
+        else:
+            sys.stderr.write(
+                "  ✗ claude 退出碼 " + str(code) + "，保留在 inbox（未歸檔）\n"
+            )
+            failed += 1
+    sys.exit(1 if failed > 0 else 0)
+
+
+def main():
+    sub = sys.argv[1] if len(sys.argv) >= 2 else None
+    if sub == "send":
+        do_send()
+    elif sub in ("list", "ls"):
+        do_list()
+    elif sub == "run":
+        do_run()
+    else:
+        sys.stderr.write(
+            "用法：mail <send|list|run>\n"
+            "  send <任務...>   投遞一封信到 inbox/（… | mail send <任務> 可帶上下文）\n"
+            "  list             列出待處理的信\n"
+            "  run [slug|--dry] 逐封 spawn claude 處理，成功歸檔到 done/\n"
+        )
+        sys.exit(2 if sub is None else 0)
+
+
+if __name__ == "__main__":
+    main()

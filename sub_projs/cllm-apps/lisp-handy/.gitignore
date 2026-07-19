@@ -1,0 +1,6 @@
+# vendored 二進位（用 scripts/vendor.sh 重生）
+/vendor/cllm-tools/
+# sidecar 執行期狀態
+/.run/
+# SBCL fasl 快取（本專案以 --script 直跑，一般不產 fasl，保險擋一下）
+*.fasl

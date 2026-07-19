@@ -1,0 +1,127 @@
+#!/usr/bin/sbcl --script
+;;;; wf —— 兩層任務派發器（Common Lisp 版）：用 llme（DeepSeek）當路由腦判斷任務「要不要動手」，
+;;;;      只需腦的走 llme、要動手的走 claude code（headless agent）、太複雜的 -i 投 inbox。
+;;;;
+;;;;   wf 幫我把 foo.py 的錯誤處理補上   auto：分類→多半判 AGENT→claude
+;;;;   wf 用繁中解釋什麼是 mmap          auto：判 BRAIN→llme 直接答
+;;;;   cat foo.py | wf 幫我改            pipe＝附給任務的上下文
+;;;;   wf -b/-a/-i <任務>               強制 brain / agent / inbox
+;;;;
+;;;; 決策順序：強制旗標 ＞ 啟發式關鍵詞（免 LLM）＞ LLM 分類。
+;;;; 環境變數：WF_ENDPOINT(deepseek) WF_LLME(sibling llme) WF_CLAUDE(claude)
+;;;;           WF_PERMISSION(acceptEdits) WF_MODEL WF_EFFORT WF_SYSTEM(預設繁中溝通；設空字串關掉)
+;;;;           WF_MAIL(sibling mail；-i 模式轉呼；本移植新增，照 sibling 可覆寫原則)
+
+(defparameter *self* *load-truename*)
+(load (merge-pathnames "src/util.lisp" *self*))
+
+(defparameter *args* (rest sb-ext:*posix-argv*))
+
+;; ── 解析前置旗標（-b/--brain、-a/--agent、-i/--inbox、-- 停止、-h/--help）＋收任務詞 ──
+(let ((force nil) (stop nil) (words nil))
+  (dolist (a *args*)
+    (cond
+      (stop (push a words))
+      ((or (string= a "-b") (string= a "--brain")) (setf force "brain"))
+      ((or (string= a "-a") (string= a "--agent")) (setf force "agent"))
+      ((or (string= a "-i") (string= a "--inbox")) (setf force "inbox"))
+      ((string= a "--") (setf stop t))
+      ((or (string= a "-h") (string= a "--help"))
+       (write-string "用法：wf [-b|-a] <任務...>；或 … | wf <任務>；或 wf < TASK.md" *error-output*) (terpri *error-output*)
+       (write-string "  -b 強制走 llme（只需腦）；-a 強制走 claude（要動手）；預設 auto 分類。" *error-output*) (terpri *error-output*)
+       (sb-ext:exit :code 0))
+      (t (push a words))))
+  (setf words (nreverse words))
+
+  ;; ── 取輸入：argv＝任務指令；pipe＝上下文 ─────────────────────────
+  (let* ((task (format nil "~{~a~^ ~}" words))
+         (piped (stdin-piped-p))
+         (ctx (if piped (str-trim (read-all-stdin)) nil))
+         (has-ctx (and ctx (< 0 (length ctx))))
+         (prompt (if (< 0 (length task))
+                     (if has-ctx
+                         (concatenate 'string task (format nil "~%~%--- 以下為透過管線傳入的上下文 ---~%") ctx)
+                         task)
+                     (if has-ctx ctx nil))))
+    (when (null prompt)
+      (let ((e *error-output*))
+        (write-string "用法：wf [-b|-a] <任務...>            例：wf 幫我把 foo.py 的錯誤處理補上" e) (terpri e)
+        (write-string "      cat foo.py | wf 幫我改          （pipe 當上下文附給任務）" e) (terpri e)
+        (write-string "      wf < TASK.md                    （無參數＝整個 stdin 當任務）" e) (terpri e)
+        (write-string "  -b 強制 llme（只需腦）／-a 強制 claude（要動手）；預設 auto 由 llme 分類。" e) (terpri e))
+      (sb-ext:exit :code 2))
+
+    ;; ── 啟發式路由關鍵詞（一字不差照抄 Fennel 版）──────────────────
+    (let ((agent-pats
+            (list "改" "修改" "修復" "修正" "修好" "改好" "弄好" "搞定" "重構" "重寫" "改寫" "改成"
+                  "新增" "加上" "增加" "刪除" "刪掉" "移除" "替換" "取代" "實作" "實現" "執行" "跑一下"
+                  "編譯" "打包" "測試" "部署" "安裝" "建立" "建置" "初始化" "清理" "重命名" "格式化"
+                  "refactor" "fix" "edit" "implement" "rename" "deploy" "install" "commit" "build"))
+          (brain-pats
+            (list "解釋" "說明" "什麼是" "甚麼是" "何謂" "為什麼" "為何" "翻譯" "總結" "摘要" "概述"
+                  "定義" "舉例" "比較" "介紹" "explain" "translate" "summarize" "summarise" "define" "what is" "why")))
+      (labels ((any-match (low pats)
+                 (some (lambda (p) (search p low)) pats))
+               (heuristic-route (text)
+                 (let* ((low (string-downcase text))
+                        (a (any-match low agent-pats))
+                        (b (any-match low brain-pats)))
+                   (cond ((and a (not b)) "agent")
+                         ((and b (not a)) "brain")
+                         (t nil)))))
+        (let* ((endpoint (or (getenv-nonempty "WF_ENDPOINT") "deepseek"))
+               (llme (or (getenv-nonempty "WF_LLME") "llme"))
+               (claude (or (getenv-nonempty "WF_CLAUDE") "claude"))
+               (system (let ((s (sb-ext:posix-getenv "WF_SYSTEM")))
+                         (if (null s) "與使用者溝通時用繁體中文。" s)))
+               (classify-sys
+                 (concatenate 'string
+                   "你是任務路由器。判斷使用者的任務**是否需要實際動手**（讀寫檔案、執行指令、"
+                   "跨多檔修改、跑測試等 agent 能力）。需要動手→回 AGENT；只需生成文字／回答／"
+                   "翻譯／摘要／寫一段內容（不落檔）→回 BRAIN。只回一個詞：AGENT 或 BRAIN。")))
+          (labels ((classify (text)
+                     ;; 回 "agent"/"brain"；不清楚/失敗→"agent"（偏向能完成動手任務，較安全）
+                     (let ((out (string-upcase
+                                 (str-trim
+                                  (or (run-capture llme
+                                        (list endpoint "--temperature" "0" "--max-tokens" "16"
+                                              "--system" classify-sys "--" text))
+                                      "")))))
+                       (cond ((search "BRAIN" out) "brain")
+                             ((search "AGENT" out) "agent")
+                             (t "agent")))))
+            ;; 決策順序：強制旗標 ＞ 啟發式（免 LLM）＞ LLM 分類
+            (let* ((heur (if force nil (heuristic-route prompt)))
+                   (route (or force heur (classify prompt)))
+                   (how (cond (force "強制")
+                              (heur "啟發式・免 LLM")
+                              (t (concatenate 'string "llme 分類，endpoint=" endpoint)))))
+              (write-string (concatenate 'string "[wf] 路由：" route "（" how "）") *error-output*)
+              (terpri *error-output*)
+
+              ;; ── inbox：非同步投遞，轉呼同層 mail send ──────────────────
+              (when (string= route "inbox")
+                (let* ((mail (or (getenv-nonempty "WF_MAIL")
+                                 (concatenate 'string (dir-of *self*) "/mail")))
+                       (send-task (if (< 0 (length task)) task (or ctx "")))
+                       (feed (if (and has-ctx (< 0 (length task))) ctx nil)))
+                  (sb-ext:exit :code (run-exec mail (list "send" send-task) :input feed))))
+
+              ;; ── brain / agent 當場跑 ────────────────────────────────
+              (let ((cmd
+                      (if (string= route "brain")
+                          (let ((p (list endpoint "--stream")))
+                            (when (< 0 (length system))
+                              (setf p (append p (list "--system" system))))
+                            (append p (list "--" prompt)))
+                          nil))
+                    (prog (if (string= route "brain") llme claude)))
+                (unless (string= route "brain")
+                  (let* ((permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits"))
+                         (p (list "-p" "--permission-mode" permission)))
+                    (when (< 0 (length system))
+                      (setf p (append p (list "--append-system-prompt" system))))
+                    (let ((m (getenv-nonempty "WF_MODEL")))  (when m (setf p (append p (list "--model" m)))))
+                    (let ((ef (getenv-nonempty "WF_EFFORT"))) (when ef (setf p (append p (list "--effort" ef)))))
+                    (setf cmd (append p (list "--" prompt)))))
+                (sb-ext:exit :code (run-exec prog cmd))))))))))

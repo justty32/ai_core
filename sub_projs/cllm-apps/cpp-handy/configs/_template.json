@@ -1,0 +1,6 @@
+{
+  "endpoint": "https://api.example.com/v1/chat/completions",
+  "model": "your-model-id",
+  "api_key": "PASTE-KEY-OR-DELETE-THIS-LINE",
+  "timeout_ms": 120000
+}

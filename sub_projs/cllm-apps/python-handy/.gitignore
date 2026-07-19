@@ -1,0 +1,12 @@
+# vendored cllm 二進位（由 scripts/vendor.sh 產出，與上游解耦、不進版控）
+vendor/
+
+# up.sh 的 sidecar runtime 狀態（pid / log）
+.run/
+
+# Python 快取
+__pycache__/
+*.pyc
+
+# 使用者本機憑證 config（若有；configs/ 內的 endpoint config 是 keyless 的，照常進版控）
+configs/config.json

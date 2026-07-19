@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+# wf — 兩層任務派發器：用 llme（DeepSeek）當路由腦，判斷任務「要不要動手」，
+#      只需腦的走 llme、要動手的走 claude code（headless agent）。
+#
+#   wf 幫我把 foo.py 的錯誤處理補上         auto：分類→多半判 AGENT→claude 動手
+#   wf 用繁中解釋什麼是 mmap                auto：判 BRAIN→llme 直接答
+#   cat foo.py | wf 幫我改、加型別註記        pipe＝附給任務的上下文
+#   wf -b <任務>                            強制 BRAIN（走 llme，跳過分類）
+#   wf -a <任務>                            強制 AGENT（走 claude，跳過分類）
+#   wf -i <任務>                            非同步投遞 inbox（轉 `mail send`，不當場等）
+#   wf < TASK.md                            無參數＝整個 stdin 當任務
+#
+# 三模式：-b 只需腦(llme) / -a 當場動手(claude) / -i 非同步交接(inbox，由 `mail run` 之後 drain)。
+# auto（不給旗標）在 brain/agent 之間分類，順序＝**啟發式關鍵詞（免 LLM）＞ LLM 分類**。
+#
+# 環境變數（handy 慣例，改行為不改碼）：
+#   WF_ENDPOINT    llme 的 endpoint（預設 "deepseek"；BRAIN 執行與路由分類都用它）
+#   WF_LLME        覆寫 llme 執行檔（預設＝同層 sibling <script-dir>/llme；測試設 echo）
+#   WF_CLAUDE      覆寫 claude 執行檔（預設 "claude"；測試設 echo）
+#   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"）
+#   WF_MODEL       claude --model（預設不帶＝繼承 claude 預設）
+#   WF_EFFORT      claude --effort（選填，如 high）
+#   WF_SYSTEM      追加 system 指示（預設要 agent/llme 用繁中溝通；設空字串關掉）
+
+import os
+import sys
+import shlex
+import subprocess
+from pathlib import Path
+
+
+def getenv_nonempty(k):
+    v = os.environ.get(k)
+    return v if v else None
+
+
+def script_dir():
+    return Path(__file__).resolve().parent
+
+
+# stdin 被 pipe / 重導才讀（非 tty，安全），避免互動卡等 EOF。
+def stdin_piped():
+    return not sys.stdin.isatty()
+
+
+def capture(cmd):
+    r = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+    return (r.stdout or b"").decode("utf-8", "replace")
+
+
+# ── 啟發式路由關鍵詞（一字不差照抄 Fennel 版）─────────────────────────
+AGENT_PATS = [  # 需要動手／落檔／執行
+    "改", "修改", "修復", "修正", "修好", "改好", "弄好", "搞定", "重構", "重寫", "改寫", "改成",
+    "新增", "加上", "增加", "刪除", "刪掉", "移除", "替換", "取代", "實作", "實現", "執行", "跑一下",
+    "編譯", "打包", "測試", "部署", "安裝", "建立", "建置", "初始化", "清理", "重命名", "格式化",
+    "refactor", "fix", "edit", "implement", "rename", "deploy", "install", "commit", "build",
+]
+BRAIN_PATS = [  # 只需生成／回答（不落檔）
+    "解釋", "說明", "什麼是", "甚麼是", "何謂", "為什麼", "為何", "翻譯", "總結", "摘要", "概述",
+    "定義", "舉例", "比較", "介紹", "explain", "translate", "summarize", "summarise", "define", "what is", "why",
+]
+
+
+def any_match(low, pats):
+    for p in pats:
+        if p in low:
+            return True
+    return False
+
+
+# 回 "agent" / "brain" / None（模稜兩可→交給 LLM）
+def heuristic_route(text):
+    low = text.lower()
+    a = any_match(low, AGENT_PATS)
+    b = any_match(low, BRAIN_PATS)
+    if a and not b:
+        return "agent"
+    if b and not a:
+        return "brain"
+    return None
+
+
+CLASSIFY_SYS = (
+    "你是任務路由器。判斷使用者的任務**是否需要實際動手**（讀寫檔案、執行指令、"
+    "跨多檔修改、跑測試等 agent 能力）。需要動手→回 AGENT；只需生成文字／回答／"
+    "翻譯／摘要／寫一段內容（不落檔）→回 BRAIN。只回一個詞：AGENT 或 BRAIN。"
+)
+
+
+def classify(text, llme, endpoint):
+    # 回 "agent" 或 "brain"；不清楚/失敗 → "agent"（偏向能完成動手任務，較安全）
+    cmd = " ".join([
+        shlex.quote(llme), shlex.quote(endpoint),
+        "--temperature", "0", "--max-tokens", "16",
+        "--system", shlex.quote(CLASSIFY_SYS),
+        "--", shlex.quote(text),
+    ])
+    out = capture(cmd).strip().upper()
+    if "BRAIN" in out:
+        return "brain"
+    if "AGENT" in out:
+        return "agent"
+    return "agent"
+
+
+def main():
+    argv = sys.argv[1:]
+
+    # ── 解析前置旗標（-b/--brain、-a/--agent、-i/--inbox、-- 停止、-h/--help）＋收任務詞 ──
+    force = None  # None＝auto；"brain"／"agent"／"inbox"
+    stop = False
+    words = []
+    for a in argv:
+        if stop:
+            words.append(a)
+        elif a in ("-b", "--brain"):
+            force = "brain"
+        elif a in ("-a", "--agent"):
+            force = "agent"
+        elif a in ("-i", "--inbox"):
+            force = "inbox"
+        elif a == "--":
+            stop = True
+        elif a in ("-h", "--help"):
+            sys.stderr.write(
+                "用法：wf [-b|-a] <任務...>；或 … | wf <任務>；或 wf < TASK.md\n"
+                "  -b 強制走 llme（只需腦）；-a 強制走 claude（要動手）；預設 auto 分類。\n"
+            )
+            sys.exit(0)
+        else:
+            words.append(a)
+
+    # ── 取輸入：argv＝任務指令；pipe＝上下文 ─────────────────────────
+    task = " ".join(words)
+    piped = stdin_piped()
+    ctx = sys.stdin.read().strip() if piped else None
+    has_ctx = bool(ctx) and len(ctx) > 0
+
+    if len(task) > 0:
+        prompt = (task + "\n\n--- 以下為透過管線傳入的上下文 ---\n" + ctx) if has_ctx else task
+    else:
+        prompt = ctx if has_ctx else None
+
+    if prompt is None:
+        sys.stderr.write(
+            "用法：wf [-b|-a] <任務...>            例：wf 幫我把 foo.py 的錯誤處理補上\n"
+            "      cat foo.py | wf 幫我改          （pipe 當上下文附給任務）\n"
+            "      wf < TASK.md                    （無參數＝整個 stdin 當任務）\n"
+            "  -b 強制 llme（只需腦）／-a 強制 claude（要動手）；預設 auto 由 llme 分類。\n"
+        )
+        sys.exit(2)
+
+    endpoint = getenv_nonempty("WF_ENDPOINT") or "deepseek"
+    llme = getenv_nonempty("WF_LLME") or str(script_dir() / "llme")
+    claude = getenv_nonempty("WF_CLAUDE") or "claude"
+    _s = os.environ.get("WF_SYSTEM")
+    system = "與使用者溝通時用繁體中文。" if _s is None else _s
+
+    # 決策順序：強制旗標 ＞ 啟發式（免 LLM）＞ LLM 分類（只有前兩者沒定案才呼叫）
+    heur = None if force else heuristic_route(prompt)
+    route = force or heur or classify(prompt, llme, endpoint)
+    how = "強制" if force else ("啟發式・免 LLM" if heur else ("llme 分類，endpoint=" + endpoint))
+    sys.stderr.write("[wf] 路由：" + route + "（" + how + "）\n")
+
+    # inbox 模式：非同步投遞，轉呼同層 mail send（task 與 ctx 分開傳，slug 才乾淨）。
+    if route == "inbox":
+        mail = str(script_dir() / "mail")
+        send_task = task if len(task) > 0 else (ctx or "")
+        base = " ".join([shlex.quote(mail), "send", shlex.quote(send_task)])
+        if has_ctx and len(task) > 0:
+            cmd = "printf %s " + shlex.quote(ctx) + " | " + base
+        else:
+            cmd = base
+        code = subprocess.call(cmd, shell=True)
+        sys.exit(code)
+
+    # ── 執行（brain / agent 當場跑）──────────────────────────────────────
+    if route == "brain":
+        # 只需腦 → llme（DeepSeek）直接答，串流吐出
+        parts = [shlex.quote(llme), shlex.quote(endpoint), "--stream"]
+        if len(system) > 0:
+            parts.append("--system")
+            parts.append(shlex.quote(system))
+        parts.append("--")
+        parts.append(shlex.quote(prompt))
+    else:
+        # 要動手 → claude -p headless agent（在當前目錄動手）
+        permission = getenv_nonempty("WF_PERMISSION") or "acceptEdits"
+        parts = [shlex.quote(claude), "-p", "--permission-mode", shlex.quote(permission)]
+        if len(system) > 0:
+            parts.append("--append-system-prompt")
+            parts.append(shlex.quote(system))
+        m = getenv_nonempty("WF_MODEL")
+        if m:
+            parts.append("--model")
+            parts.append(shlex.quote(m))
+        e = getenv_nonempty("WF_EFFORT")
+        if e:
+            parts.append("--effort")
+            parts.append(shlex.quote(e))
+        parts.append("--")
+        parts.append(shlex.quote(prompt))
+
+    code = subprocess.call(" ".join(parts), shell=True)
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()

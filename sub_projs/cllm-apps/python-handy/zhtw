@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# zhtw — 薄包裝範例：固定取樣參數 ＋ system prompt ＋ prompt 前置，轉呼 llme。
+#
+# 一個「人格」單檔（不用資料夾）：把一組設定烤死，使用者只給要翻的文字。
+#   zhtw <要翻譯的文字...>          位置參數當輸入
+#   echo ... | zhtw / zhtw < file  無位置參數時讀 stdin（管線公民）
+#     → llme deepseek --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
+#
+# 這就是 handy 的「薄包裝」：站在 llme 上，把 endpoint／取樣參數／人格烤死，
+# 只留使用者輸入這個變數。改最上面那幾個常數即換一個人格。
+#
+# 環境變數：
+#   ZHTW_LLME  覆寫 llme 執行檔（預設＝本 script 同層 sibling <script-dir>/llme）
+
+import os
+import sys
+import shlex
+import subprocess
+from pathlib import Path
+
+# ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
+ENDPOINT = "deepseek"
+SYSTEM = "你是專業翻譯引擎。把使用者提供的文字翻成自然、道地的繁體中文。只輸出譯文本身，不要加任何解釋、引號或前後綴。"
+PREFIX = "翻譯以下內容：\n"
+# ⚠ max-tokens 要給夠：qwen3.5/gemma 等會 <think> 的 reasoning 模型，思考鏈
+#   與答案共用 max-tokens 預算，給小值（如 1024）會偶爾被思考吃光→content 空。
+#   翻譯設 4096 綽綽有餘。（top-p 與 temperature 慣例二擇一，這裡兩者都示範。）
+FLAGS = ["--temperature", "0.2", "--top-p", "0.9", "--max-tokens", "4096"]
+# ────────────────────────────────────────────────────────────────
+
+
+def getenv_nonempty(k):
+    v = os.environ.get(k)
+    return v if v else None
+
+
+def script_dir():
+    return Path(__file__).resolve().parent
+
+
+def main():
+    args = sys.argv[1:]
+    # 輸入來源：有位置參數＝所有參數併成一句；否則讀 stdin（僅非 tty 才讀，避免互動卡等 EOF）。
+    if len(args) > 0:
+        text = " ".join(args)
+    elif not sys.stdin.isatty():
+        text = sys.stdin.read().strip()
+    else:
+        text = ""
+
+    if len(text) == 0:
+        sys.stderr.write("用法：zhtw <要翻譯的文字...>   或   echo ... | zhtw\n")
+        sys.exit(2)
+
+    prompt = PREFIX + text
+
+    # sibling 解析：預設同層 <script-dir>/llme，env ZHTW_LLME 可覆寫。
+    llme = getenv_nonempty("ZHTW_LLME") or str(script_dir() / "llme")
+
+    # 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
+    parts = [shlex.quote(llme), shlex.quote(ENDPOINT)]
+    for f in FLAGS:
+        parts.append(shlex.quote(f))
+    parts.append("--system")
+    parts.append(shlex.quote(SYSTEM))
+    parts.append("--")
+    parts.append(shlex.quote(prompt))
+
+    code = subprocess.call(" ".join(parts), shell=True)
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main()

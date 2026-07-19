@@ -1,0 +1,35 @@
+#!/usr/bin/sbcl --script
+;;;; zhtw —— 繁中翻譯薄包裝（人格單檔，Common Lisp 版）：固定取樣參數 ＋ system ＋ 前置，轉呼 llme。
+;;;;   zhtw <要翻譯的文字...>          位置參數當輸入
+;;;;   echo ... | zhtw / zhtw < file  無位置參數時讀 stdin（管線公民）
+;;;;     → llme deepseek --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
+;;;;
+;;;; 改最上面那幾個常數即換一個人格。sibling llme 解析：預設 <script-dir>/llme，env ZHTW_LLME 可覆寫。
+
+(defparameter *self* *load-truename*)
+(load (merge-pathnames "src/util.lisp" *self*))
+
+;; ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
+(defparameter +endpoint+ "deepseek")
+(defparameter +system+
+  "你是專業翻譯引擎。把使用者提供的文字翻成自然、道地的繁體中文。只輸出譯文本身，不要加任何解釋、引號或前後綴。")
+(defparameter +prefix+ (format nil "翻譯以下內容：~%"))
+(defparameter +flags+ (list "--temperature" "0.2" "--top-p" "0.9" "--max-tokens" "4096"))
+;; ────────────────────────────────────────────────────────────────
+
+(defparameter *args* (rest sb-ext:*posix-argv*))
+
+;; 輸入來源：有位置參數＝所有參數併成一句；否則讀 stdin（管線公民慣例，照原型無 tty 檢查）。
+(let ((text (if (< 0 (length *args*))
+                (format nil "~{~a~^ ~}" *args*)
+                (str-trim (read-all-stdin)))))
+  (when (= 0 (length text))
+    (write-string "用法：zhtw <要翻譯的文字...>   或   echo ... | zhtw" *error-output*)
+    (terpri *error-output*)
+    (sb-ext:exit :code 2))
+  (let* ((prompt (concatenate 'string +prefix+ text))
+         (llme (or (getenv-nonempty "ZHTW_LLME")
+                   (concatenate 'string (dir-of *self*) "/llme")))
+         (cmd (append (list +endpoint+) +flags+
+                      (list "--system" +system+ "--" prompt))))
+    (sb-ext:exit :code (run-exec llme cmd))))

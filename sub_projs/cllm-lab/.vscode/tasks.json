@@ -1,0 +1,53 @@
+{
+  // cllm-lab：一鍵跑當前語言的 run.sh，以及 C/C++ debug 用的 -g 編譯前置任務。
+  // run.sh 會自己 source ~/dev/cllm/env.sh，所以不用先設環境；預設打離線 fixture。
+  // 用法：開任一語言的 play.*，按 Ctrl+Shift+B（預設建置任務）或 Terminal > Run Task。
+  // 斷點 debug 見 .vscode/launch.json（按 F5）。
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cllm: run 當前語言 (run.sh)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${fileDirname}/run.sh"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true, "focus": false },
+      "detail": "在目前開啟的 play.* 所屬語言資料夾跑 run.sh（離線 fixture）"
+    },
+    {
+      "label": "cllm: run 當前語言 (真後端)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${fileDirname}/run.sh"],
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true, "focus": false },
+      "detail": "同上；改用真後端請先把 play.* 裡的 endpoint 指到你的 LLM 服務"
+    },
+    {
+      "label": "cllm-dbg-build-c",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/dev/cllm/env.sh && cd \"${workspaceFolder}/c\" && cc -g -O0 play.c $(pkg-config --cflags --libs cllm jansson) -o .play.dbg"
+      ],
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "detail": "debug 前置：帶符號編譯 c/play.c → c/.play.dbg（給 launch.json 用）"
+    },
+    {
+      "label": "cllm-dbg-build-cpp",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/dev/cllm/env.sh && cd \"${workspaceFolder}/cpp\" && g++ -g -O0 -std=c++23 play.cpp $(pkg-config --cflags --libs cllm) -o .play.dbg"
+      ],
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "detail": "debug 前置：帶符號編譯 cpp/play.cpp → cpp/.play.dbg（給 launch.json 用）"
+    }
+  ]
+}

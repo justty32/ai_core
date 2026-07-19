@@ -1,0 +1,90 @@
+{
+  // cllm-lab 斷點 debug 設定。lisp 系（lisp/s7/fennel/janet）不含在內。
+  // fixtures 路徑固定為 install-dev.sh 產出的 ~/dev/share/cllm/fixtures/。
+  // 執行期 libcllm.so 靠 .pc 帶的 rpath 找得到，不需額外 LD_LIBRARY_PATH。
+  // 各語言需要的擴充見 .vscode/extensions.json。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "cllm: debug C (play.c)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/c/.play.dbg",
+      "args": ["file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "cwd": "${workspaceFolder}/c",
+      "stopAtEntry": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "cllm-dbg-build-c",
+      "setupCommands": [
+        { "description": "啟用 gdb pretty-printing", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ]
+    },
+    {
+      "name": "cllm: debug C++ (play.cpp)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/cpp/.play.dbg",
+      "args": ["file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "cwd": "${workspaceFolder}/cpp",
+      "stopAtEntry": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "cllm-dbg-build-cpp",
+      "setupCommands": [
+        { "description": "啟用 gdb pretty-printing", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ]
+    },
+    {
+      "name": "cllm: debug Python (play.py)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/python/play.py",
+      "args": ["file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "cwd": "${workspaceFolder}/python",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "/home/lorkhan/dev/lib/python",
+        "LIBCLLM": "/home/lorkhan/dev/lib/libcllm.so"
+      }
+    },
+    {
+      "name": "cllm: debug Go (main.go)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/go",
+      "args": ["file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "cwd": "${workspaceFolder}/go",
+      "env": {
+        "PKG_CONFIG_PATH": "/home/lorkhan/dev/lib/pkgconfig",
+        "LD_LIBRARY_PATH": "/home/lorkhan/dev/lib"
+      }
+    },
+    {
+      "name": "cllm: debug Lua (play.lua)",
+      "type": "lua-local",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/lua",
+      "program": { "command": "lua" },
+      "args": ["${workspaceFolder}/lua/play.lua", "file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "env": {
+        "LUA_CPATH_5_4": "/home/lorkhan/dev/lib/lua/5.4/?.so;;",
+        "LUA_PATH_5_4": "/home/lorkhan/dev/share/lua/?.lua;;",
+        "LUA_CPATH": "/home/lorkhan/dev/lib/lua/5.4/?.so;;",
+        "LUA_PATH": "/home/lorkhan/dev/share/lua/?.lua;;"
+      }
+    },
+    {
+      "name": "cllm: debug Shell (play.sh)",
+      "type": "bashdb",
+      "request": "launch",
+      "program": "${workspaceFolder}/shell/play.sh",
+      "args": ["file:///home/lorkhan/dev/share/cllm/fixtures/"],
+      "cwd": "${workspaceFolder}/shell",
+      "env": {
+        "PATH": "/home/lorkhan/dev/bin:/usr/bin:/bin:/usr/local/bin"
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+#!/usr/bin/sbcl --script
+;;;; llme —— cllm 多 endpoint dispatcher（薄轉發器，Common Lisp 版）。
+;;;;   llme <endpoint> [llm 的其餘參數...]
+;;;;     → 把 <endpoint> 翻成 <config_dir>/<endpoint>.json
+;;;;     → 轉呼 `llm --config <那個檔> [--api-key <k>] <其餘參數...>`
+;;;;
+;;;; 不 link libcllm、不重造任何東西——挑一個 cllm config 檔、原樣轉呼現成的 llm CLI。
+;;;;
+;;;; 環境變數：
+;;;;   LLME_LLM         覆寫要轉呼的 llm 執行檔（預設 "llm"；測試設 echo 可看轉出的參數）
+;;;;   LLME_CONFIG_DIR  覆寫 config 目錄（預設＝本 script 同層的 configs/）
+;;;;   <自動注入 api key>  呼叫 <endpoint> 時，若使用者沒自帶 --api-key，依序找：
+;;;;                      ① LLME_KEY_<EP> ② <EP>_API_KEY（<EP>＝endpoint 名大寫、非英數轉 _）
+
+(defparameter *self* *load-truename*)
+(load (merge-pathnames "src/util.lisp" *self*))
+
+(defparameter *args* (rest sb-ext:*posix-argv*))
+
+(defun config-dir ()
+  (or (getenv-nonempty "LLME_CONFIG_DIR")
+      (concatenate 'string (dir-of *self*) "/configs")))
+
+(defun list-endpoints (dir)
+  (list-stems dir "json" :skip-underscore t))
+
+;; 用逐段 write-string 保證與 Fennel 版一字不差（避免 format 指令混入）。
+(defun print-usage (dir)
+  (let ((e *error-output*))
+    (write-string "用法：llme <endpoint> [llm 的其餘參數...]" e) (terpri e)
+    (write-string "  例：llme opus --stream 你好" e) (terpri e)
+    (write-string (concatenate 'string "  <endpoint> 對應 " dir "/<endpoint>.json（cllm config），") e) (terpri e)
+    (write-string "  其餘參數原樣轉給 llm CLI（--config <那個檔> 已自動帶上）。" e) (terpri e)
+    (write-string "  環境變數：LLME_LLM 覆寫 llm 執行檔；LLME_CONFIG_DIR 覆寫 config 目錄。" e) (terpri e)
+    (let ((eps (list-endpoints dir)))
+      (if (= 0 (length eps))
+          (progn (write-string (concatenate 'string "  （目前 " dir " 下沒有可用的 endpoint config）") e) (terpri e))
+          (progn (write-string (concatenate 'string "  可用 endpoint：" (format nil "~{~a~^ ~}" eps)) e) (terpri e))))))
+
+;; endpoint 名 → env 慣例大寫識別子（非英數→_，如 deep-seek → DEEP_SEEK）
+(defun env-stem (s)
+  (map 'string
+       (lambda (c)
+         (let ((u (char-upcase c)))
+           (if (or (char<= #\A u #\Z) (char<= #\0 u #\9)) u #\_)))
+       s))
+
+(defun user-gave-api-key (rest-args)
+  (some (lambda (a)
+          (or (string= a "--api-key")
+              (and (>= (length a) 10) (string= (subseq a 0 10) "--api-key="))))
+        rest-args))
+
+(defun auto-api-key (ep)
+  (let ((stem (env-stem ep)))
+    (or (getenv-nonempty (concatenate 'string "LLME_KEY_" stem))
+        (getenv-nonempty (concatenate 'string stem "_API_KEY")))))
+
+(let* ((ep (first *args*))
+       (dir (config-dir)))
+  (when (or (null ep) (string= ep "--help") (string= ep "-h"))
+    (print-usage dir)
+    (sb-ext:exit :code (if (null ep) 2 0)))
+  (let ((cfg (concatenate 'string dir "/" ep ".json")))
+    (unless (probe-file cfg)
+      (format *error-output* "llme：找不到 endpoint「~a」的 config（~a）~%" ep cfg)
+      (print-usage dir)
+      (sb-ext:exit :code 2))
+    (let* ((llm (or (getenv-nonempty "LLME_LLM") "llm"))
+           (rest-args (rest *args*))
+           (cmd (list "--config" cfg)))
+      (unless (user-gave-api-key rest-args)
+        (let ((k (auto-api-key ep)))
+          (when k (setf cmd (append cmd (list "--api-key" k))))))
+      (setf cmd (append cmd rest-args))
+      (sb-ext:exit :code (run-exec llm cmd)))))

@@ -1,0 +1,154 @@
+#!/usr/bin/sbcl --script
+;;;; mail —— inbox 協議的可執行版（Common Lisp 版）：把「太複雜、不想當場等」的任務寫成一封信
+;;;;        投進 inbox/，之後由 `mail run` 逐封 spawn claude code 去做，成功歸檔到 done/。
+;;;;
+;;;;   mail send <任務...>        寫一封信到 inbox/<slug>.md，印出路徑，立即返回
+;;;;     cat ctx | mail send <任務>   pipe 當上下文寫進信
+;;;;   mail list                  列出 inbox/ 頂層待處理的信（done/ 不列）
+;;;;   mail run [slug]            處理：對每封（或指定 slug）spawn claude -p 跑，成功 mv 到 done/
+;;;;   mail run --dry             只列會處理哪些、不真跑
+;;;;
+;;;; 環境變數：INBOX_DIR（投遞區，預設 <script-dir>/inbox）；WF_CLAUDE / WF_PERMISSION（與 wf 共用）。
+
+(defparameter *self* *load-truename*)
+(load (merge-pathnames "src/util.lisp" *self*))
+
+(defparameter *args* (rest sb-ext:*posix-argv*))
+
+(defparameter *inbox-dir*
+  (or (getenv-nonempty "INBOX_DIR")
+      (concatenate 'string (dir-of *self*) "/inbox")))
+(defparameter *done-dir* (concatenate 'string *inbox-dir* "/done"))
+
+(defun ensure-dirs ()
+  (ensure-directories-exist (concatenate 'string *done-dir* "/")))
+
+;; ── slugify：任務前段轉 kebab、去掉檔名不安全字元、限 16 字（UTF-8 安全）。照 Fennel 版順序。
+(defun ws->dash (s)
+  (with-output-to-string (o)
+    (let ((prev-ws nil))
+      (loop for c across s do
+        (if (member c *ws* :test #'char=)
+            (progn (unless prev-ws (write-char #\- o)) (setf prev-ws t))
+            (progn (write-char c o) (setf prev-ws nil)))))))
+
+(defun collapse-dashes (s)
+  (with-output-to-string (o)
+    (let ((prev-dash nil))
+      (loop for c across s do
+        (if (char= c #\-)
+            (progn (unless prev-dash (write-char #\- o)) (setf prev-dash t))
+            (progn (write-char c o) (setf prev-dash nil)))))))
+
+(defparameter +unsafe-chars+ "/\\:*?\"'<>|")
+
+(defun utf8-head (s n)
+  ;; CL 字串是字元序列，subseq 按字元切、天然 UTF-8 安全（不切半個字）。
+  (if (<= (length s) n) s (subseq s 0 n)))
+
+(defun slugify (task)
+  (let* ((s (str-trim task))
+         (s (ws->dash s))
+         (s (remove-if (lambda (c) (find c +unsafe-chars+)) s))
+         (s (collapse-dashes s))
+         (s (string-left-trim "-" s))
+         (s (utf8-head s 16))
+         (s (string-right-trim "-" s)))
+    (if (= 0 (length s)) "task" s)))
+
+(defun path-exists (path) (probe-file path))
+
+(defun unique-path (slug)
+  (let ((p (concatenate 'string *inbox-dir* "/" slug ".md"))
+        (n 2))
+    (loop while (path-exists p) do
+      (setf p (concatenate 'string *inbox-dir* "/" slug "-" (princ-to-string n) ".md"))
+      (incf n))
+    p))
+
+(defun list-md (dir) (list-stems dir "md"))
+
+;; ── 子命令 ──────────────────────────────────────────────────────────
+(defun do-send ()
+  (let* ((words (rest *args*))
+         (task (format nil "~{~a~^ ~}" words))
+         (ctx (if (stdin-piped-p) (str-trim (read-all-stdin)) nil))
+         (has-ctx (and ctx (< 0 (length ctx)))))
+    (when (and (= 0 (length task)) (not has-ctx))
+      (write-string "用法：mail send <任務...>（或 … | mail send <任務>）" *error-output*)
+      (terpri *error-output*)
+      (sb-ext:exit :code 2))
+    (let* ((real-task (if (< 0 (length task)) task ctx))
+           (slug (slugify real-task))
+           (path (unique-path slug))
+           (ctx-part (if (and has-ctx (< 0 (length task))) ctx "（無）"))
+           (body (concatenate 'string
+                   "# " slug (format nil "~%~%")
+                   "## 任務" (format nil "~%") real-task (format nil "~%~%")
+                   "## 上下文" (format nil "~%") ctx-part (format nil "~%~%")
+                   "---" (format nil "~%")
+                   "（此信由 handy inbox 投遞；請完整完成信中的任務。處理者會於完成後將本信歸檔到 done/。）"
+                   (format nil "~%"))))
+      (ensure-dirs)
+      (write-file path body)
+      (write-string (concatenate 'string "已投遞：" path) *standard-output*)
+      (terpri *standard-output*)
+      (sb-ext:exit :code 0))))
+
+(defun do-list ()
+  (let ((pending (list-md *inbox-dir*)))
+    (if (= 0 (length pending))
+        (progn (write-string "（inbox 空：沒有待處理的信）" *standard-output*) (terpri))
+        (progn
+          (write-string (concatenate 'string "待處理的信（" (princ-to-string (length pending)) "）：") *standard-output*)
+          (terpri)
+          (dolist (s pending) (write-string (concatenate 'string "  " s) *standard-output*) (terpri))))
+    (sb-ext:exit :code 0)))
+
+(defun do-run ()
+  (let* ((claude (or (getenv-nonempty "WF_CLAUDE") "claude"))
+         (permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits"))
+         (arg2 (second *args*))
+         (dry (and arg2 (string= arg2 "--dry")))
+         (only (if (and arg2 (not dry)) arg2 nil))
+         (pending (if only (list only) (list-md *inbox-dir*)))
+         (failed 0))
+    (when (= 0 (length pending))
+      (write-string "（inbox 空：無事可做）" *standard-output*) (terpri)
+      (sb-ext:exit :code 0))
+    (ensure-dirs)
+    (dolist (slug pending)
+      (let ((path (concatenate 'string *inbox-dir* "/" slug ".md")))
+        (if (not (path-exists path))
+            (progn
+              (write-string (concatenate 'string "跳過（找不到）：" slug) *error-output*) (terpri *error-output*)
+              (incf failed))
+            (let* ((letter (or (read-file path) ""))
+                   (prompt (concatenate 'string
+                             "以下是一封待處理的任務信，請完整完成信中的任務：" (format nil "~%~%") letter)))
+              (write-string (concatenate 'string (format nil "~%") "=== 處理：" slug " ===") *standard-output*) (terpri)
+              (if dry
+                  (progn (write-string "  [--dry] 略過不跑" *standard-output*) (terpri))
+                  (let ((code (run-exec claude (list "-p" "--permission-mode" permission "--" prompt))))
+                    (if (eql code 0)
+                        (let ((dst (concatenate 'string *done-dir* "/" slug ".md")))
+                          (rename-file path dst)
+                          (write-string (concatenate 'string "  ✓ 完成，歸檔 → done/" slug ".md") *standard-output*) (terpri))
+                        (progn
+                          (write-string (concatenate 'string "  ✗ claude 退出碼 " (princ-to-string code) "，保留在 inbox（未歸檔）") *error-output*)
+                          (terpri *error-output*)
+                          (incf failed)))))))))
+    (sb-ext:exit :code (if (> failed 0) 1 0))))
+
+(let ((sub (first *args*)))
+  (cond
+    ((and sub (string= sub "send")) (do-send))
+    ((and sub (or (string= sub "list") (string= sub "ls"))) (do-list))
+    ((and sub (string= sub "run")) (do-run))
+    (t
+     (let ((e *error-output*))
+       (write-string "用法：mail <send|list|run>" e) (terpri e)
+       (write-string "  send <任務...>   投遞一封信到 inbox/（… | mail send <任務> 可帶上下文）" e) (terpri e)
+       (write-string "  list             列出待處理的信" e) (terpri e)
+       (write-string "  run [slug|--dry] 逐封 spawn claude 處理，成功歸檔到 done/" e) (terpri e))
+     (sb-ext:exit :code (if (null sub) 2 0)))))

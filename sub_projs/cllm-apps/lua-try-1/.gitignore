@@ -1,0 +1,6 @@
+# vendored 二進位（用 scripts/vendor.sh 重生）
+/vendor/cllm-tools/
+# sidecar 執行期狀態
+/.run/
+# 真憑證：只有 config.example.json 進版控
+/config/config.json

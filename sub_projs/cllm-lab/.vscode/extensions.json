@@ -1,0 +1,11 @@
+{
+  // 各語言 debug（斷點）需要的 VSCode 擴充。裝了才有對應的 launch.json 設定可用。
+  "recommendations": [
+    "ms-vscode.cpptools",                    // C / C++ debug（cppdbg，靠系統 gdb，已裝）
+    "ms-python.python",                      // Python debug（debugpy，內建、無系統相依）
+    "ms-python.debugpy",
+    "golang.go",                             // Go debug（需 dlv，首次 debug 會提示安裝）
+    "tomblind.local-lua-debugger-vscode",    // Lua debug（純 Lua 除錯器，無系統相依）
+    "rogalmic.bash-debug"                    // Shell debug（需系統裝 bashdb）
+  ]
+}

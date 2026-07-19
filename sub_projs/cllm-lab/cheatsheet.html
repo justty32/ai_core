@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cllm-lab 速查表</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#fff; --ink:#1a1a1a; --muted:#666; --line:#e3e3df;
+    --accent:#7c3a2d; --accent-soft:#f0e6e2; --code-bg:#f2f0ec; --code-ink:#3a3a3a;
+    --kbd-bg:#fff; --kbd-line:#ccc; --warn:#9a5b00; --warn-bg:#fbf3e2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1a1917; --card:#232220; --ink:#e8e6e2; --muted:#9a978f; --line:#38352f;
+      --accent:#d99a86; --accent-soft:#3a2b26; --code-bg:#2b2926; --code-ink:#d0cdc6;
+      --kbd-bg:#2b2926; --kbd-line:#4a453d; --warn:#e0b878; --warn-bg:#332a1a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1a1917; --card:#232220; --ink:#e8e6e2; --muted:#9a978f; --line:#38352f;
+    --accent:#d99a86; --accent-soft:#3a2b26; --code-bg:#2b2926; --code-ink:#d0cdc6;
+    --kbd-bg:#2b2926; --kbd-line:#4a453d; --warn:#e0b878; --warn-bg:#332a1a;
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f7f5; --card:#fff; --ink:#1a1a1a; --muted:#666; --line:#e3e3df;
+    --accent:#7c3a2d; --accent-soft:#f0e6e2; --code-bg:#f2f0ec; --code-ink:#3a3a3a;
+    --kbd-bg:#fff; --kbd-line:#ccc; --warn:#9a5b00; --warn-bg:#fbf3e2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  code,kbd,pre{font-family:"SF Mono",ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace}
+  header{
+    max-width:1180px; margin:0 auto; padding:22px 20px 8px;
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  }
+  header h1{margin:0; font-size:22px; letter-spacing:-.3px}
+  header .sub{color:var(--muted); font-size:13px}
+  header .spacer{flex:1}
+  .themebtn{
+    border:1px solid var(--line); background:var(--card); color:var(--muted);
+    border-radius:6px; padding:5px 11px; font-size:12px; cursor:pointer;
+  }
+  .themebtn:hover{color:var(--ink); border-color:var(--accent)}
+  .wrap{
+    max-width:1180px; margin:0 auto; padding:8px 20px 60px;
+    columns:340px; column-gap:16px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px 15px; margin:0 0 16px; break-inside:avoid;
+  }
+  .card h2{
+    margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--accent); display:flex; align-items:center; gap:7px;
+  }
+  .card h2 .n{
+    background:var(--accent-soft); color:var(--accent); border-radius:5px;
+    font-size:11px; padding:1px 6px; font-weight:700;
+  }
+  .card h3{margin:12px 0 5px; font-size:12.5px; color:var(--ink)}
+  .card h3:first-of-type{margin-top:2px}
+  p{margin:6px 0}
+  .muted{color:var(--muted)}
+  pre{
+    background:var(--code-bg); color:var(--code-ink); border-radius:7px;
+    padding:9px 11px; margin:6px 0; overflow-x:auto; font-size:12.5px; line-height:1.55;
+  }
+  pre code{white-space:pre}
+  code.inl{background:var(--code-bg); color:var(--code-ink); border-radius:4px; padding:1px 5px; font-size:12.5px}
+  .cm{color:var(--muted)}
+  table{width:100%; border-collapse:collapse; margin:4px 0; font-size:12.5px}
+  th,td{text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px}
+  td:first-child{white-space:nowrap}
+  kbd{
+    background:var(--kbd-bg); border:1px solid var(--kbd-line); border-bottom-width:2px;
+    border-radius:4px; padding:0 5px; font-size:11.5px; color:var(--ink);
+  }
+  .warn{
+    background:var(--warn-bg); border-left:3px solid var(--warn); color:var(--ink);
+    border-radius:0 6px 6px 0; padding:7px 10px; margin:8px 0; font-size:12.5px;
+  }
+  .warn b{color:var(--warn)}
+  .pill{display:inline-block; background:var(--accent-soft); color:var(--accent); border-radius:20px; padding:1px 9px; font-size:11px; margin:1px 2px 1px 0}
+  .steps{counter-reset:s; padding:0; margin:6px 0; list-style:none}
+  .steps li{position:relative; padding:2px 0 2px 24px; margin:3px 0}
+  .steps li::before{
+    counter-increment:s; content:counter(s); position:absolute; left:0; top:2px;
+    width:17px; height:17px; border-radius:50%; background:var(--accent); color:#fff;
+    font-size:11px; font-weight:700; text-align:center; line-height:17px;
+  }
+  footer{max-width:1180px; margin:0 auto; padding:0 20px 40px; color:var(--muted); font-size:12px}
+  a{color:var(--accent)}
+  @media print{
+    body{background:#fff; font-size:11px}
+    .themebtn{display:none}
+    .wrap{columns:3; column-gap:10px; padding-top:0}
+    .card{border-color:#ccc; padding:9px 10px; margin-bottom:9px}
+    header{padding:10px 12px 4px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>cllm-lab 速查表</h1>
+  <span class="sub">九語言 · 一顆 <code class="inl">libcllm.so</code> · 一個入口 <code class="inl">llm_ask()</code></span>
+  <span class="spacer"></span>
+  <button class="themebtn" id="themebtn">◐ 切換深/淺色</button>
+</header>
+
+<div class="wrap">
+
+  <!-- 開工 -->
+  <div class="card">
+    <h2><span class="n">0</span> 開工三步</h2>
+    <ol class="steps">
+      <li><b>一次性</b>裝環境（換機才做）<pre><code>bash ~/repo/ai_core/sub_projs/cllm/install-dev.sh</code></pre></li>
+      <li>每次開工前 source 環境<pre><code>source ~/dev/cllm/env.sh</code></pre></li>
+      <li>挑語言、跑起手檔（離線、不連網）<pre><code>cd ~/code/cllm-lab/cpp
+bash run.sh</code></pre></li>
+    </ol>
+    <div class="warn"><b>⚠</b> 編輯器要<b>從 source 過 env.sh 的 shell 開</b>（<code class="inl">code .</code>／<code class="inl">nvim</code>），否則 clangd／gopls／pyright 找不到標頭 → 一片紅波浪線。</div>
+    <p class="muted">健康檢查：<code class="inl">bash ~/repo/ai_core/sub_projs/cllm/test/bindings_smoke.sh</code>（九語言全綠＝正常）</p>
+  </div>
+
+  <!-- 心智模型 -->
+  <div class="card">
+    <h2><span class="n">1</span> 心智模型</h2>
+    <p>學一次 API，九語言都會用——binding 只是 <code class="inl">llm_ask()</code> 的薄皮，<b>形狀一致、差在語法</b>。</p>
+    <table>
+      <tr><td><code class="inl">ask(prompt[,ep],…)</code></td><td>回完整答案字串</td></tr>
+      <tr><td><code class="inl">on_delta</code></td><td>給了＝串流，逐段回呼（回 truthy 中止）</td></tr>
+      <tr><td><code class="inl">schema</code></td><td>要求結構化輸出（回 JSON 字串）</td></tr>
+      <tr><td><code class="inl">tools</code>+<code class="inl">on_tool</code></td><td>送定義；收 <code class="inl">{name,arguments}</code>（單輪）</td></tr>
+      <tr><td><code class="inl">media</code>/<code class="inl">modalities</code></td><td>輸入媒體／要求輸出模態</td></tr>
+      <tr><td><code class="inl">on_media</code></td><td>模型產出媒體 <code class="inl">{mime,bytes}</code></td></tr>
+    </table>
+    <p class="muted">每個資料夾的 <code class="inl">play.*</code> ＝同一套六個示範用該語言寫一遍，<b>直接改它就是開發</b>。</p>
+  </div>
+
+  <!-- CLI -->
+  <div class="card">
+    <h2><span class="n">2</span> <code class="inl">llm</code> CLI（unix filter）</h2>
+    <pre><code>llm 用一句話介紹你自己           <span class="cm"># 位置參數</span>
+echo 數到五 | llm --stream        <span class="cm"># stdin＋串流</span>
+cat report.txt | llm 總結這份     <span class="cm"># 合體：指令在前資料在後</span>
+git diff | llm 把 - 寫成 commit    <span class="cm"># 「-」明指 stdin 插入點</span></code></pre>
+    <table>
+      <tr><th>旗標</th><th>作用</th></tr>
+      <tr><td><code class="inl">--stream</code></td><td>逐段吐 stdout</td></tr>
+      <tr><td><code class="inl">--image &lt;檔&gt;</code></td><td>輸入媒體（可重複，mime 由副檔名推）</td></tr>
+      <tr><td><code class="inl">--schema &lt;檔&gt;</code></td><td>JSON Schema → 結構化輸出</td></tr>
+      <tr><td><code class="inl">--tool &lt;檔&gt;</code></td><td>工具定義（可重複），tool_calls 一行一則 JSON</td></tr>
+      <tr><td><code class="inl">--modality n[=檔]</code></td><td>要求輸出模態如 <code class="inl">audio=cfg.json</code></td></tr>
+      <tr><td><code class="inl">--media-out &lt;目錄&gt;</code></td><td>產出媒體落檔（目錄須先存在）</td></tr>
+      <tr><td><code class="inl">--endpoint</code> <code class="inl">--model</code> <code class="inl">--api-key</code></td><td>後端／模型／金鑰</td></tr>
+      <tr><td><code class="inl">--config &lt;檔&gt;</code></td><td>扁平 JSON 設定檔</td></tr>
+    </table>
+    <p class="muted">連線／取樣旗標由 <code class="inl">Client</code> 欄位<b>反射</b>生成 → <b>以 <code class="inl">llm --help</code> 為準</b>。退出碼：<kbd>0</kbd> 成功 <kbd>1</kbd> 用法錯 <kbd>2</kbd> 請求失敗 <kbd>130</kbd> Ctrl-C。</p>
+  </div>
+
+  <!-- C / C++ -->
+  <div class="card">
+    <h2><span class="n">3</span> C · C++</h2>
+    <h3>C — <code class="inl">&lt;cllm/cabi.h&gt;</code></h3>
+    <pre><code>llm_client_t c={0}; c.endpoint=url;
+llm_request_t r={0}; r.prompt="你好";
+llm_handlers_t h={0}; h.on_text=on_text;
+llm_ask(NULL,&c,&r,&h); <span class="cm">// 回 LLM_OK</span></code></pre>
+    <p class="muted">編：<code class="inl">cc play.c $(pkg-config --cflags --libs cllm jansson)</code></p>
+    <h3>C++ — <code class="inl">&lt;cllm/llm.hpp&gt;</code>（便利層）</h3>
+    <pre><code>llm::Client c; c.endpoint=url;
+auto r=c.ask("你好");  <span class="cm">// Result&lt;string&gt;</span>
+if(r) use(*r); else r.error().message;
+c.ask("數到五",{.stream=true,.on_delta=cb});
+auto ch=llm::ask_as&lt;Character&gt;(c,"給我角色");</code></pre>
+    <p class="muted">編：<code class="inl">g++ -std=c++23 … $(pkg-config --cflags --libs cllm)</code></p>
+    <div class="warn"><b>⚠</b> 給反射（<code class="inl">ask_as&lt;T&gt;</code>／<code class="inl">make_tool</code>）的 struct 要放 <b>namespace scope</b>，函式內 local struct 反射不了。</div>
+  </div>
+
+  <!-- Python / Go -->
+  <div class="card">
+    <h2><span class="n">3</span> Python · Go</h2>
+    <h3>Python — <code class="inl">import llm</code></h3>
+    <pre><code>llm.ask("你好", endpoint)
+llm.ask("數到五", endpoint=ep, stream=True,
+        on_delta=lambda p: print(p,end="") or False)
+obj=json.loads(llm.ask("給我角色",
+     endpoint=ep, schema='{"type":"object"}'))
+<span class="cm"># tools=[{name,description,parameters}]</span>
+<span class="cm"># on_tool(call) / on_media(m) / 錯誤 llm.LLMError</span></code></pre>
+    <h3>Go — <code class="inl">import "cllm"</code>（options）</h3>
+    <pre><code>ans, err := cllm.Ask("你好", cllm.Endpoint(url))
+cllm.Ask("數到五", cllm.Endpoint(url),
+  cllm.Stream(), cllm.OnDelta(func(p string)bool{
+    return false }))
+<span class="cm">// Schema/Tools/OnTool/OnMedia/MediaIn/Modalities</span></code></pre>
+    <div class="warn"><b>⚠</b> Go cgo 需先 <code class="inl">source env.sh</code> 再 <code class="inl">go run .</code></div>
+  </div>
+
+  <!-- Lua / Fennel -->
+  <div class="card">
+    <h2><span class="n">3</span> Lua · Fennel</h2>
+    <h3>Lua — <code class="inl">require("llm")</code></h3>
+    <pre><code>llm.ask("你好", endpoint)
+llm.ask{ prompt="數到五", endpoint=ep,
+  stream=true, on_delta=function(p)
+    io.write(p) return false end }
+<span class="cm">-- schema/tools/on_tool/on_media/media/modalities</span>
+<span class="cm">-- JSON: require "dkjson"</span></code></pre>
+    <h3>Fennel — <code class="inl">(require :llm)</code></h3>
+    <pre><code>(llm.ask {:prompt "數到五" :endpoint ep
+  :stream true :on_delta (fn [p] (io.write p) false)})</code></pre>
+    <div class="warn"><b>⚠</b> Fennel table 鍵一律用<b>底線</b>：<code class="inl">:on_delta</code>／<code class="inl">:on_tool</code>，<b>不是</b> <code class="inl">:on-delta</code>。跑在 lua 5.4。</div>
+  </div>
+
+  <!-- s7 / CL -->
+  <div class="card">
+    <h2><span class="n">3</span> s7 Scheme · Common Lisp</h2>
+    <h3>s7 — <code class="inl">(llm-ask …)</code></h3>
+    <pre><code>(llm-ask "你好" :endpoint ep)
+(llm-ask "數到五" :endpoint ep :stream #t
+  :on-delta (lambda (p) (display p) #f))
+<span class="cm">; 跑：llm-s7 play.scm  | 無原生 json→jq shell-out</span></code></pre>
+    <div class="warn"><b>⚠</b> s7 回呼裡<b>別丟 error／別做 I/O</b>——longjmp 穿 C++ 是 UB。只 <code class="inl">set!</code> 存值，解析挪到 <code class="inl">llm-ask</code> 之後。</div>
+    <h3>CL — <code class="inl">(cllm:ask …)</code></h3>
+    <pre><code>(cllm:ask "你好" ep)
+(cllm:ask "數到五" :endpoint ep :stream t
+  :on-delta (lambda (p) (write-string p)
+             (finish-output) nil))
+<span class="cm">; sbcl --script  | JSON: shasht(quicklisp)</span></code></pre>
+  </div>
+
+  <!-- 接後端 -->
+  <div class="card">
+    <h2><span class="n">4</span> 接後端 / 登入</h2>
+    <p class="muted">lab 預設打離線 fixture。接真模型三條路：</p>
+    <h3>(a) 本機 LM Studio — 最省事</h3>
+    <pre><code>llm 介紹你自己 \
+  --endpoint http://localhost:1234/v1/chat/completions \
+  --model local-model</code></pre>
+    <div class="warn"><b>⚠</b> reasoning 模型別設 <code class="inl">--max-tokens</code>：思考鏈與答案共用預算，設太小會讓 <code class="inl">content</code> 變空。</div>
+    <h3>(b) Anthropic — 走 <code class="inl">anthropic-proxy</code></h3>
+    <pre><code>cmake --build --preset linux-debug --target anthropic-proxy
+./build/tools/anthropic-proxy &amp;
+cp tools/anthropic-proxy/configs/opus.json \
+   ~/.config/llm/config.json   <span class="cm"># 填 sk-ant- key</span>
+llm 哈囉</code></pre>
+    <h3>(c) OAuth 登入 — <code class="inl">llm-login</code></h3>
+    <pre><code>cmake --build --preset linux-debug --target llm-login
+cp tools/llm-login/providers/openrouter.json \
+   ~/.config/llm/oauth.json
+./build/tools/llm-login login   <span class="cm"># headless 加 --no-browser</span></code></pre>
+  </div>
+
+  <!-- 供應商矩陣 -->
+  <div class="card">
+    <h2><span class="n">4</span> 供應商速記</h2>
+    <table>
+      <tr><th>供應商</th><th>怎麼接</th></tr>
+      <tr><td>OpenRouter</td><td><code class="inl">llm-login</code>，免註冊 client，最省事</td></tr>
+      <tr><td>Gemini / Azure / GitHub</td><td><code class="inl">llm-login</code>（各自先備 OAuth app）</td></tr>
+      <tr><td>DeepSeek / OpenAI</td><td>直接填 <code class="inl">--api-key</code>（OpenAI 相容）</td></tr>
+      <tr><td>Anthropic</td><td>走 <code class="inl">anthropic-proxy</code>（協定需翻譯）</td></tr>
+      <tr><td>本機 LM Studio</td><td><code class="inl">--endpoint :1234</code>，免 key</td></tr>
+    </table>
+  </div>
+
+  <!-- 建置 -->
+  <div class="card">
+    <h2><span class="n">5</span> 建置 / 安裝</h2>
+    <p class="muted">lab 吃 <code class="inl">~/dev/cllm/</code> 的產物，本身不建。要重建 cllm 本體：</p>
+    <pre><code>cd ~/repo/ai_core/sub_projs/cllm
+cmake --preset linux-debug        <span class="cm"># vcpkg 自動裝 glaze</span>
+cmake --build --preset linux-debug
+bash install-dev.sh               <span class="cm"># 冪等裝進 ~/dev</span></code></pre>
+    <p><span class="pill">相依極簡</span> C++ 只用 vcpkg 的 <b>glaze</b>＋系統 <b>libcurl</b>。preset：<code class="inl">linux-*</code>／<code class="inl">mingw-*</code>。</p>
+    <p class="muted">Windows：<code class="inl">#ifdef</code> 已包好、POSIX 已測，但尚未實建。</p>
+  </div>
+
+  <!-- 疑難排解 -->
+  <div class="card">
+    <h2><span class="n">6</span> 疑難排解</h2>
+    <table>
+      <tr><th>症狀</th><th>解法</th></tr>
+      <tr><td>編輯器紅波浪線</td><td>從 source env.sh 的 shell 重開編輯器</td></tr>
+      <tr><td>找不到 <code class="inl">llm</code>/<code class="inl">.so</code></td><td>跑 <code class="inl">install-dev.sh</code> 再 <code class="inl">source env.sh</code></td></tr>
+      <tr><td>不確定環境健康</td><td><code class="inl">bindings_smoke.sh</code>（全綠＝正常）</td></tr>
+      <tr><td>真後端 content 空</td><td>reasoning 模型，別設 <code class="inl">--max-tokens</code></td></tr>
+      <tr><td>Fennel 回呼沒觸發</td><td>鍵改底線 <code class="inl">:on_delta</code></td></tr>
+      <tr><td>s7 跑一半崩</td><td>回呼別丟 error／別做 I/O</td></tr>
+      <tr><td>Go cgo 報錯</td><td>先 <code class="inl">source env.sh</code></td></tr>
+    </table>
+    <p class="muted">完整版 → <a href="GUIDE.md">GUIDE.md</a>。真相源 <code class="inl">~/repo/ai_core/sub_projs/cllm/</code>（docs／bindings／tools）。</p>
+  </div>
+
+</div>
+
+<footer>
+  cllm-lab · 值得留的成果記得搬回 <code class="inl">~/repo/ai_core/sub_projs/cllm/</code>（lab 是暫存遊樂場）。
+</footer>
+
+<script>
+(function(){
+  var btn=document.getElementById('themebtn');
+  var root=document.documentElement;
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    if(!cur){ cur=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'; }
+    root.setAttribute('data-theme', cur==='dark'?'light':'dark');
+  });
+})();
+</script>
+</body>
+</html>
