@@ -29,7 +29,10 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 - **Step 1 完成 ✅**（假靜態樹證 mount 通路）：`unipath_fs.py`（Python＋fusepy）掛一棵 0-based 數字樹，
   每個元素目錄含 `data`/`ctl`/`status` 約定檔。已驗：`ls` walk（含巢狀）、`cat` 讀、`echo >` 寫 data、
   `ctl` 命令（`set`/`mkelem`/`rmelem`）皆通。跑法：`.venv/bin/python unipath_fs.py mnt`（前景），另開終端 `ls/cat/echo mnt/…`，`fusermount -u mnt` 卸載。
-- **Step 2 待做**：把假樹換成**真執行態環境**（暴露 Python process 自己的物件/env），觸及「執行態路徑化」核心。
+- **Step 2 完成 ✅**（真執行態環境）：`unipath_live.py` 把一個活 Python process 的物件圖暴露成路徑樹——
+  list→數字子路徑、dict→字串鍵子路徑；背景 thread 持續改 `world[0]`，故同路徑不同時刻讀到不同值（＝執行態非快照）；
+  `echo > …/data` write-through 改活物件；`ctl` 支援 `append`/`set`/`del`。跑法同 step 1（換 `unipath_live.py`）。
+- **Step 3 待議**：跨 process 暴露（別的 process 的 env，非自己）／轉真 9P／接 tick 狀態轉移語意／往階段二。
 - 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
 
 ## 鐵律
