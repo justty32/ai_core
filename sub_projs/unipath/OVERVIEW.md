@@ -34,7 +34,7 @@
 | **step 1** | 假靜態樹，證 FUSE mount 管線 | `ls`/`cat`/`echo` walk/讀/寫皆通 | `unipath_fs.py`（`up_static`/`up_fuse`）|
 | **step 2** | 暴露**自身** process 執行態 | counter 隨時間變（非快照）、`echo` write-through、`ctl` | `unipath_live.py`（`up_env`/`up_fuse`）|
 | **step 3** | **跨 process** 暴露 | 從外部 walk 另一 process 的 env、獨立第三方確認改到發布端本身 | `unipath_pub.py` + `unipath_mount.py` |
-| **step 4** | **真 9P2000 線格式** | 獨立真 9P client 自測互通；可被核心 `v9fs` 掛載 | `unipath_9p.py`（`up_ninep*`）|
+| **step 4** | **真 9P2000 線格式** | 獨立真 9P client 自測互通；**✅ 已被核心 `v9fs` 真掛載驗證**（2026-07-19，`ls`/`cat` 透過核心讀活值）| `unipath_9p.py`（`up_ninep*`）|
 | **step 5** | **tick 回合制狀態轉移** | counter 累加、echo 抄鄰居、guard 傷害/回血/死亡、使用者影響於回合邊界吸收 | `unipath_tick.py`（`up_tick`/`up_tick_rules`）|
 | **step 6** | **腳本化 NPC＋巢狀 tick＋影響走路徑樹**（階段二種子）| NPC 行為＝住 `/idx/script/data` 的腳本、`echo` 改行為即生效；巢狀 town 每父回合跑 rate 拍；影響＝寫樹 | `unipath_world.py`（`up_tick_script`）|
 
