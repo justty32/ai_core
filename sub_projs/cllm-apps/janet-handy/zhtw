@@ -1,0 +1,53 @@
+#!/usr/bin/env janet
+# zhtw — 繁中翻譯薄包裝範例（人格單檔，Janet 版）：固定取樣參數 ＋ system prompt ＋ 前置，轉呼 llme。
+#
+#   zhtw <要翻譯的文字...>          位置參數當輸入
+#   echo ... | zhtw / zhtw < file  無位置參數時讀 stdin（管線公民）
+#     → llme deepseek --temperature 0.2 --top-p 0.9 --max-tokens 4096 --system <SYSTEM> -- <前置+文字>
+#
+# 站在 llme 上，把 endpoint／取樣參數／人格烤死，只留使用者輸入這個變數。改最上面那幾個常數即換人格。
+#
+# 環境變數：
+#   ZHTW_LLME  覆寫 llme 執行檔（預設＝本 script 同層 sibling <script-dir>/llme）
+
+# 載入共用膠水碼：先解 symlink 取本檔真實所在目錄，再 dofile 併入本環境。
+(def _self (os/realpath (get (dyn :args) 0)))
+(def _dir (string/slice _self 0 (last (string/find-all "/" _self))))
+(dofile (string _dir "/src/util.janet") :env (curenv))
+
+# ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
+(def ENDPOINT "deepseek")
+(def SYSTEM
+  "你是專業翻譯引擎。把使用者提供的文字翻成自然、道地的繁體中文。只輸出譯文本身，不要加任何解釋、引號或前後綴。")
+(def PREFIX "翻譯以下內容：\n")
+# ⚠ max-tokens 要給夠：會 <think> 的 reasoning 模型，思考鏈與答案共用預算，給小值會被吃光。
+(def FLAGS ["--temperature" "0.2" "--top-p" "0.9" "--max-tokens" "4096"])
+# ────────────────────────────────────────────────────────────────
+
+(def args (dyn :args))
+(def words (array/slice args 1))
+
+# 輸入來源：有位置參數＝所有參數併成一句；否則讀 stdin（管線公民慣例，照 Fennel 原型無 tty 檢查）。
+(def text
+  (if (< 0 (length words))
+    (string/join words " ")
+    (trim (read-stdin))))
+
+(when (= 0 (length text))
+  (eprin "用法：zhtw <要翻譯的文字...>   或   echo ... | zhtw\n")
+  (os/exit 2))
+
+(def prompt (string PREFIX text))
+
+# sibling 解析：預設同層 <script-dir>/llme，env ZHTW_LLME 可覆寫。
+(def llme (or (getenv-nonempty "ZHTW_LLME") (string (script-dir) "/llme")))
+
+# 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
+(def parts @[(shquote llme) (shquote ENDPOINT)])
+(each f FLAGS (array/push parts (shquote f)))
+(array/push parts (shquote "--system"))
+(array/push parts (shquote SYSTEM))
+(array/push parts (shquote "--"))
+(array/push parts (shquote prompt))
+
+(os/exit (run-shell (string/join parts " ")))

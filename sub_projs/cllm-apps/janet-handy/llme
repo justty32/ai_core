@@ -1,0 +1,85 @@
+#!/usr/bin/env janet
+# llme — cllm 多 endpoint dispatcher（薄轉發器，Janet 版）
+#
+#   llme <endpoint> [llm 的其餘參數...]
+#     → 把 <endpoint> 翻成 <config_dir>/<endpoint>.json
+#     → 轉呼 `llm --config <那個檔> [--api-key <k>] <其餘參數...>`
+#
+# 不 link libcllm、不重造任何東西——只挑一個 cllm config 檔、原樣轉呼現成的 llm CLI
+# （handy 方法論：拿現成程式薄殼包裝）。runtime 只要 llm 在 PATH。
+#
+# 環境變數：
+#   LLME_LLM         覆寫要轉呼的 llm 執行檔（預設 "llm"；測試設 echo 可看轉出的參數）
+#   LLME_CONFIG_DIR  覆寫 config 目錄（預設＝本 script 同層的 configs/）
+#   <自動注入 api key>  呼叫 <endpoint> 時，若使用者沒自帶 --api-key，依序找：
+#                      ① LLME_KEY_<EP>（llme 專屬覆寫）② <EP>_API_KEY（provider 慣例）
+#                      找到就自動補 --api-key <值>；<EP>＝endpoint 名大寫、非英數轉 _。
+#                      使用者自帶 --api-key 則一律尊重、不覆寫。
+
+# 載入共用膠水碼：先解 symlink 取本檔真實所在目錄（自足、不依賴 util），再 dofile 併入本環境。
+(def _self (os/realpath (get (dyn :args) 0)))
+(def _dir (string/slice _self 0 (last (string/find-all "/" _self))))
+(dofile (string _dir "/src/util.janet") :env (curenv))
+
+(def args (dyn :args))
+(def ep (get args 1))
+(def user-args (if (< (length args) 2) @[] (array/slice args 2)))   # endpoint 之後的其餘參數
+
+(defn config-dir []
+  (or (getenv-nonempty "LLME_CONFIG_DIR")
+      (string (script-dir) "/configs")))
+
+(defn list-endpoints [dir]
+  (list-stems dir "json" true))
+
+(defn usage [dir]
+  (eprin
+    "用法：llme <endpoint> [llm 的其餘參數...]\n"
+    "  例：llme opus --stream 你好\n"
+    (string "  <endpoint> 對應 " dir "/<endpoint>.json（cllm config），\n")
+    "  其餘參數原樣轉給 llm CLI（--config <那個檔> 已自動帶上）。\n"
+    "  環境變數：LLME_LLM 覆寫 llm 執行檔；LLME_CONFIG_DIR 覆寫 config 目錄。\n")
+  (def eps (list-endpoints dir))
+  (if (= 0 (length eps))
+    (eprin (string "  （目前 " dir " 下沒有可用的 endpoint config）\n"))
+    (eprin (string "  可用 endpoint：" (string/join eps " ") "\n"))))
+
+(def dir (config-dir))
+
+(when (or (nil? ep) (= ep "--help") (= ep "-h"))
+  (usage dir)
+  (os/exit (if (nil? ep) 2 0)))
+
+(def cfg (string dir "/" ep ".json"))
+(when (not (file-exists? cfg))
+  (eprin (string "llme：找不到 endpoint「" ep "」的 config（" cfg "）\n"))
+  (usage dir)
+  (os/exit 2))
+
+(def llm (or (getenv-nonempty "LLME_LLM") "llm"))
+
+# 使用者是否已自帶 --api-key（含 --api-key=… 形式）？有就不自動注入、尊重之。
+(defn user-gave-api-key? []
+  (var found false)
+  (each a user-args
+    (when (or (= a "--api-key") (string/has-prefix? "--api-key=" a))
+      (set found true)))
+  found)
+
+# 自動注入的 api key：LLME_KEY_<EP> ＞ <EP>_API_KEY（皆 nonempty 才算）。
+(defn auto-api-key [ep]
+  (def stem (env-stem ep))
+  (or (getenv-nonempty (string "LLME_KEY_" stem))
+      (getenv-nonempty (string stem "_API_KEY"))))
+
+# 組轉發命令：llm --config <cfg> [--api-key <env>] <user-args...>
+# 自動 --api-key 放在使用者參數「之前」——即便重複，命令列後者覆寫前者，使用者顯式帶的仍最終生效。
+(def parts @[(shquote llm) "--config" (shquote cfg)])
+(when (not (user-gave-api-key?))
+  (def k (auto-api-key ep))
+  (when k
+    (array/push parts "--api-key")
+    (array/push parts (shquote k))))
+(each a user-args (array/push parts (shquote a)))
+
+(os/exit (run-shell (string/join parts " ")))

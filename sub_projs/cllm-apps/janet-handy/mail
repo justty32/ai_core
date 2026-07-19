@@ -1,0 +1,122 @@
+#!/usr/bin/env janet
+# mail — inbox 協議的可執行版（工具＝mail、信箱＝inbox/，Janet 版）：把「太複雜、不想當場等」的
+#        任務寫成一封信投進 inbox/，之後由 `mail run` 逐封 spawn claude code 去做，成功歸檔 done/。
+#
+#   mail send <任務...>        寫一封信到 inbox/<slug>.md，印出路徑，立即返回
+#     cat ctx | mail send <任務>   pipe 當上下文寫進信
+#   mail list                  列出 inbox/ 頂層待處理的信（done/ 不列）
+#   mail run [slug]            處理：對每封（或指定 slug）spawn claude -p 跑，成功 mv 到 done/
+#   mail run --dry             只列會處理哪些、不真跑
+#
+# 環境變數：
+#   INBOX_DIR      投遞區（預設＝本 script 同層的 inbox/）
+#   WF_CLAUDE      claude 執行檔（預設 "claude"；測試設 echo）  ← 與 wf 共用
+#   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"）← 與 wf 共用
+
+# 載入共用膠水碼：先解 symlink 取本檔真實所在目錄，再 dofile 併入本環境。
+(def _self (os/realpath (get (dyn :args) 0)))
+(def _dir (string/slice _self 0 (last (string/find-all "/" _self))))
+(dofile (string _dir "/src/util.janet") :env (curenv))
+
+(def args (dyn :args))
+
+(def inbox-dir (or (getenv-nonempty "INBOX_DIR") (string (script-dir) "/inbox")))
+(def done-dir (string inbox-dir "/done"))
+
+(defn ensure-dirs []
+  (run-shell (string "mkdir -p " (shquote done-dir))))
+
+# ── slug：任務前段轉 kebab、去掉檔名不安全字元、限 16 字（UTF-8 安全）；撞名補 -2/-3…
+# 照 Fennel 版順序：trim → %s+→- → 去不安全字元 → %-+→- → 去頭 - → utf8-head 16 → 去尾 -。
+(defn slugify [task]
+  (var t (trim task))
+  (set t (peg/replace-all ~(some (set ,ws)) "-" t))
+  (set t (peg/replace-all ~(set "/\\:*?\"'<>|") "" t))
+  (set t (peg/replace-all ~(some "-") "-" t))
+  (set t (if (string/has-prefix? "-" t) (string/slice t 1) t))
+  (set t (utf8-head t 16))
+  (set t (if (string/has-suffix? "-" t) (string/slice t 0 -2) t))
+  (if (= t "") "task" (string t)))
+
+(defn unique-path [slug]
+  (var p (string inbox-dir "/" slug ".md"))
+  (var n 2)
+  (while (file-exists? p)
+    (set p (string inbox-dir "/" slug "-" n ".md"))
+    (++ n))
+  p)
+
+(defn list-md [dir] (list-stems dir "md"))
+
+# ── 子命令 ──────────────────────────────────────────────────────────
+(def sub (get args 1))
+
+(defn do-send []
+  (def words (array/slice args 2))
+  (def task (string/join words " "))
+  (def ctx (if (stdin-piped?) (trim (read-stdin)) nil))
+  (def has-ctx (and ctx (< 0 (length ctx))))
+  (when (and (= 0 (length task)) (not has-ctx))
+    (eprin "用法：mail send <任務...>（或 … | mail send <任務>）\n")
+    (os/exit 2))
+  (def real-task (if (< 0 (length task)) task ctx))
+  (def slug (slugify real-task))
+  (def path (unique-path slug))
+  (def body (string "# " slug "\n\n## 任務\n" real-task "\n\n## 上下文\n"
+                    (if (and has-ctx (< 0 (length task))) ctx "（無）") "\n\n"
+                    "---\n（此信由 handy inbox 投遞；請完整完成信中的任務。處理者會於完成後將本信歸檔到 done/。）\n"))
+  (ensure-dirs)
+  (write-file path body)
+  (prin (string "已投遞：" path "\n"))
+  (os/exit 0))
+
+(defn do-list []
+  (def pending (list-md inbox-dir))
+  (if (= 0 (length pending))
+    (prin "（inbox 空：沒有待處理的信）\n")
+    (do (prin (string "待處理的信（" (length pending) "）：\n"))
+        (each s pending (prin (string "  " s "\n")))))
+  (os/exit 0))
+
+(defn do-run []
+  (def claude (or (getenv-nonempty "WF_CLAUDE") "claude"))
+  (def permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits"))
+  (def arg2 (get args 2))
+  (def dry (= arg2 "--dry"))
+  (def only (if (and arg2 (not dry)) arg2 nil))
+  (def pending (if only [only] (list-md inbox-dir)))
+  (when (= 0 (length pending))
+    (prin "（inbox 空：無事可做）\n") (os/exit 0))
+  (ensure-dirs)
+  (var failed 0)
+  (each slug pending
+    (def path (string inbox-dir "/" slug ".md"))
+    (if (not (file-exists? path))
+      (do (eprin (string "跳過（找不到）：" slug "\n")) (set failed (+ failed 1)))
+      (let [letter (or (read-file path) "")
+            prompt (string "以下是一封待處理的任務信，請完整完成信中的任務：\n\n" letter)]
+        (prin (string "\n=== 處理：" slug " ===\n"))
+        (if dry
+          (prin "  [--dry] 略過不跑\n")
+          (let [cmd (string/join
+                      [(shquote claude) "-p" "--permission-mode" (shquote permission)
+                       "--" (shquote prompt)] " ")
+                code (run-shell cmd)]
+            (if (= code 0)
+              (let [dst (string done-dir "/" slug ".md")]
+                (os/rename path dst)
+                (prin (string "  ✓ 完成，歸檔 → done/" slug ".md\n")))
+              (do (eprin (string "  ✗ claude 退出碼 " (string code) "，保留在 inbox（未歸檔）\n"))
+                  (set failed (+ failed 1)))))))))
+  (os/exit (if (> failed 0) 1 0)))
+
+(cond
+  (= sub "send") (do-send)
+  (or (= sub "list") (= sub "ls")) (do-list)
+  (= sub "run") (do-run)
+  (do (eprin
+        "用法：mail <send|list|run>\n"
+        "  send <任務...>   投遞一封信到 inbox/（… | mail send <任務> 可帶上下文）\n"
+        "  list             列出待處理的信\n"
+        "  run [slug|--dry] 逐封 spawn claude 處理，成功歸檔到 done/\n")
+      (os/exit (if (nil? sub) 2 0))))

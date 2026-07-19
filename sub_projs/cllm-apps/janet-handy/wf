@@ -1,0 +1,152 @@
+#!/usr/bin/env janet
+# wf — 兩層任務派發器（Janet 版）：用 llme（DeepSeek）當路由腦，判斷任務「要不要動手」，
+#      只需腦的走 llme、要動手的走 claude code（headless agent）。
+#
+#   wf 幫我把 foo.py 的錯誤處理補上         auto：分類→多半判 AGENT→claude 動手
+#   wf 用繁中解釋什麼是 mmap                auto：判 BRAIN→llme 直接答
+#   cat foo.py | wf 幫我改、加型別註記        pipe＝附給任務的上下文
+#   wf -b <任務>    強制 BRAIN（走 llme）      wf -a <任務>  強制 AGENT（走 claude）
+#   wf -i <任務>    非同步投遞 inbox（轉 `mail send`）    wf < TASK.md  無參數＝整個 stdin 當任務
+#
+# auto 分類順序＝**啟發式關鍵詞（免 LLM）＞ LLM 分類**。
+#
+# 環境變數：
+#   WF_ENDPOINT    llme 的 endpoint（預設 "deepseek"）
+#   WF_LLME        覆寫 llme 執行檔（預設＝同層 sibling <script-dir>/llme；測試設 echo）
+#   WF_CLAUDE      覆寫 claude 執行檔（預設 "claude"；測試設 echo）
+#   WF_MAIL        覆寫 mail 執行檔（預設＝同層 sibling <script-dir>/mail；-i 模式轉呼）
+#   WF_PERMISSION  claude --permission-mode（預設 "acceptEdits"）
+#   WF_MODEL       claude --model（預設不帶）      WF_EFFORT  claude --effort（選填）
+#   WF_SYSTEM      追加 system 指示（預設繁中溝通；設空字串關掉）
+
+# 載入共用膠水碼：先解 symlink 取本檔真實所在目錄，再 dofile 併入本環境。
+(def _self (os/realpath (get (dyn :args) 0)))
+(def _dir (string/slice _self 0 (last (string/find-all "/" _self))))
+(dofile (string _dir "/src/util.janet") :env (curenv))
+
+(def args (dyn :args))
+
+# ── 解析前置旗標（-b/--brain、-a/--agent、-i/--inbox、-- 停止、-h/--help）＋收任務詞 ──────
+(var force nil)   # nil＝auto；"brain"／"agent"／"inbox"
+(var stop false)
+(def words @[])
+(each a (array/slice args 1)
+  (cond
+    stop (array/push words a)
+    (or (= a "-b") (= a "--brain")) (set force "brain")
+    (or (= a "-a") (= a "--agent")) (set force "agent")
+    (or (= a "-i") (= a "--inbox")) (set force "inbox")
+    (= a "--") (set stop true)
+    (or (= a "-h") (= a "--help"))
+    (do (eprin "用法：wf [-b|-a] <任務...>；或 … | wf <任務>；或 wf < TASK.md\n"
+               "  -b 強制走 llme（只需腦）；-a 強制走 claude（要動手）；預設 auto 分類。\n")
+        (os/exit 0))
+    (array/push words a)))
+
+# ── 取輸入：argv＝任務指令；pipe＝上下文 ─────────────────────────
+(def task (string/join words " "))
+(def piped (stdin-piped?))
+(def ctx (if piped (trim (read-stdin)) nil))
+(def has-ctx (and ctx (< 0 (length ctx))))
+
+(def prompt
+  (if (< 0 (length task))
+    (if has-ctx (string task "\n\n--- 以下為透過管線傳入的上下文 ---\n" ctx) task)
+    (if has-ctx ctx nil)))
+
+(when (nil? prompt)
+  (eprin
+    "用法：wf [-b|-a] <任務...>            例：wf 幫我把 foo.py 的錯誤處理補上\n"
+    "      cat foo.py | wf 幫我改          （pipe 當上下文附給任務）\n"
+    "      wf < TASK.md                    （無參數＝整個 stdin 當任務）\n"
+    "  -b 強制 llme（只需腦）／-a 強制 claude（要動手）；預設 auto 由 llme 分類。\n")
+  (os/exit 2))
+
+# ── 啟發式路由關鍵詞（一字不差照抄 Fennel 版）─────────────────────────
+(def AGENT-PATS   # 需要動手／落檔／執行
+  ["改" "修改" "修復" "修正" "修好" "改好" "弄好" "搞定" "重構" "重寫" "改寫" "改成"
+   "新增" "加上" "增加" "刪除" "刪掉" "移除" "替換" "取代" "實作" "實現" "執行" "跑一下"
+   "編譯" "打包" "測試" "部署" "安裝" "建立" "建置" "初始化" "清理" "重命名" "格式化"
+   "refactor" "fix" "edit" "implement" "rename" "deploy" "install" "commit" "build"])
+(def BRAIN-PATS   # 只需生成／回答（不落檔）
+  ["解釋" "說明" "什麼是" "甚麼是" "何謂" "為什麼" "為何" "翻譯" "總結" "摘要" "概述"
+   "定義" "舉例" "比較" "介紹" "explain" "translate" "summarize" "summarise" "define" "what is" "why"])
+
+(defn any-match? [low pats]
+  (var hit false)
+  (each p pats
+    (when (string/find p low) (set hit true)))
+  hit)
+
+# 回 "agent" / "brain" / nil（模稜兩可→交給 LLM）
+(defn heuristic-route [text]
+  (def low (string/ascii-lower text))
+  (def a (any-match? low AGENT-PATS))
+  (def b (any-match? low BRAIN-PATS))
+  (cond
+    (and a (not b)) "agent"
+    (and b (not a)) "brain"
+    nil))
+
+(def endpoint (or (getenv-nonempty "WF_ENDPOINT") "deepseek"))
+(def llme (or (getenv-nonempty "WF_LLME") (string (script-dir) "/llme")))
+(def claude (or (getenv-nonempty "WF_CLAUDE") "claude"))
+(def system (let [s (os/getenv "WF_SYSTEM")]
+              (if (nil? s) "與使用者溝通時用繁體中文。" s)))
+
+# ── LLM 分類（auto 時用 llme 判 AGENT/BRAIN）───────────────────────────
+(def CLASSIFY-SYS
+  (string "你是任務路由器。判斷使用者的任務**是否需要實際動手**（讀寫檔案、執行指令、"
+          "跨多檔修改、跑測試等 agent 能力）。需要動手→回 AGENT；只需生成文字／回答／"
+          "翻譯／摘要／寫一段內容（不落檔）→回 BRAIN。只回一個詞：AGENT 或 BRAIN。"))
+
+(defn classify [text]
+  # 回 "agent" 或 "brain"；不清楚/失敗 → "agent"（偏向能完成動手任務，較安全）
+  (def cmd (string/join
+             [(shquote llme) (shquote endpoint)
+              "--temperature" "0" "--max-tokens" "16"
+              "--system" (shquote CLASSIFY-SYS)
+              "--" (shquote text)] " "))
+  (def out (string/ascii-upper (trim (capture-shell cmd))))
+  (cond
+    (string/find "BRAIN" out) "brain"
+    (string/find "AGENT" out) "agent"
+    "agent"))
+
+# 決策順序：強制旗標 ＞ 啟發式（免 LLM）＞ LLM 分類（只有前兩者沒定案才呼叫）
+(def heur (if force nil (heuristic-route prompt)))
+(def route (or force heur (classify prompt)))
+(def how (cond force "強制" heur "啟發式・免 LLM" (string "llme 分類，endpoint=" endpoint)))
+(eprin (string "[wf] 路由：" route "（" how "）\n"))
+
+# inbox 模式：非同步投遞，轉呼同層 mail send（task 與 ctx 分開傳，slug 才乾淨），不當場等。
+(when (= route "inbox")
+  (def mail (or (getenv-nonempty "WF_MAIL") (string (script-dir) "/mail")))
+  (def send-task (if (< 0 (length task)) task (or ctx "")))
+  (def base (string/join [(shquote mail) "send" (shquote send-task)] " "))
+  # 有 argv task 且另有 pipe 上下文 → 把 ctx 經 stdin 餵給 mail（它會分欄記）
+  (def cmd (if (and has-ctx (< 0 (length task)))
+             (string "printf %s " (shquote ctx) " | " base)
+             base))
+  (os/exit (run-shell cmd)))
+
+# ── 執行（brain / agent 當場跑）──────────────────────────────────────
+(def parts
+  (if (= route "brain")
+    # 只需腦 → llme（DeepSeek）直接答，串流吐出
+    (let [p @[(shquote llme) (shquote endpoint) "--stream"]]
+      (when (< 0 (length system))
+        (array/push p "--system") (array/push p (shquote system)))
+      (array/push p "--") (array/push p (shquote prompt))
+      p)
+    # 要動手 → claude -p headless agent（在當前目錄動手）
+    (let [permission (or (getenv-nonempty "WF_PERMISSION") "acceptEdits")
+          p @[(shquote claude) "-p" "--permission-mode" (shquote permission)]]
+      (when (< 0 (length system))
+        (array/push p "--append-system-prompt") (array/push p (shquote system)))
+      (let [m (getenv-nonempty "WF_MODEL")]  (when m (array/push p "--model")  (array/push p (shquote m))))
+      (let [e (getenv-nonempty "WF_EFFORT")] (when e (array/push p "--effort") (array/push p (shquote e))))
+      (array/push p "--") (array/push p (shquote prompt))
+      p)))
+
+(os/exit (run-shell (string/join parts " ")))
