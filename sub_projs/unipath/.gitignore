@@ -1,3 +1,5 @@
 .venv/
 mnt/
 __pycache__/
+ports/cpp/unipath_9p_cpp
+ports/cpp/*.o

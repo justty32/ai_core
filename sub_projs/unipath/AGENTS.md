@@ -1,67 +1,30 @@
-# unipath — 歸一於路徑的落地基材（方案 A 實作）
+# unipath — AI agent 專案備忘
 
-unipath = **「先歸一於路徑，後成局」願景的階段一落地**——採 **Plan 9 思想＋9P 協議**、以 **FUSE 起步**，把「一個活 process 的執行態環境」暴露成一棵**可 walk 的路徑樹**，外部用 `ls`/`cat`/`echo` 就能定址並讀寫其中元素。**Python 原型優先、暫不考慮效能。**
-
-> 暫名，可改。本檔是**最頂層入口**：只指向設計真源與當前狀態，durable 細節不堆這裡。
+unipath = **「先歸一於路徑、後成局」願景的階段一落地**——採 **Plan 9 思想＋9P 協議**、以 FUSE 起步，把一個正在跑的 process 的執行態環境暴露成可 walk 的路徑樹。本檔是**最頂層路由器**：只指向下一層，durable 細節不寫這裡。
 
 ## 先讀哪裡
 
-- **想一頁掌握全貌** → [OVERVIEW.md](OVERVIEW.md)（全景文）或 [overview.html](overview.html)（瀏覽器開的視覺速覽）。
-- **想懂為什麼這樣設計** → ai_core 筆記鏈（見下方「設計真源」）。
-- **想動手跑** → 本檔「當前狀態」各 step 的跑法，或 OVERVIEW.md「怎麼跑」。
-- **補先驗知識** → [docs/](docs/)：
-  - [背景-fuse與vfs.md](docs/背景-fuse與vfs.md) · [背景-inode與pipe與socket.md](docs/背景-inode與pipe與socket.md) · [背景-fd操作三組.md](docs/背景-fd操作三組.md)
-  - [背景-檔案動詞與process與mmap.md](docs/背景-檔案動詞與process與mmap.md) · [背景-page-cache.md](docs/背景-page-cache.md)
-  - [背景-mount命名空間與bind.md](docs/背景-mount命名空間與bind.md) · [背景-ptrace與proc-mem.md](docs/背景-ptrace與proc-mem.md)
-  - [背景-9p訊息格式.md](docs/背景-9p訊息格式.md)（拿 `unipath_9p.py` 當活教材）
+- **一頁掌握全貌** → [OVERVIEW.md](OVERVIEW.md)（全景文）/ [overview.html](overview.html)（視覺速覽）。
+- **想動手做某件事** → [WORKFLOWS.md](WORKFLOWS.md)：依意圖派發。
+- **專案結構 / 檔案地圖** → [INDEX.md](INDEX.md)。
+- **為什麼這樣設計** → 設計真源＝ai_core 筆記鏈（見 [INDEX](INDEX.md)「設計真源」）。
+- **補作業系統先驗知識** → [docs/](docs/)（FUSE/VFS、9P 格式、inode、mmap、ptrace…）。
+
+## 鐵律（always-on）
+
+1. **試驗田心態**：低風險、隨時可推倒；先跑通再固化，不開工前立法。
+2. **每個程式碼檔 < 100 行**（unipath 專屬，覆蓋 [DEV-GUIDE](DEV-GUIDE.md) 的 300 行預設）——膨脹即按職責拆模組（共用邏輯抽 `up_*`、step 腳本退成薄入口）。
+3. **先 hack 出能跑的最小暴露，再回填規範**（有 9P 現成規範可抄，不從零）。
+4. **未經確認不 push、不開新工作**。
+5. **全繁體中文**留檔；識別子、指令、協議欄位名保留原文。
 
 ## 定位（與 handy 的分工）
 
-- [handy](../handy/AGENTS.md) ＝「**拿現成程式用腳本包裝**、資料夾＝callable」——較上層。
-- **unipath ＝更底層**：不是包裝現成程式，而是**把 process 環境本身暴露成路徑樹**（`/proc` 式、Plan 9 式）。所以另起乾淨地、不塞進 handy。
+- [handy](../handy/AGENTS.md) ＝拿現成程式用腳本包裝（較上層）。
+- **unipath ＝更底層**：把 process 環境本身暴露成路徑樹（`/proc` 式、Plan 9 式）。
 
-## 設計真源（唯一，先讀）
+## 主工作流（活狀態：只列 open）
 
-願景與決策全在 ai_core 的筆記鏈，**動手前先讀**：
-
-1. [世界（OS-as-game）篇](../../workflows/notes/20260719-1150-世界-os-as-game-tick-npc-檔案系統即場景.md)
-2. [兩層底座重解：歸一於路徑＋tick](../../workflows/notes/20260719-1301-兩層底座重解-歸一於路徑-tick即時間轉換.md)
-3. [**實作路線規劃（本專案的由來）**](../../workflows/notes/20260719-1518-實作路線規劃-採plan9與9p蓋在linux-方案a.md) ← 方案 A、FUSE、Python 等定調都在此
-
-## 已定調（來自路線篇）
-
-- **規範層＝「講 9P」**（語言中立）；真 Plan 9 留作「以後有需要再換」的逃生門。
-- **實作＝FUSE 蓋在 Linux**（`fusepy`/`pyfuse3` 類），介面**照 9P 慣例擺**，日後平滑轉真 9P。
-- **控制/資料模型抄 Plan 9 慣例**：`data` 檔讀寫 ＋ `ctl` 檔寫控制命令 ＋ `status` 讀狀態（取代 ioctl）。
-- **原型載體＝Python**，原型優先、暫不管效能（合「Python 只是參考實作」宗旨）。
-
-## 當前狀態
-
-- **Step 1 完成 ✅**（假靜態樹證 mount 通路）：`unipath_fs.py`（Python＋fusepy）掛一棵 0-based 數字樹，
-  每個元素目錄含 `data`/`ctl`/`status` 約定檔。已驗：`ls` walk（含巢狀）、`cat` 讀、`echo >` 寫 data、
-  `ctl` 命令（`set`/`mkelem`/`rmelem`）皆通。跑法：`.venv/bin/python unipath_fs.py mnt`（前景），另開終端 `ls/cat/echo mnt/…`，`fusermount -u mnt` 卸載。
-- **Step 2 完成 ✅**（真執行態環境）：`unipath_live.py` 把一個活 Python process 的物件圖暴露成路徑樹——
-  list→數字子路徑、dict→字串鍵子路徑；背景 thread 持續改 `world[0]`，故同路徑不同時刻讀到不同值（＝執行態非快照）；
-  `echo > …/data` write-through 改活物件；`ctl` 支援 `append`/`set`/`del`。跑法同 step 1（換 `unipath_live.py`）。
-- **Step 3 完成 ✅**（跨 process 暴露）：拆成 `unipath_env.py`（純邏輯）＋`unipath_pub.py`（發布端 process，持有活 env＋監聽 Unix socket）＋`unipath_mount.py`（薄 FUSE 客戶端，每操作轉 **9P 形狀 RPC**）。
-  已驗：從外部 walk 另一 process 的 env、跨 process 執行態（tick 可見）、跨 process write-through（獨立第三方確認改到發布端本身）、ctl。
-  跑法：終端 A `unipath_pub.py /tmp/unipath.sock`；終端 B `unipath_mount.py /tmp/unipath.sock mnt`；終端 C `ls/cat/echo mnt/…`。
-  **界線**：step 3 是 9P 的**形狀**（JSON-over-socket）；真線格式見 step 4。
-- **Step 4 完成 ✅**（真 9P2000 線格式）：`unipath_9p.py` 以逐位元組真 9P2000 服務 Env 樹（Tversion/Tattach/Twalk/Topen/Tread〔含目錄 stat 項〕/Twrite/Tclunk/Tstat）。
-  已用**獨立真 9P client** 自測互通：`./unipath_9p.py serve 5640` ＋ `./unipath_9p.py selftest 5640`（讀活 counter、讀目錄、write-through 皆通）。
-  **核心 v9fs 掛載（需 root，使用者自跑）**：`sudo modprobe 9pnet_fd 9p` 後
-  `sudo mount -t 9p -o trans=tcp,port=5640,version=9p2000,uname=me 127.0.0.1 <mnt>`。
-- **Step 5 完成 ✅**（tick 回合制轉移原型）：`unipath_tick.py` 把 env 的背景 `+1` 升級成真回合制轉移——
-  `tick(world, influences)` 一回合＝吸收使用者影響→拍全樹快照→依各元素 `kind` 規則同步更新（cellular-automaton 式）。
-  示範四元素（counter/guard NPC/well 資源/echo 抄鄰居）；`run(N)`＝Δt 回合數；使用者影響用 pending 佇列於回合邊界吸收。
-  跑：`./.venv/bin/python unipath_tick.py`。**建在 `Env(tick=False)` 上、借 `env.lock`，可直接被 step 3/4 發布端暴露。**
-- **Step 6 待議**：①把「使用者影響」從旁路佇列改走**路徑樹寫入**（`echo>…/data`），讓「借樹＝影響」合一（見 tick agent 疑點 2）；
-  ②巢狀 tick（上層目錄驅動下層多次）；③規則從硬編 `kind` 表換成**可定址腳本**（NPC＝腳本）＝往階段二。
-- 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
-
-## 鐵律
-
-1. **試驗田心態**：低風險、隨時可推倒；先跑通再固化，別開工前立法。
-2. **先 hack 出能跑的最小暴露，再回填規範**（有 9P 現成規範可抄，不從零）。
-3. **未經確認不 push、不開新工作**。
-4. **全繁體中文**留檔；識別子／指令／技術名詞保留原文。
+- **進度**（我手上 in-flight）→ [SESSION-LOG.md](SESSION-LOG.md)
+- **待使用者**（需你親自做/驗證，如 sudo 掛載）→ [WAIT_USER.md](WAIT_USER.md)
+- **結構整理**（重構/拆檔時的被動參考）→ [DEV-GUIDE.md](DEV-GUIDE.md)
