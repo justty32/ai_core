@@ -9,7 +9,7 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 - **想一頁掌握全貌** → [OVERVIEW.md](OVERVIEW.md)（全景文）或 [overview.html](overview.html)（瀏覽器開的視覺速覽）。
 - **想懂為什麼這樣設計** → ai_core 筆記鏈（見下方「設計真源」）。
 - **想動手跑** → 本檔「當前狀態」各 step 的跑法，或 OVERVIEW.md「怎麼跑」。
-- **補先驗知識** → [docs/](docs/)：[背景-fuse與vfs.md](docs/背景-fuse與vfs.md)、[背景-檔案動詞與process與mmap.md](docs/背景-檔案動詞與process與mmap.md)、[背景-fd操作三組.md](docs/背景-fd操作三組.md)。
+- **補先驗知識** → [docs/](docs/)：[背景-fuse與vfs.md](docs/背景-fuse與vfs.md)、[背景-檔案動詞與process與mmap.md](docs/背景-檔案動詞與process與mmap.md)、[背景-fd操作三組.md](docs/背景-fd操作三組.md)、[背景-inode與pipe與socket.md](docs/背景-inode與pipe與socket.md)。
 
 ## 定位（與 handy 的分工）
 
