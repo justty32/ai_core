@@ -87,8 +87,8 @@ footer{padding:30px 0 60px;color:var(--muted);font-size:.85rem;border-top:1px so
   <p class="thesis">「先歸一於路徑、後成局」願景的階段一落地——採 <b>Plan 9 思想 ＋ 9P 協議</b>，以 FUSE 起步，把一個<b>正在跑的 process 的執行態環境</b>暴露成一棵可 walk 的路徑樹。</p>
   <div class="meta">
     <span>方案 <b>A</b>（Plan 9＋9P 蓋在 Linux）</span>
-    <span>載體 <b>Python</b>（原型優先）</span>
-    <span>進度 <b>step 1–4 全綠</b></span>
+    <span>載體 <b>Python</b>＋<b>C++</b>＋<b>Fennel</b></span>
+    <span>進度 <b>step 1–5 全綠 · 3 語言互通</b></span>
     <span><b>2026-07-19</b></span>
   </div>
 </div></header>
@@ -119,7 +119,7 @@ footer{padding:30px 0 60px;color:var(--muted);font-size:.85rem;border-top:1px so
 </section>
 
 <section>
-  <h2><span class="n">03</span>四刀進度</h2>
+  <h2><span class="n">03</span>五刀進度</h2>
   <div class="steps">
     <div class="step"><span class="badge">✅ done</span><div>
       <h3>step 1 · 假靜態樹</h3>
@@ -136,8 +136,23 @@ footer{padding:30px 0 60px;color:var(--muted);font-size:.85rem;border-top:1px so
     <div class="step"><span class="badge">✅ done</span><div>
       <h3>step 4 · 真 9P2000 線格式</h3>
       <div class="desc">逐位元組真協議（Tversion/Tattach/Twalk/Topen/Tread〔含目錄 stat 項〕/Twrite/Tclunk/Tstat）。獨立真 9P client 自測互通。<b>規範「講 9P」坐實</b>，可被核心 v9fs 掛載、網路透明＝兩世界通聯。</div>
-      <div class="file">unipath_9p.py</div></div></div>
+      <div class="file">unipath_9p.py · up_ninep*</div></div></div>
+    <div class="step"><span class="badge">✅ done</span><div>
+      <h3>step 5 · tick 回合制狀態轉移</h3>
+      <div class="desc"><code>tick(當前狀態, 使用者影響) → 下個狀態</code>：每回合吸收使用者影響 → 拍全樹快照 → 依規則同步更新。Δt＝回合數；影響＝執行期注入。示範四元素（counter/guard/well/echo）：counter 累加、echo 落後一回合抄鄰居、guard 傷害/回血/死亡皆驗通。時間軸落地。</div>
+      <div class="file">unipath_tick.py · up_tick · up_tick_rules</div></div></div>
   </div>
+</section>
+
+<section>
+  <h2><span class="n">03·5</span>多語言 port：語言中立實證</h2>
+  <p>規範層宗旨＝「<b>你得會講 9P</b>，跟語言無關」。已用三語言各寫一版 9P server，並用<b>同一個 Python 9P client</b> 逐位元組對話驗互通：</p>
+  <div class="cards">
+    <div class="card"><h3>Python <span class="badge">✅</span></h3><p>參考實作（up_ninep*）。</p></div>
+    <div class="card"><h3>C++ <span class="badge">✅</span></h3><p>raw socket、g++、無 libfuse；逐位元組近乎全同。</p></div>
+    <div class="card"><h3>Fennel <span class="badge">✅</span></h3><p>Lisp-on-Lua、LuaJIT FFI 手綁 socket。</p></div>
+  </div>
+  <p style="margin-top:10px">同一 client 能跟 Python / C++ / Fennel 三種 server 對話 ⇒ <b>「語言中立＝講 9P」落地</b>。各 port 每檔亦 &lt;100 行。</p>
 </section>
 
 <section>
@@ -155,11 +170,15 @@ step 3（跨 process）
   └────────────────┘          └─────────────────┘
 
 step 4（真 9P）
-  ┌ 發布端 process ┐              ┌ 核心 v9fs ┐
-  │ 活 env + tick  │◀─真 9P2000──│ mount -t 9p│──▶ ls/cat/echo
-  │ 監聽 TCP:5640  │   線格式     │（脫離 FUSE）│
-  └────────────────┘              └────────────┘</div>
-  <p style="margin-top:12px"><code>unipath_env.py</code> ＝執行態環境的純邏輯（無 FUSE/socket 依賴），被 step 3/4 共用。一路「介面照 9P 慣例擺」，故 step 3→4 是平滑升級。</p>
+  ┌ 發布端 process ┐         ┌ 核心 v9fs / C++ / Fennel server ┐
+  │ 活 env + tick  │◀真9P2000│ mount -t 9p                     │──▶ ls/cat/echo
+  │ 監聽 TCP:5640  │  線格式 │（脫離 FUSE、可跨機器/跨語言）    │
+  └────────────────┘         └─────────────────────────────────┘
+
+step 5（tick）
+  TickWorld（活 env，關背景+1）── run(N 回合) ──▶ 每回合：吸收使用者影響 → 拍全樹快照 → 依規則同步更新
+  這棵 world 可被 step 3/4 發布端暴露，外部即看到回合制轉移</div>
+  <p style="margin-top:12px"><code>up_env.py</code>（Env）＝執行態環境純邏輯（無 FUSE/socket 依賴），被 FUSE(<code>up_fuse</code>) 與 9P(<code>up_ninep</code>) 共用。程式碼已正規化拆檔（每檔 &lt;100 行，共用邏輯抽 <code>up_*</code>、step 腳本為薄入口）——地圖見 <a href="INDEX.md">INDEX.md</a>。</p>
 </section>
 
 <section>
@@ -181,7 +200,14 @@ ls mnt ; echo 777 &gt; mnt/2/hp/data ; fusermount -u mnt
 .venv/bin/python unipath_9p.py selftest 5640   <span class="c"># 獨立 9P client 自測</span>
 sudo modprobe 9pnet_fd 9p
 sudo mount -t 9p -o trans=tcp,port=5640,version=9p2000,uname=$USER 127.0.0.1 /tmp/umnt
-ls /tmp/umnt ; cat /tmp/umnt/0/data ; sudo umount /tmp/umnt</pre>
+ls /tmp/umnt ; cat /tmp/umnt/0/data ; sudo umount /tmp/umnt
+
+<span class="c"># step 5 tick 示範</span>
+.venv/bin/python unipath_tick.py
+
+<span class="c"># 多語言 port 跨語言互通（啟任一語言 server，用 Python client 打它）</span>
+( cd ports/cpp &amp;&amp; make &amp;&amp; ./unipath_9p_cpp serve 5661 )   <span class="c"># 或 ports/fennel: ./serve.sh 5662</span>
+.venv/bin/python unipath_9p.py selftest 5661            <span class="c"># → SELFTEST OK</span></pre>
 </section>
 
 <section>
@@ -190,8 +216,9 @@ ls /tmp/umnt ; cat /tmp/umnt/0/data ; sudo umount /tmp/umnt</pre>
     <b>誠實標註：</b>step 3 是 9P 的「形狀」（JSON-over-socket），step 4 才是真線格式。真 9P 掛載需 root（mount 天生特權）；讀一定通，透過核心 mount 寫入涉及 9P uid 權限。暫忽略 CPU 週期（僅限慢世界）。Python 只是參考實作，規範層（講 9P）才是重點。
   </div>
   <ul style="margin-top:14px">
-    <li><b>C 接 tick</b>：把 <code>tick(env, 影響) → 下個狀態</code> 落成真回合制轉移（現只有背景 +1 雛形）。</li>
-    <li><b>D 往階段二</b>：在這副 9P 基材上搭 os-as-game 玩具。</li>
+    <li><b>使用者影響改走路徑樹寫入</b>：把 tick 的旁路佇列改成吸收 <code>echo &gt; …/data</code> 的樹寫入 → 「借樹＝影響」合一。</li>
+    <li><b>巢狀 tick</b>：上層目錄的一個 tick 驅動下層元素多次 tick（承筆記 §4.3）。</li>
+    <li><b>規則換可定址腳本</b>：tick 規則從硬編 kind 表換成路徑上可定址的腳本（NPC＝腳本）＝往<b>階段二 os-as-game</b>。</li>
     <li>真 9P 寫入 uid/權限、9P2000.L 擴充、發布端接真實 process 狀態（非示範 world）。</li>
   </ul>
 </section>
