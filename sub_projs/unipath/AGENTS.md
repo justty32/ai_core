@@ -35,8 +35,12 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 - **Step 3 完成 ✅**（跨 process 暴露）：拆成 `unipath_env.py`（純邏輯）＋`unipath_pub.py`（發布端 process，持有活 env＋監聽 Unix socket）＋`unipath_mount.py`（薄 FUSE 客戶端，每操作轉 **9P 形狀 RPC**）。
   已驗：從外部 walk 另一 process 的 env、跨 process 執行態（tick 可見）、跨 process write-through（獨立第三方確認改到發布端本身）、ctl。
   跑法：終端 A `unipath_pub.py /tmp/unipath.sock`；終端 B `unipath_mount.py /tmp/unipath.sock mnt`；終端 C `ls/cat/echo mnt/…`。
-  **界線**：目前是 9P 的**形狀**（JSON-over-socket），**非真 9P 線格式**——留 step 4 平滑轉。
-- **Step 4 待議**：轉**真 9P 線格式**（可用核心 `v9fs` mount，脫離 FUSE）／接 **tick** 狀態轉移語意／往階段二。
+  **界線**：step 3 是 9P 的**形狀**（JSON-over-socket）；真線格式見 step 4。
+- **Step 4 完成 ✅**（真 9P2000 線格式）：`unipath_9p.py` 以逐位元組真 9P2000 服務 Env 樹（Tversion/Tattach/Twalk/Topen/Tread〔含目錄 stat 項〕/Twrite/Tclunk/Tstat）。
+  已用**獨立真 9P client** 自測互通：`./unipath_9p.py serve 5640` ＋ `./unipath_9p.py selftest 5640`（讀活 counter、讀目錄、write-through 皆通）。
+  **核心 v9fs 掛載（需 root，使用者自跑）**：`sudo modprobe 9pnet_fd 9p` 後
+  `sudo mount -t 9p -o trans=tcp,port=5640,version=9p2000,uname=me 127.0.0.1 <mnt>`。
+- **Step 5 待議**：接 **tick** 狀態轉移語意／往階段二 os-as-game。
 - 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
 
 ## 鐵律
