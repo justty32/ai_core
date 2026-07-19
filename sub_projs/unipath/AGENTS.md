@@ -32,7 +32,11 @@ unipath = **「先歸一於路徑，後成局」願景的階段一落地**——
 - **Step 2 完成 ✅**（真執行態環境）：`unipath_live.py` 把一個活 Python process 的物件圖暴露成路徑樹——
   list→數字子路徑、dict→字串鍵子路徑；背景 thread 持續改 `world[0]`，故同路徑不同時刻讀到不同值（＝執行態非快照）；
   `echo > …/data` write-through 改活物件；`ctl` 支援 `append`/`set`/`del`。跑法同 step 1（換 `unipath_live.py`）。
-- **Step 3 待議**：跨 process 暴露（別的 process 的 env，非自己）／轉真 9P／接 tick 狀態轉移語意／往階段二。
+- **Step 3 完成 ✅**（跨 process 暴露）：拆成 `unipath_env.py`（純邏輯）＋`unipath_pub.py`（發布端 process，持有活 env＋監聽 Unix socket）＋`unipath_mount.py`（薄 FUSE 客戶端，每操作轉 **9P 形狀 RPC**）。
+  已驗：從外部 walk 另一 process 的 env、跨 process 執行態（tick 可見）、跨 process write-through（獨立第三方確認改到發布端本身）、ctl。
+  跑法：終端 A `unipath_pub.py /tmp/unipath.sock`；終端 B `unipath_mount.py /tmp/unipath.sock mnt`；終端 C `ls/cat/echo mnt/…`。
+  **界線**：目前是 9P 的**形狀**（JSON-over-socket），**非真 9P 線格式**——留 step 4 平滑轉。
+- **Step 4 待議**：轉**真 9P 線格式**（可用核心 `v9fs` mount，脫離 FUSE）／接 **tick** 狀態轉移語意／往階段二。
 - 依賴：`fusepy`（純 ctypes 綁 libfuse2）；venv 在 `.venv/`（gitignored）。
 
 ## 鐵律
