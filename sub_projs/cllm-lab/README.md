@@ -45,3 +45,13 @@ API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_d
 - **完整文檔**（選項表／注意事項／C ABI 參考）：`~/repo/ai_core/sub_projs/cllm/bindings/README.md`
 - **真相源**：本資料夾的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/bindings/<lang>/example.*`——
   lab 是暫存遊樂場，**值得留的成果記得搬回 repo**。
+
+## Windows（MinGW）註記
+
+- **C++ 庫路徑已在 Windows 驗綠**（2026-07-20，mingw64 g++16.1.0）：`cpp/play.cpp` 的六大能力
+  （ask／stream／`ask_as<T>` 反射／tool／media out／media in）連結 `libcllm.dll.a`＋glaze 後全對。
+  但**繞過了 `install-dev.sh`／pkg-config**（手工組 include layout＋直接 `-I…/src -I…/glaze -L…/build -lcllm`）——
+  Windows 沒 pkg-config，`run.sh` 那條走不了；打包層（`~/dev` 前綴）在 Windows 尚未驗。
+- **`play.cpp` 第 7 步（shell-out 呼 `llm` CLI）在 Windows 失敗**、非 cllm 問題：那句 `popen("llm … --endpoint 'file://…'")`
+  用單引號，Windows `popen`／`system` 走 `cmd.exe`、單引號非引號 → llm 收到帶引號 endpoint → URL 解析失敗。
+  同 cpp-handy 的 POSIX-shell 假設坑（見 cllm [gotchas/windows](../cllm/workflows/common/gotchas/windows.md)）。
