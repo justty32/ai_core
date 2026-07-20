@@ -236,7 +236,7 @@ static int l_ask(lua_State *L) {
   int optidx = 0;               /* opts table 的堆疊位置，0＝無 */
   char *prompt_dup = NULL;      /* table 形式時 strdup 的 prompt */
   const char *prompt;
-  char *endpoint = NULL, *api_key = NULL, *model = NULL, *schema_json = NULL;
+  char *endpoint = NULL, *api_key = NULL, *model = NULL, *schema_json = NULL, *system = NULL;
   const char *pos_endpoint = NULL;
 
   if (lua_istable(L, 1)) {                      /* llm.ask{ prompt=… } */
@@ -264,6 +264,7 @@ static int l_ask(lua_State *L) {
 
   if (optidx) {
     endpoint = dup_field(L, optidx, "endpoint"); /* NULL = 內建 localhost */
+    system   = dup_field(L, optidx, "system");   /* system role 指示；NULL = 不送 */
     api_key  = dup_field(L, optidx, "api_key");
     model    = dup_field(L, optidx, "model");
     lua_getfield(L, optidx, "timeout_ms");
@@ -288,6 +289,7 @@ static int l_ask(lua_State *L) {
   c.endpoint = endpoint ? endpoint : pos_endpoint;
   c.api_key = api_key;
   c.model = model;
+  r.system = system;
   if (schema_json) { schema.name = "response"; schema.json = schema_json; r.schema = &schema; }
   r.tools = tools;           r.tools_count = tools_n;
   r.media = media;           r.media_count = media_n;
@@ -308,7 +310,7 @@ static int l_ask(lua_State *L) {
   free_tools(tools, tools_n);
   free_media_in(media, media_n);
   free_modalities(modalities, modalities_n);
-  free(endpoint); free(api_key); free(model); free(schema_json); free(prompt_dup);
+  free(endpoint); free(api_key); free(model); free(schema_json); free(system); free(prompt_dup);
 
   if (ctx.cb_error) { /* Lua 回呼丟的錯：清乾淨後上拋成 Lua error */
     char msg[512]; snprintf(msg, sizeof msg, "%s", ctx.errmsg);

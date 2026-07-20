@@ -4,6 +4,7 @@
 //
 //	cllm.Ask("你好")                                        // 只給 prompt（走內建 localhost）
 //	cllm.Ask("你好", cllm.Endpoint("http://…/chat/completions"))
+//	cllm.Ask("你好", cllm.System("你是一隻傲嬌的貓"))          // system role 指示
 //	cllm.Ask("你好", cllm.Model("local-model"), cllm.Temperature(0.7))
 //	cllm.Ask("數到五", cllm.Stream(),                       // 串流：逐段進 OnDelta
 //	    cllm.OnDelta(func(p string) bool { fmt.Print(p); return false }))  // 回 true 可中止
@@ -43,7 +44,7 @@ type Error struct{ Msg string }
 func (e *Error) Error() string { return "cllm: " + e.Msg }
 
 type config struct {
-	endpoint, apiKey, model, schema        string
+	endpoint, apiKey, model, schema, system string
 	timeoutMs                              int
 	temperature, topP, presence, frequency *float32
 	maxTokens, seed                        *int
@@ -61,6 +62,7 @@ type config struct {
 type Option func(*config)
 
 func Endpoint(s string) Option            { return func(c *config) { c.endpoint = s } }
+func System(s string) Option              { return func(c *config) { c.system = s } } // system role 指示（在 user 前插一則）
 func APIKey(s string) Option              { return func(c *config) { c.apiKey = s } }
 func Model(s string) Option               { return func(c *config) { c.model = s } }
 func TimeoutMs(ms int) Option             { return func(c *config) { c.timeoutMs = ms } }
@@ -242,6 +244,9 @@ func Ask(prompt string, opts ...Option) (string, error) {
 
 	var r C.llm_request_t
 	r.prompt = cstr(prompt)
+	if cfg.system != "" {
+		r.system = cstr(cfg.system)
+	}
 	if cfg.stream {
 		r.stream = 1
 	}

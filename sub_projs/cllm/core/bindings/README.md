@@ -60,7 +60,8 @@ bash <lang>/smoke.sh               # 單語言（自動 source ~/dev/cllm/env.sh
 - **s7 / CL / Janet**：`(llm-ask prompt [endpoint] :key val …)`／`(cllm:ask …)`／`(llm/ask prompt [endpoint] :key val …)`，**hyphen keyword**（`:on-delta`／`:api-key`／`:max-tokens`）。
 - **Go**：`Ask(prompt, opts...) (string, error)`，functional options（`cllm.Endpoint(url)`／`cllm.Temperature(0.7)`／`cllm.Stream()`／`cllm.OnDelta(fn)`）；錯誤走回傳的 `error`。
 - **C++**：`ask(prompt, {.stream=…, .on_delta=…})` 回 `std::expected<std::string, Error>`；錯誤統一走 `expected`（不混 throw／空字串），要一行爽寫可 `.value()` 就地拋。
-- 欄位：`endpoint`／`api_key`／`model`／`timeout_ms`／`temperature`／`top_p`／`presence_penalty`／`frequency_penalty`／`max_tokens`／`seed`／`stream`／`schema`／`on_delta`／`on_error`（皆選填）。回完整答案字串。
+- 欄位：`endpoint`／`system`／`api_key`／`model`／`timeout_ms`／`temperature`／`top_p`／`presence_penalty`／`frequency_penalty`／`max_tokens`／`seed`／`stream`／`schema`／`on_delta`／`on_error`（皆選填）。回完整答案字串。
+- **`system`**（system role 指示）：空/未給＝不送；非空＝在 user 訊息前插一則 `role:"system"` 純文字訊息（OpenAI 慣例 system→user）。命名照各語言慣例：Lua/Python `system=`；s7/CL/Janet `:system`；Go `cllm.System(...)`；C/C++ 直接設 `Request.system`；CLI `--system <文字>`。
 - **進階欄位（v1 已全語言收齊）**：`tools`（name/description/parameters）＋`on_tool`（收 id/name/arguments，回真值＝中止）、`media`（url 或 bytes＋mime）、`modalities`（name＋config JSON）、`on_media`（收 mime/bytes）。命名照各語言慣例（snake_case／hyphen keyword／functional options）。⚠ tools 是**單輪**：執行工具與是否回送由呼叫端決定（C ABI 無多輪 loop）。
 
 ## 注意（v1，刻意小）

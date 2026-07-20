@@ -34,8 +34,8 @@ code . 或 nvim play.cpp  # ③ 開始改
 | [go/](go/) | main.go | `bash run.sh` | gopls（`go.mod` replace 指到 ~/dev；cgo 需先 source env.sh）|
 | [shell/](shell/) | play.sh | `bash run.sh` | —（`llm` CLI 是 unix filter）|
 
-API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_delta` 逐段串流；進階欄位
-`tools`／`on_tool`／`media`／`on_media`／`modalities`（各語言慣例命名）。C++ 另有
+API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_delta` 逐段串流；欄位
+`system`（system role 指示）＋進階 `tools`／`on_tool`／`media`／`on_media`／`modalities`（各語言慣例命名）。C++ 另有
 `std::expected` 便利層＋`ask_as<T>`（struct 進 struct 出）。
 
 ## 出了問題／要查細節

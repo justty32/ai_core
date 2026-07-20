@@ -153,6 +153,7 @@ git diff | llm 把 - 寫成 commit    <span class="cm"># 「-」明指 stdin 插
     <table>
       <tr><th>旗標</th><th>作用</th></tr>
       <tr><td><code class="inl">--stream</code></td><td>逐段吐 stdout</td></tr>
+      <tr><td><code class="inl">--system &lt;文字&gt;</code></td><td>system role 指示（字面文字，在 user 前插一則）</td></tr>
       <tr><td><code class="inl">--image &lt;檔&gt;</code></td><td>輸入媒體（可重複，mime 由副檔名推）</td></tr>
       <tr><td><code class="inl">--schema &lt;檔&gt;</code></td><td>JSON Schema → 結構化輸出</td></tr>
       <tr><td><code class="inl">--tool &lt;檔&gt;</code></td><td>工具定義（可重複），tool_calls 一行一則 JSON</td></tr>
@@ -192,14 +193,14 @@ llm.ask("數到五", endpoint=ep, stream=True,
         on_delta=lambda p: print(p,end="") or False)
 obj=json.loads(llm.ask("給我角色",
      endpoint=ep, schema='{"type":"object"}'))
-<span class="cm"># tools=[{name,description,parameters}]</span>
+<span class="cm"># system="你是貓" / tools=[{name,description,parameters}]</span>
 <span class="cm"># on_tool(call) / on_media(m) / 錯誤 llm.LLMError</span></code></pre>
     <h3>Go — <code class="inl">import "cllm"</code>（options）</h3>
     <pre><code>ans, err := cllm.Ask("你好", cllm.Endpoint(url))
 cllm.Ask("數到五", cllm.Endpoint(url),
   cllm.Stream(), cllm.OnDelta(func(p string)bool{
     return false }))
-<span class="cm">// Schema/Tools/OnTool/OnMedia/MediaIn/Modalities</span></code></pre>
+<span class="cm">// System/Schema/Tools/OnTool/OnMedia/MediaIn/Modalities</span></code></pre>
     <div class="warn"><b>⚠</b> Go cgo 需先 <code class="inl">source env.sh</code> 再 <code class="inl">go run .</code></div>
   </div>
 
@@ -211,7 +212,7 @@ cllm.Ask("數到五", cllm.Endpoint(url),
 llm.ask{ prompt="數到五", endpoint=ep,
   stream=true, on_delta=function(p)
     io.write(p) return false end }
-<span class="cm">-- schema/tools/on_tool/on_media/media/modalities</span>
+<span class="cm">-- system/schema/tools/on_tool/on_media/media/modalities</span>
 <span class="cm">-- JSON: require "dkjson"</span></code></pre>
     <h3>Fennel — <code class="inl">(require :llm)</code></h3>
     <pre><code>(llm.ask {:prompt "數到五" :endpoint ep

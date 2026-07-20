@@ -4,6 +4,7 @@
 ;;;;   (cllm:ask "你好")                                   ; 只給 prompt（走內建 localhost）
 ;;;;   (cllm:ask "你好" "http://…/chat/completions")       ; prompt + endpoint（位置形式）
 ;;;;   (cllm:ask "你好" :model "local-model" :temperature 0.7)
+;;;;   (cllm:ask "你好" :system "你是一隻傲嬌的貓")             ; system role 指示（在 user 前插一則）
 ;;;;   (cllm:ask "數到五" :stream t                         ; 串流：逐段進 on-delta
 ;;;;             :on-delta (lambda (piece) (write-string piece) (finish-output) nil))  ; 回真值可中止
 ;;;;   (cllm:ask "東京天氣如何？"                           ; 工具：:tools 送定義，:on-tool 收呼叫
@@ -62,7 +63,10 @@
 (defcstruct media-in (url :pointer) (mime :pointer) (data :pointer) (len :size))
 (defcstruct modality (name :pointer) (config :pointer))
 (defcstruct request
-  (prompt :pointer) (schema :pointer)
+  ;; ⚠ CFFI 依宣告順序算 offset——`system` 是 prompt 之後第二欄（對齊 cabi_request.h 的
+  ;;   llm_request_t）。漏掉它會讓其後所有欄位位移一個指標寬，stream 落錯槽、media/modalities
+  ;;   讀錯位址。見 gotchas/windows.md 與 python binding 的同款註記。
+  (prompt :pointer) (system :pointer) (schema :pointer)
   (tools :pointer) (tools-count :size)
   (media :pointer) (media-count :size)
   (modalities :pointer) (modalities-count :size)
@@ -147,6 +151,7 @@
 :on-media＝(lambda (m) …)，m 是 (:mime :bytes) plist（bytes＝octet vector），回真值中止。"
   (let* ((endpoint (or (when (and args (stringp (first args))) (pop args)) ; 位置形式
                        (getf args :endpoint)))                            ; 或 :endpoint 關鍵字
+         (system (getf args :system))
          (api-key (getf args :api-key)) (model (getf args :model))
          (timeout-ms (getf args :timeout-ms))
          (temperature (getf args :temperature)) (top-p (getf args :top-p))
@@ -221,6 +226,7 @@
                     (setf (foreign-slot-value slot '(:struct modality) 'name) (fstr (getf md :name))
                           (foreign-slot-value slot '(:struct modality) 'config) (fstr (getf md :config))))))
               (setf (foreign-slot-value r '(:struct request) 'prompt) (fstr prompt)
+                    (foreign-slot-value r '(:struct request) 'system) (fstr system)
                     (foreign-slot-value r '(:struct request) 'tools) tools-ptr
                     (foreign-slot-value r '(:struct request) 'tools-count) tools-n
                     (foreign-slot-value r '(:struct request) 'media) media-ptr

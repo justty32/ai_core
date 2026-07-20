@@ -128,6 +128,7 @@ static s7_pointer g_llm_ask(s7_scheme *sc, s7_pointer args) {
     if (s7_is_keyword(first)) { /* keyword 選項形式 */
       s7_pointer v;
       if ((v = kw_get(sc, rest, "endpoint"))    && s7_is_string(v))  c.endpoint = s7_string(v);
+      if ((v = kw_get(sc, rest, "system"))      && s7_is_string(v))  r.system   = s7_string(v); /* system role 指示 */
       if ((v = kw_get(sc, rest, "api-key"))     && s7_is_string(v))  c.api_key  = s7_string(v);
       if ((v = kw_get(sc, rest, "model"))       && s7_is_string(v))  c.model    = s7_string(v);
       if ((v = kw_get(sc, rest, "timeout-ms"))  && s7_is_integer(v)) c.timeout_ms = (long)s7_integer(v);

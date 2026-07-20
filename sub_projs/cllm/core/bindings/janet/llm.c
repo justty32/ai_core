@@ -188,6 +188,7 @@ static Janet cfun_ask(int32_t argc, Janet *argv) {
 
   const char *endpoint = ds_str(opts, "endpoint");
   c.endpoint = endpoint ? endpoint : pos_endpoint; /* NULL＝內建 localhost */
+  r.system = ds_str(opts, "system"); /* system role 指示；NULL＝不送。字串借 opts（已 gcroot）*/
   c.api_key = ds_str(opts, "api-key");
   c.model = ds_str(opts, "model");
   double d;
