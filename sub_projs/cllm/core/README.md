@@ -16,7 +16,7 @@
 
 現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。（舊 L0 `archived/` 已於 2026-07-16 刪除——內容早已融進 C ABI 實作，查史用 `git log -- sub_projs/cllm/core/archived`。）
 
-離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（35/35 綠）＋ `test/bindings_smoke.sh` 一鍵驗九語言綁定（輪流呼叫各 `bindings/<lang>/smoke.sh`）。
+離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（35/35 綠）＋ `test/bindings_smoke.sh` 一鍵驗十一語言綁定（輪流呼叫各 `bindings/<lang>/smoke.sh`）。
 
 ## 建置（命令列）
 

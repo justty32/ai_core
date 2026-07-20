@@ -139,7 +139,7 @@ cat > "$PREFIX/share/cllm/README.md" <<'EOF'
 所有語言 API 一致：`ask(prompt[, endpoint], …)` + `on_delta` 串流回呼，回完整答案字串。
 每個 example 都示範：基本 ask、串流、schema→JSON 解析、tools＋on_tool、media 輸出（on_media）、
 media 輸入＋modalities、以及從該語言 shell-out 呼叫 `llm` CLI。
-離線自測：`bash <cllm repo>/test/bindings_smoke.sh`（九語言一鍵）。
+離線自測：`bash <cllm repo>/test/bindings_smoke.sh`（十一語言一鍵）。
 EOF
 
 echo ""

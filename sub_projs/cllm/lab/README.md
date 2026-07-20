@@ -4,7 +4,7 @@
 `play.*` 是完整範例起手檔（基本 ask／串流／schema 結構化輸出／tools／media／modalities 全示範），
 **直接改它就是開發**。
 
-> 📖 **要教學／速查？** 完整上手教學看 [`GUIDE.md`](GUIDE.md)（心智模型→CLI→九語言 API→接後端登入→建置→疑難排解）；
+> 📖 **要教學／速查？** 完整上手教學看 [`GUIDE.md`](GUIDE.md)（心智模型→CLI→十語言 API→接後端登入→建置→疑難排解）；
 > 一頁速查、可印可貼牆的版本 → 瀏覽器打開 [`cheatsheet.html`](cheatsheet.html)（離線可用、深淺色自適應）。
 
 ## 30 秒開工
@@ -41,7 +41,7 @@ API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_d
 ## 出了問題／要查細節
 
 - **環境壞了？** 重建：`bash ~/repo/ai_core/sub_projs/cllm/core/install-dev.sh`（冪等覆蓋 ~/dev 的 cllm 部分）
-- **環境健康檢查**：`bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh`（九語言一鍵，全綠＝正常）
+- **環境健康檢查**：`bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh`（十一語言一鍵，全綠＝正常）
 - **完整文檔**（選項表／注意事項／C ABI 參考）：`~/repo/ai_core/sub_projs/cllm/core/bindings/README.md`
 - **真相源**：本資料夾的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/core/bindings/<lang>/example.*`——
   lab 是暫存遊樂場，**值得留的成果記得搬回 repo**。
