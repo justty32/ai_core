@@ -101,7 +101,7 @@ app 把 cllm 的錯誤分三類、退出碼帶語意：
 要做 OpenRouter OAuth 帳號登入（**需你親自開瀏覽器一次**）：
 
 ```sh
-cp ~/repo/ai_core/sub_projs/cllm/tools/llm-login/providers/openrouter.json ~/.config/llm/oauth.json
+cp ~/repo/ai_core/sub_projs/cllm/core/tools/llm-login/providers/openrouter.json ~/.config/llm/oauth.json
 llm-login login        # 開瀏覽器帳號登入 → 換不過期 key
 MODE=openrouter ./scripts/up.sh 你好
 ```

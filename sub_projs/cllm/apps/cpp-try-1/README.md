@@ -53,7 +53,7 @@ cd ~/code/cllm-apps/cpp-try-1 && ./build.sh          # → build/cpp-try-1
 ```
 
 > tools（anthropic-proxy／llm-login／liblogin.so）**已由姊妹 agent 用 cmake 建好**，產物在
-> `~/repo/ai_core/sub_projs/cllm/build/tools/`。本專案**直接重用**，不重跑 cmake。
+> `~/repo/ai_core/sub_projs/cllm/core/build/tools/`。本專案**直接重用**，不重跑 cmake。
 
 ### 1. 離線自檢（不觸網）
 
@@ -107,8 +107,8 @@ app 把 cllm 的錯誤分類、退出碼帶語意（`src/app.hpp::classify_error
 要做 OpenRouter OAuth 帳號登入（**需你親自開瀏覽器一次**）：
 
 ```sh
-cp ~/repo/ai_core/sub_projs/cllm/tools/llm-login/providers/openrouter.json ~/.config/llm/oauth.json
-~/repo/ai_core/sub_projs/cllm/build/tools/llm-login login   # 開瀏覽器帳號登入 → 換不過期 key
+cp ~/repo/ai_core/sub_projs/cllm/core/tools/llm-login/providers/openrouter.json ~/.config/llm/oauth.json
+~/repo/ai_core/sub_projs/cllm/core/build/tools/llm-login login   # 開瀏覽器帳號登入 → 換不過期 key
 MODE=openrouter ./scripts/up.sh 你好
 ```
 

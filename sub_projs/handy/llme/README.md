@@ -16,7 +16,7 @@ llme local 你好                # local ＝ 本機 LM Studio（configs/local.js
 
 **慣例**〔提案・可改〕：`<endpoint>` 對應 `configs/<endpoint>.json`（就是一份 cllm config：`endpoint`/`model`/`api_key`/`timeout_ms`）。`_` 開頭的檔（如 `_template.json`）視為模板／隱藏，不列進可用 endpoint。其餘參數（prompt、`--stream`、`--image`、`--schema`、`--tool`…）原樣轉給 `llm`，`--config <那個檔>` 已自動帶上。
 
-新增一個 endpoint：`cp configs/_template.json configs/opus.json` 再填（⚠ 真 config 檔**不能留 `_notes` 之類非 Client 欄位**——glaze 嚴格拒未知鍵；模板的 `_notes` 只因模板從不被載入才無事）。`api_key` 留空可走 auto-inject（見下）或 [`llm-login`](../../cllm/tools/llm-login/README.md)。
+新增一個 endpoint：`cp configs/_template.json configs/opus.json` 再填（⚠ 真 config 檔**不能留 `_notes` 之類非 Client 欄位**——glaze 嚴格拒未知鍵；模板的 `_notes` 只因模板從不被載入才無事）。`api_key` 留空可走 auto-inject（見下）或 [`llm-login`](../../cllm/core/tools/llm-login/README.md)。
 
 ## auto-inject api key〔慣例・2026-07-18〕
 

@@ -119,13 +119,13 @@
   <div class="card">
     <h2><span class="n">0</span> 開工三步</h2>
     <ol class="steps">
-      <li><b>一次性</b>裝環境（換機才做）<pre><code>bash ~/repo/ai_core/sub_projs/cllm/install-dev.sh</code></pre></li>
+      <li><b>一次性</b>裝環境（換機才做）<pre><code>bash ~/repo/ai_core/sub_projs/cllm/core/install-dev.sh</code></pre></li>
       <li>每次開工前 source 環境<pre><code>source ~/dev/cllm/env.sh</code></pre></li>
       <li>挑語言、跑起手檔（離線、不連網）<pre><code>cd ~/code/cllm-lab/cpp
 bash run.sh</code></pre></li>
     </ol>
     <div class="warn"><b>⚠</b> 編輯器要<b>從 source 過 env.sh 的 shell 開</b>（<code class="inl">code .</code>／<code class="inl">nvim</code>），否則 clangd／gopls／pyright 找不到標頭 → 一片紅波浪線。</div>
-    <p class="muted">健康檢查：<code class="inl">bash ~/repo/ai_core/sub_projs/cllm/test/bindings_smoke.sh</code>（九語言全綠＝正常）</p>
+    <p class="muted">健康檢查：<code class="inl">bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh</code>（九語言全綠＝正常）</p>
   </div>
 
   <!-- 心智模型 -->
@@ -298,13 +298,13 @@ bash install-dev.sh               <span class="cm"># 冪等裝進 ~/dev</span></
       <tr><td>Windows Python 載不到 <code class="inl">.so</code></td><td>設 <code class="inl">LIBCLLM=…/build/libcllm.dll</code>（llm.py 預設找 <code class="inl">.so</code>）</td></tr>
       <tr><td>Windows fixture 開不了</td><td><code class="inl">file://</code> 用真磁碟路徑 <code class="inl">C:/…</code>，非 MSYS <code class="inl">/c/…</code></td></tr>
     </table>
-    <p class="muted">完整版 → <a href="GUIDE.md">GUIDE.md</a>。真相源 <code class="inl">~/repo/ai_core/sub_projs/cllm/</code>（docs／bindings／tools）。</p>
+    <p class="muted">完整版 → <a href="GUIDE.md">GUIDE.md</a>。真相源 <code class="inl">~/repo/ai_core/sub_projs/cllm/core/</code>（docs／bindings／tools）。</p>
   </div>
 
 </div>
 
 <footer>
-  cllm-lab · 值得留的成果記得搬回 <code class="inl">~/repo/ai_core/sub_projs/cllm/</code>（lab 是暫存遊樂場）。
+  cllm-lab · 值得留的成果記得搬回 <code class="inl">~/repo/ai_core/sub_projs/cllm/core/</code>（lab 是暫存遊樂場）。
 </footer>
 
 <script>

@@ -1,6 +1,6 @@
 # cllm — C LLM：對外 C ABI（`libcllm.so`）＋ `llm` CLI（unix filter）
 
-← [sub_projs](../README.md)
+← [cllm 傘](../README.md)｜[sub_projs](../../README.md)
 
 **cllm** 把 LLM 收成**一支對外 C ABI 共享庫 `libcllm.so`**（`extern "C"`，唯一入口 `llm_ask`）＋建在其上的 **`llm` unix filter CLI**。源自 galtxt 的純 C++ 實驗線（原 `galtxt/try_3`），收斂成兩交付物後**抽離成獨立產物**。
 
@@ -14,7 +14,7 @@
 > 1. **`libcllm.so` —— 對外 C ABI**（`src/cabi.*`，`extern "C"`）：唯一入口 `llm_ask` 統一吃 prompt＋schema＋tools＋media＋modalities＋stream。純 C 客戶端 include `cabi.h`、連 `-lcllm` 即用；另附 header-only 的 C++ 薄鏡像 `cabi.hpp`（`llm::abi`）。
 > 2. **`llm` —— unix filter CLI**（`src/cli.*`＋`src/main.cpp`）：走 `cabi.hpp` 消費 `libcllm`。
 
-現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。（舊 L0 `archived/` 已於 2026-07-16 刪除——內容早已融進 C ABI 實作，查史用 `git log -- sub_projs/cllm/archived`。）
+現行原始碼（`src/`）：`http.{hpp,cpp}`（傳輸）＋`cabi*.h`／`cabi*.cpp`（C ABI 傘檔＋功能頭＋按關注點拆的實作）＋`cabi*.hpp`（C++ 薄鏡像）＋`cli.{hpp,cpp}`＋`main.cpp`（`llm` CLI）。**逐檔領域／關鍵符號** → [common/code-map](workflows/common/code-map/CODE_MAP.md)。（舊 L0 `archived/` 已於 2026-07-16 刪除——內容早已融進 C ABI 實作，查史用 `git log -- sub_projs/cllm/core/archived`。）
 
 離線 fixture（`test/fixtures/{fake,fake_stream,fake_tool,fake_json,fake_media}/`）＋ `test/cli_smoke.sh` 端到端驗 `llm` CLI（35/35 綠）＋ `test/bindings_smoke.sh` 一鍵驗九語言綁定（輪流呼叫各 `bindings/<lang>/smoke.sh`）。
 

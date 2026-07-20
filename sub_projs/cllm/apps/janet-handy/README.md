@@ -105,7 +105,7 @@ export DEEPSEEK_API_KEY=sk-...     # llme 自動注入 --api-key
 ```sh
 # 前置（一次）：build cllm 三支 tool，並 vendored（可選）
 cd ~/repo/ai_core/sub_projs/cllm && cmake --preset linux-debug && cmake --build --preset linux-debug
-cd ~/repo/ai_core/sub_projs/cllm-apps/janet-handy && ./scripts/vendor.sh   # 複製 anthropic-proxy/llm-login/liblogin.so
+cd ~/repo/ai_core/sub_projs/cllm/apps/janet-handy && ./scripts/vendor.sh   # 複製 anthropic-proxy/llm-login/liblogin.so
 
 # 起 proxy sidecar + 備憑證 + 用本 app 的 llme anthropic 跑
 export ANTHROPIC_API_KEY=sk-ant-...

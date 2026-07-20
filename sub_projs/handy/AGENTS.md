@@ -1,12 +1,12 @@
 # handy — AI agent 專案備忘
 
-handy = **路徑一（把 OS 當 AI agent）的落地試驗田——一組靈活的小腳本／小程式集，拿現成程式（尤其 [cllm](../cllm/AGENTS.md) 與其 tool）用腳本包裝、按慣例組合**。北極星＝**整個作業系統變成一個 AI agent**（工具集，非單體）。本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
+handy = **路徑一（把 OS 當 AI agent）的落地試驗田——一組靈活的小腳本／小程式集，拿現成程式（尤其 [cllm](../cllm/core/AGENTS.md) 與其 tool）用腳本包裝、按慣例組合**。北極星＝**整個作業系統變成一個 AI agent**（工具集，非單體）。本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
 
 ## 先讀哪裡
 
 - **使用者要你動手做某件事** → **[WORKFLOWS.md](WORKFLOWS.md)**：依意圖派發到對應工作流，再讀該工作流入口。
 - **想看專案長怎樣 / 有哪些住戶 / 設計脈絡** → **[INDEX.md](INDEX.md)**：repo 頂層結構地圖。
-- **要用 cllm／cllm tool** → [cllm/AGENTS.md](../cllm/AGENTS.md)（重點現成件清單見 [INDEX](INDEX.md)）。
+- **要用 cllm／cllm tool** → [cllm/AGENTS.md](../cllm/core/AGENTS.md)（重點現成件清單見 [INDEX](INDEX.md)）。
 
 ## 分層思想（本專案的組織原則）
 

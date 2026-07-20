@@ -8,7 +8,7 @@
 
 ## Repo 佈局
 
-工作流骨架 ＋ **語料庫**（`corpus/`，進行中）＋ **第一片程式碼**（`gen_v0/`，確定性生成器玩具版）。LLM 接口探索三線（`try_1` s7／`try_2` Lua／`try_4` 三線整合）已探索完、退出現役維護鏈並**從工作樹移除**（durable 細節留 git log ＋ [common/gotchas](workflows/common/gotchas.md)）；純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/README.md)**。
+工作流骨架 ＋ **語料庫**（`corpus/`，進行中）＋ **第一片程式碼**（`gen_v0/`，確定性生成器玩具版）。LLM 接口探索三線（`try_1` s7／`try_2` Lua／`try_4` 三線整合）已探索完、退出現役維護鏈並**從工作樹移除**（durable 細節留 git log ＋ [common/gotchas](workflows/common/gotchas.md)）；純 C++ 那條（原 `try_3`）已收斂成兩交付物、**抽離成獨立 sub_proj [cllm](../cllm/core/README.md)**。
 
 | 路徑 | 內容 |
 |------|------|
@@ -24,7 +24,7 @@
 | [`uniform_probe/`](uniform_probe/README.md) | **統一節點五路並行探索＋綜合**（bench）：a1–a5 各獨立最小 kernel＋一粒度切片，[synth](uniform_probe/synth/synth.lisp) 綜合成最小統一 kernel（102 行）。五發現：種≠粒度／分支=普通節點(DAG)／事實vs句式=兩域／填充物帶邏輯→界線溶解／層湧現+懸空=佔位。 |
 | [`realizer_l/`](realizer_l/README.md) | **realizer（CL 壓縮版）＋director 搜索層**（macro 母語，接 comfy/gen_v1_l）：同一套八股（核心 90 行，Fennel 六檔 224 的壓縮對照）；**director 升格**——不再顯式給風格座標，改窮舉模板×填充＋成本挑最優，`intent`（甜/靜）搜出不同風格、`direct-n` 自動生 N 種台詞流（閉環最初手寫「20 種」）。九 demo 全綠。跑法 `cd realizer_l && sbcl --script main.lisp`。 |
 | [`corpus/`](corpus/README.md) | **語料庫**（日和町 galgame，~150 檔）：34 篇劇本（含 2 篇逐句深度分析）＋52 短場景＋多尺度世界設定（`世界/`）＋14 份角色 dossier（`人物/`）＋19 題評測 benchmark＋固化規則素材。入口與 canon 專名見 [corpus/README](corpus/README.md)。|
-| ~~`try_3/`~~ → [`../cllm/`](../cllm/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
+| ~~`try_3/`~~ → [`../cllm/`](../cllm/core/README.md) | 玩具實驗場③（**純 C++、傳統 header**）已收斂成兩交付物（對外 C ABI `libcllm.so`＋`llm` unix filter CLI）、**抽離成獨立 sub_proj `cllm`**。舊 L0（`llm::Client` ask＋三擴充）封存於 `cllm/archived/`。|
 
 ## 開發工作流
 

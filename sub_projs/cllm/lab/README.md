@@ -40,10 +40,10 @@ API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_d
 
 ## 出了問題／要查細節
 
-- **環境壞了？** 重建：`bash ~/repo/ai_core/sub_projs/cllm/install-dev.sh`（冪等覆蓋 ~/dev 的 cllm 部分）
-- **環境健康檢查**：`bash ~/repo/ai_core/sub_projs/cllm/test/bindings_smoke.sh`（九語言一鍵，全綠＝正常）
-- **完整文檔**（選項表／注意事項／C ABI 參考）：`~/repo/ai_core/sub_projs/cllm/bindings/README.md`
-- **真相源**：本資料夾的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/bindings/<lang>/example.*`——
+- **環境壞了？** 重建：`bash ~/repo/ai_core/sub_projs/cllm/core/install-dev.sh`（冪等覆蓋 ~/dev 的 cllm 部分）
+- **環境健康檢查**：`bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh`（九語言一鍵，全綠＝正常）
+- **完整文檔**（選項表／注意事項／C ABI 參考）：`~/repo/ai_core/sub_projs/cllm/core/bindings/README.md`
+- **真相源**：本資料夾的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/core/bindings/<lang>/example.*`——
   lab 是暫存遊樂場，**值得留的成果記得搬回 repo**。
 
 ## Windows（MinGW）註記
@@ -54,4 +54,4 @@ API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_d
   Windows 沒 pkg-config，`run.sh` 那條走不了；打包層（`~/dev` 前綴）在 Windows 尚未驗。
 - **`play.cpp` 第 7 步（shell-out 呼 `llm` CLI）在 Windows 失敗**、非 cllm 問題：那句 `popen("llm … --endpoint 'file://…'")`
   用單引號，Windows `popen`／`system` 走 `cmd.exe`、單引號非引號 → llm 收到帶引號 endpoint → URL 解析失敗。
-  同 cpp-handy 的 POSIX-shell 假設坑（見 cllm [gotchas/windows](../cllm/workflows/common/gotchas/windows.md)）。
+  同 cpp-handy 的 POSIX-shell 假設坑（見 cllm [gotchas/windows](../core/workflows/common/gotchas/windows.md)）。

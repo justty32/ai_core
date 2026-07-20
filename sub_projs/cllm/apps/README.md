@@ -8,7 +8,7 @@
 
 ## 一句話
 
-**cllm-apps ＝把 [handy](../handy/AGENTS.md) 的四支工具（`llme`/`zhtw`/`wf`/`mail`）用各種語言重寫一遍**，並照本房房規整合 [cllm](../cllm/AGENTS.md) 的周邊工具（anthropic-proxy / llm-login）。真相源＝handy 的 **Fennel 原型**，移植版行為 **1:1 逐字對齊**。
+**cllm-apps ＝把 [handy](../../handy/AGENTS.md) 的四支工具（`llme`/`zhtw`/`wf`/`mail`）用各種語言重寫一遍**，並照本房房規整合 [cllm](../core/AGENTS.md) 的周邊工具（anthropic-proxy / llm-login）。真相源＝handy 的 **Fennel 原型**，移植版行為 **1:1 逐字對齊**。
 
 ## 兩群 app（別搞混）
 
@@ -119,6 +119,6 @@ lua-try-1/           ┘
 
 ## 設計脈絡
 
-- **四工具真相源**＝[handy](../handy/AGENTS.md) 的 Fennel 原型（`../handy/{llme,zhtw,wf,mail}`）。
-- **cllm 周邊**（anthropic-proxy / llm-login / `llm` CLI / binding）＝[cllm](../cllm/AGENTS.md)。
+- **四工具真相源**＝[handy](../../handy/AGENTS.md) 的 Fennel 原型（`../../handy/{llme,zhtw,wf,mail}`）。
+- **cllm 周邊**（anthropic-proxy / llm-login / `llm` CLI / binding）＝[cllm](../core/AGENTS.md)。
 - 本專案 2026-07-19 由 `~/code/cllm-apps`（版控外工作區）納入 repo 統一管理。

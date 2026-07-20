@@ -16,6 +16,7 @@
 | `docs/` | 分篇中文教學（00 環境 → 09 C FFI）；入口見 [docs/README.md](docs/README.md) |
 | `cl-cheatsheet.html` | 單頁速查表（語言 + 庫濃縮成一頁）|
 | `build/` | `asdf:make` 產出的獨立執行檔 `build/cl-lab` |
+| [`comfy/`](comfy/README.md) | **舒適 CL 地基**（2026-07-20 併入）：一層順手糖（`true`/`false`、`'a'` 字元、C 風格字串轉義）＋成熟可 VSCode/Alive debug 的 SBCL 環境。框架外實驗場、獨立一攤，自帶入口。 |
 | `workflows/` | 工作流（入口見 [WORKFLOWS.md](WORKFLOWS.md)）|
 | `inbox/` | agent 之間的**信件**收件匣（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 

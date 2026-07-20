@@ -41,7 +41,7 @@
 | daemon 骨架（常駐＋socket＋佇列＋單例計量） | `llm_entry.cpp` 的 `--serve <sock>` | `../ver_1/try_implement/core_handy/examples/llm_entry.cpp` |
 | 登入／key 失效重登／patch config | `llm-login` | `../cllm/tools/llm-login/` |
 | 命令 log／memoize／可靠度原料 | NDJSON trace 構想 | note 0718 §6.3 |
-| cllm 現成件：`libcllm.so`（唯一入口 `llm_ask`）＋`llm` CLI、`tools/llm-login`、`tools/anthropic-proxy` | — | [cllm/AGENTS.md](../cllm/AGENTS.md) |
+| cllm 現成件：`libcllm.so`（唯一入口 `llm_ask`）＋`llm` CLI、`tools/llm-login`、`tools/anthropic-proxy` | — | [cllm/AGENTS.md](../cllm/core/AGENTS.md) |
 
 ## 設計脈絡（來龍去脈／設計決定）
 

@@ -1,8 +1,8 @@
 # comfy — 舒適 Common Lisp 地基
 
-← [sub_projs](../README.md)
+← [cl-lab](../README.md)
 
-一個**動手實驗場**（跟 [galtxt/try_1](../galtxt/try_1/README.md) 同性質，**刻意不套**九軸／workflow 框架）。
+一個**動手實驗場**（跟 galtxt 早期 s7 線〔try_1，已退役、留 [git 史](../../../galtxt/AGENTS.md)〕同性質，**刻意不套**九軸／workflow 框架）。
 目的兩個：
 
 1. **一層薄薄的順手糖**，蓋在標準 Common Lisp 上，把幾個我不習慣的寫法換成舒服的——
@@ -12,14 +12,14 @@
    REPL 邊寫邊測、condition/restart 互動除錯、`trace`/`step`/`break` 全在手邊。
 
 > **⚠ 在 AGENTS.md 鐵律之外**：專案鐵律定「實作只用 Python 3.11+ 標準庫、POSIX、Windows 不考慮」。
-> 本夾與 try_1 一樣是**框架外的實驗場**（Common Lisp / SBCL / Windows），故**不受該鐵律約束**。
+> 本夾同 galtxt 早期 s7 線一樣是**框架外的實驗場**（Common Lisp / SBCL / Windows），故**不受該鐵律約束**。
 > 相依原則：**糖本體（`:comfy` 系統）維持零外部相依**（只用 SBCL 內建 ASDF）；至於真實工作需要的
 > 庫（如 JSON），走 **Quicklisp** 引入——galtxt 的 LLM 接口一定要 JSON，故已裝 Quicklisp ＋
 > `com.inuoe.jzon`（見「JSON」節）。糖與庫分層：載入糖不會拖進任何外部相依。
 
 ## 由來
 
-s7 Scheme（見 [galtxt/try_1](../galtxt/try_1/README.md)）跑通了 LLM 接口，但語法不順手、且沒有成熟的
+s7 Scheme（galtxt 早期 try_1 線，已退役）跑通了 LLM 接口，但語法不順手、且沒有成熟的
 VSCode 除錯環境。比過 Racket（VSCode step-debug 偏弱）、Clojure（JVM 太重）後，選定 **SBCL＝
 普通 Common Lisp**：debugger／condition system 真成熟，Alive 給得起 VSCode 裡的 REPL/inline-eval/
 互動除錯，而 `true`/`false` 用 `defconstant` 就有、`'a'` 用 reader macro 就有，都不必魔改語意。

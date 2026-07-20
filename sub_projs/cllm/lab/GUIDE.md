@@ -27,10 +27,10 @@ lab 依賴一份常駐開發環境 `~/dev/cllm/`（放好編譯好的 `.so`、`l
 
 ```bash
 # ① 從 repo 建置並安裝到 ~/dev（冪等，重跑只會覆蓋 cllm 部分，不會亂刪）
-bash ~/repo/ai_core/sub_projs/cllm/install-dev.sh
+bash ~/repo/ai_core/sub_projs/cllm/core/install-dev.sh
 
 # ② 健康檢查：九語言一鍵煙霧測，全綠＝環境正常
-bash ~/repo/ai_core/sub_projs/cllm/test/bindings_smoke.sh
+bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh
 ```
 
 之後**每次開工前**，在要跑 lab 的 shell 裡 source 一次環境：
@@ -289,8 +289,8 @@ bash install-dev.sh                 # 把產物冪等安裝進 ~/dev/cllm
 | 症狀 | 解法 |
 |------|------|
 | 編輯器一片紅波浪線（找不到標頭／套件）| 沒 source env.sh 就開了編輯器。**從 source 過 env.sh 的 shell** 重開（`source ~/dev/cllm/env.sh && code .`）|
-| `run.sh` 說找不到 `llm` / `libcllm.so` | 環境沒裝好或沒 source。跑 `bash ~/repo/ai_core/sub_projs/cllm/install-dev.sh` 再 `source ~/dev/cllm/env.sh` |
-| 不確定環境是否健康 | `bash ~/repo/ai_core/sub_projs/cllm/test/bindings_smoke.sh`（九語言一鍵，全綠＝正常）|
+| `run.sh` 說找不到 `llm` / `libcllm.so` | 環境沒裝好或沒 source。跑 `bash ~/repo/ai_core/sub_projs/cllm/core/install-dev.sh` 再 `source ~/dev/cllm/env.sh` |
+| 不確定環境是否健康 | `bash ~/repo/ai_core/sub_projs/cllm/core/test/bindings_smoke.sh`（九語言一鍵，全綠＝正常）|
 | 打真後端 `content` 是空的 | reasoning 模型把 `max_tokens` 吃光了——別設 `--max-tokens`（見 §5a）|
 | Fennel 回呼沒觸發 | table 鍵用了連字號。改底線：`:on_delta` 不是 `:on-delta`（§3 Fennel）|
 | s7 跑一半崩潰 | 回呼裡丟了 error／做了檔案 I/O。回呼只 `set!` 存值，其餘挪到 `llm-ask` 之後（§3 s7）|
@@ -300,9 +300,9 @@ bash install-dev.sh                 # 把產物冪等安裝進 ~/dev/cllm
 
 ## 真相源與去向
 
-- 本 lab 的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/bindings/<lang>/example.*`。**lab 是暫存遊樂場**——值得留的成果記得搬回 repo。
+- 本 lab 的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/core/bindings/<lang>/example.*`。**lab 是暫存遊樂場**——值得留的成果記得搬回 repo。
 - 完整權威文檔：
-  - CLI 手冊 → `~/repo/ai_core/sub_projs/cllm/docs/cli-manual.md`
+  - CLI 手冊 → `~/repo/ai_core/sub_projs/cllm/core/docs/cli-manual.md`
   - 建置／依賴 → `.../docs/setup.md`、跨平台 → `.../docs/platform.md`
   - C ABI 參考 → `.../docs/c-abi-reference.md`、C++ 鏡像 → `.../docs/cpp-mirror-reference.md`
   - binding 選項表／注意事項 → `.../bindings/README.md`
