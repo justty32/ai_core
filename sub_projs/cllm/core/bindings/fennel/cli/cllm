@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# cllm — Fennel 版 llm CLI 進入點（薄殼）。用法同 llm：cllm [旗標...] [prompt...]
+# 先設好 lua 5.4 的 llm.so／dkjson 搜尋路徑（自 env.sh 的 *_5_4），再用 fennel 跑 cllm.fnl。
+set -uo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "${LUA_CPATH_5_4:-}" ]; then . "${PREFIX:-$HOME/dev}/cllm/env.sh"; fi
+exec env LUA_CPATH="$LUA_CPATH_5_4" LUA_PATH="$LUA_PATH_5_4" fennel "$HERE/cllm.fnl" "$@"

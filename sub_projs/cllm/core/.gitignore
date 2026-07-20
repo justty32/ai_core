@@ -8,3 +8,6 @@ build/
 bindings/lua/llm.so
 bindings/s7/llm-s7
 *.so
+
+# CLI 外殼 smoke 的就地產物（cli/smoke.sh 重生；c/cpp/go 建到 temp，python 生 __pycache__）
+__pycache__/
