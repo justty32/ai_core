@@ -9,6 +9,10 @@
 - ~~規則換可定址腳本~~ ✅ NPC 行為＝住在 `/idx/script/data` 的腳本，可 `cat`/`echo` 讀改。
 - ~~規則語言換嵌入式 Lisp~~ ✅ 已換 **Janet**（`up_tick_janet.py`）——比 Python `exec` 更貼「規範層語言中立」、獨立行程天然沙箱。
 
+## 平台限制
+
+- **Windows 跑不了（現形態）**：核心走 `fusepy`＋FUSE（libfuse），Windows 無原生 FUSE（WinFsp 亦非 fusepy 目標）→ 只能在 Linux／macOS 跑。跨機開發時 unipath 這攤留在 Linux 機。
+
 ## Open：往階段二 / 待收尾
 
 - **Janet 引擎優化**：目前每元素每回合起一個 janet 行程（JSON 交換），暫不管效能；日後可換常駐 janet REPL / libjanet 嵌入。
