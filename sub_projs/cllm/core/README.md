@@ -86,6 +86,23 @@ llm 用一句話介紹你自己 --endpoint http://localhost:1234/v1/chat/complet
 - 一個閘道就把下面幾百個模型接上：`deepseek/…`、`openai/gpt-4o-mini`、`anthropic/claude-…`、`google/gemini-…` 都靠改 `model` 一欄切換（DeepSeek／OpenAI 直連也同理，各自的 OpenAI 相容端點填 key 即可；**Anthropic 直連**才要走 [anthropic-proxy](tools/anthropic-proxy/README.md)）。
 - ⚠ **OpenRouter 的 `:free` slug 是帳號權限 gated**（2026-07-20 實測揪出）：`deepseek-…:free`／`llama-3.3-70b:free` 回 HTTP 404「免費版已下架、改用付費 slug」，`gemini-2.0-flash-exp:free` 回「無端點」，同帳號只有 `tencent/hy3:free` 打得動。**免費清單依帳號／時間而變**，換家要重試。此路正好順帶驗到真後端錯誤路徑——OpenRouter 的 404 被 `guard_backend_error` 正確攔成結構化錯誤（exit 2）、沒被吞成空字串。
 
+### 雲端：DeepSeek 直連（實測綠，2026-07-20）
+
+DeepSeek 是 OpenAI 相容直連，填 key 即通（不必經 OpenRouter）：
+
+```json
+{
+  "endpoint": "https://api.deepseek.com/v1/chat/completions",
+  "model":    "deepseek-chat",
+  "api_key":  "sk-...",
+  "timeout_ms": 120000
+}
+```
+
+- **實測綠**（Linux `~/dev/bin/llm`）：非串流＋`--stream` 兩路 exit 0；壞 key → `HTTP 401: Authentication Fails` 被 `guard_backend_error` 攔成結構化錯誤（exit 2）。
+- ⚠ **DeepSeek 不支援 `--schema`（`json_schema` response_format）**：回 `HTTP 400: This response_format type is unavailable now`——`deepseek-chat` 只支援 `json_object`（JSON mode），非嚴格 schema。cllm 正確攔成 exit 2、未吞空。要嚴格結構化輸出改用支援 json_schema 的後端。見 [gotchas/backend](workflows/common/gotchas/backend.md)。
+- ⚠ **真後端一律設 `timeout_ms`**：不設時曾遇一次性連線 hang（重跑即 0s 回）。
+
 ## 更多文檔
 
 | 想做／想查 | 去哪 |
