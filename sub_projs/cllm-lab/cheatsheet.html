@@ -108,7 +108,7 @@
 <body>
 <header>
   <h1>cllm-lab 速查表</h1>
-  <span class="sub">九語言 · 一顆 <code class="inl">libcllm.so</code> · 一個入口 <code class="inl">llm_ask()</code></span>
+  <span class="sub">十語言 · 一顆 <code class="inl">libcllm.so</code>／<code class="inl">.dll</code> · 一個入口 <code class="inl">llm_ask()</code></span>
   <span class="spacer"></span>
   <button class="themebtn" id="themebtn">◐ 切換深/淺色</button>
 </header>
@@ -280,7 +280,7 @@ cmake --preset linux-debug        <span class="cm"># vcpkg 自動裝 glaze</span
 cmake --build --preset linux-debug
 bash install-dev.sh               <span class="cm"># 冪等裝進 ~/dev</span></code></pre>
     <p><span class="pill">相依極簡</span> C++ 只用 vcpkg 的 <b>glaze</b>＋系統 <b>libcurl</b>。preset：<code class="inl">linux-*</code>／<code class="inl">mingw-*</code>。</p>
-    <p class="muted">Windows：<code class="inl">#ifdef</code> 已包好、POSIX 已測，但尚未實建。</p>
+    <p class="muted">Windows（MinGW g++16.1）：<b>已實建</b>——<code class="inl">cli_smoke</code> 35/35、cpp/python 庫路徑已驗（cpp 六能力綠、python 五綠一崩）。但無 <code class="inl">pkg-config</code>，<code class="inl">run.sh</code>／<code class="inl">install-dev.sh</code> 那條走不了，需手動組 include／link；<code class="inl">libcllm.dll</code> 已改 <code class="inl">-static</code> 自足。細節見 <code class="inl">README「Windows 註記」</code>＋cllm <code class="inl">gotchas/windows</code>。</p>
   </div>
 
   <!-- 疑難排解 -->
@@ -295,6 +295,8 @@ bash install-dev.sh               <span class="cm"># 冪等裝進 ~/dev</span></
       <tr><td>Fennel 回呼沒觸發</td><td>鍵改底線 <code class="inl">:on_delta</code></td></tr>
       <tr><td>s7 跑一半崩</td><td>回呼別丟 error／別做 I/O</td></tr>
       <tr><td>Go cgo 報錯</td><td>先 <code class="inl">source env.sh</code></td></tr>
+      <tr><td>Windows Python 載不到 <code class="inl">.so</code></td><td>設 <code class="inl">LIBCLLM=…/build/libcllm.dll</code>（llm.py 預設找 <code class="inl">.so</code>）</td></tr>
+      <tr><td>Windows fixture 開不了</td><td><code class="inl">file://</code> 用真磁碟路徑 <code class="inl">C:/…</code>，非 MSYS <code class="inl">/c/…</code></td></tr>
     </table>
     <p class="muted">完整版 → <a href="GUIDE.md">GUIDE.md</a>。真相源 <code class="inl">~/repo/ai_core/sub_projs/cllm/</code>（docs／bindings／tools）。</p>
   </div>
