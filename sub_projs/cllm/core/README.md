@@ -100,7 +100,7 @@ DeepSeek 是 OpenAI 相容直連，填 key 即通（不必經 OpenRouter）：
 ```
 
 - **實測綠**（Linux `~/dev/bin/llm`）：非串流＋`--stream` 兩路 exit 0；壞 key → `HTTP 401: Authentication Fails` 被 `guard_backend_error` 攔成結構化錯誤（exit 2）。
-- ⚠ **DeepSeek 不支援 `--schema`（`json_schema` response_format）**：回 `HTTP 400: This response_format type is unavailable now`——`deepseek-chat` 只支援 `json_object`（JSON mode），非嚴格 schema。cllm 正確攔成 exit 2、未吞空。要嚴格結構化輸出改用支援 json_schema 的後端。見 [gotchas/backend](workflows/common/gotchas/backend.md)。
+- ⚠ **DeepSeek 不支援 `--schema`（`json_schema` response_format）**：回 `HTTP 400: This response_format type is unavailable now`——`deepseek-chat` 只支援 `json_object`（JSON mode），非嚴格 schema。cllm 正確攔成 exit 2、未吞空。**要在 DeepSeek 拿 schema 約束的結構化輸出，改用 `--tool`（function calling）**：把 schema 放工具的 `parameters`，模型回 tool_call 的 `arguments`＝結構化 JSON（實測綠：`--tool char.json` → `{"tool":"emit_character","arguments":{"name":"星野","age":17}}`，exit 0）。見 [gotchas/backend](workflows/common/gotchas/backend.md)。
 - ⚠ **真後端一律設 `timeout_ms`**：不設時曾遇一次性連線 hang（重跑即 0s 回）。
 
 ## 更多文檔
