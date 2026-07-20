@@ -99,9 +99,9 @@
       <li><b>uni 是否扶正</b>進 llm_forge 成正式框架（取代分層四表）？＝「畢業」決定，照規矩等你點頭。</li>
       <li><b>跨語言最後一里</b>：把 gen_v0（Lua）的 <code>fill_sequence</code> 實際改接 CL 的 <code>search*</code>（已證同形，屬 port）。</li>
     </ul>
-    <b>cllm</b>（側線・<a href="../cllm/WAIT_USER.md">cllm/WAIT_USER</a>）
+    <b>cllm</b>（側線・<a href="../cllm/core/WAIT_USER.md">cllm/WAIT_USER</a>）
     <ul>
-      <li><b>llm-login 真 OAuth 往返驗證</b>：帳號登入換 token 餵 cllm 的工具已落地、離線全綠。<b>最快從 OpenRouter 驗</b>（免註冊 client）——<code>cp providers/openrouter.json ~/.config/llm/oauth.json</code> → <code>python3 llm_login.py login</code>。詳見 <a href="../cllm/tools/llm-login/README.md">llm-login/README</a>。</li>
+      <li><b>llm-login 真 OAuth 往返驗證</b>：帳號登入換 token 餵 cllm 的工具已落地、離線全綠。<b>最快從 OpenRouter 驗</b>（免註冊 client）——<code>cp providers/openrouter.json ~/.config/llm/oauth.json</code> → <code>python3 llm_login.py login</code>。詳見 <a href="../cllm/core/tools/llm-login/README.md">llm-login/README</a>。</li>
     </ul>
   </div>
 
@@ -115,7 +115,7 @@
       <tr><td>realizer</td><td><a href="realizer_l/README.md">realizer_l</a>（CL＋director）｜<a href="realizer_f/README.md">realizer_f</a>（Fennel）</td></tr>
       <tr><td>corpus・河堤</td><td><a href="corpus/劇本/最後的櫻花雪/台詞流_場景二_河堤_20種.md">台詞流 20 種</a>｜<a href="corpus/劇本/最後的櫻花雪/模板_場景二_河堤_八股拆解.md">八股拆解</a>｜<a href="corpus/劇本/最後的櫻花雪/句子模板庫_場景二_河堤.md">句子模板庫</a></td></tr>
       <tr><td>引擎</td><td><a href="gen_v0/README.md">gen_v0</a>（搜 act）｜gen_v1 <a href="gen_v1/README.md">Lua</a>／<a href="gen_v1_f/README.md">Fennel</a>／<a href="gen_v1_l/README.md">CL</a>＋<a href="gen_v1/00_設計.md">設計（事實層四柱）</a></td></tr>
-      <tr><td>cllm 側線</td><td><a href="../cllm/tools/llm-login/README.md">llm-login/README</a>（OAuth 帳號登入）｜<a href="../cllm/README.md">cllm/README</a></td></tr>
+      <tr><td>cllm 側線</td><td><a href="../cllm/core/tools/llm-login/README.md">llm-login/README</a>（OAuth 帳號登入）｜<a href="../cllm/core/README.md">cllm/README</a></td></tr>
       <tr><td>規範・驗證</td><td><a href="workflows/common/conventions.md">conventions</a>（≤150 行等）｜<a href="workflows/testing.md">testing</a>（跑法清單）</td></tr>
       <tr><td>狀態</td><td><a href="SESSION-LOG.md">SESSION-LOG</a>｜<a href="WAIT_USER.md">WAIT_USER</a>｜<a href="INDEX.md">INDEX</a></td></tr>
     </table>
