@@ -14,7 +14,11 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 BIN="${LLM:-$ROOT/build/llm}"
-FX="file://$ROOT/test/fixtures"
+# file:// fixture 的 root：Windows(MSYS/Git Bash) 下 pwd 給的是 MSYS 路徑（/c/…），
+# native llm.exe 的 fopen 開不了；pwd -W 轉成真 Windows 磁碟路徑（C:/…）。Linux 不變。
+FXROOT="$ROOT"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) FXROOT="$(cd "$HERE/.." && pwd -W)";; esac
+FX="file://$FXROOT/test/fixtures"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 

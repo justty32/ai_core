@@ -52,7 +52,9 @@ target_compile_options(login PRIVATE $<$<CONFIG:Debug>:-g;-O0> $<$<CONFIG:Releas
 if(WIN32)
     set_target_properties(login PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
     target_link_libraries(login PRIVATE winhttp ws2_32 bcrypt)
-    target_link_options(login PRIVATE -static-libgcc -static-libstdc++)
+    # --exclude-libs,ALL：同 libcllm——不對外匯出靜態 libgcc 的 _Unwind_Resume，
+    # 否則 g++16.1.0 下與消費端 -static-libgcc 撞 multiple definition（見 common/gotchas）。
+    target_link_options(login PRIVATE -static-libgcc -static-libstdc++ -Wl,--exclude-libs,ALL)
 else()
     target_link_libraries(login PRIVATE CURL::libcurl)
 endif()

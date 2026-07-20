@@ -54,7 +54,10 @@ if(WIN32)
     # 靜態連 libstdc++/libgcc → 產出獨立 .dll，不依賴 mingw runtime DLL 在 PATH 上。
     set_target_properties(cllm PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
     target_link_libraries(cllm PRIVATE winhttp)
-    target_link_options(cllm PRIVATE -static-libgcc -static-libstdc++)
+    # --exclude-libs,ALL：自動匯出只涵蓋專案自身符號，排除靜態庫（libgcc/libstdc++）的
+    # runtime 符號——否則 g++16.1.0 下 DLL 會連 _Unwind_Resume 一起匯出，與消費端
+    # exe 的 -static-libgcc 撞成 multiple definition（見 common/gotchas）。
+    target_link_options(cllm PRIVATE -static-libgcc -static-libstdc++ -Wl,--exclude-libs,ALL)
 else()
     # 非 Windows：http 模組走 libcurl（vcpkg 裝 curl；見 vcpkg.json 註）
     find_package(CURL REQUIRED)

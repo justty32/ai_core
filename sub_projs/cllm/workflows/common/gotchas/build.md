@@ -14,6 +14,7 @@
 - **vcpkg toolchain 不會攔截系統的 `find_package(CURL)`**：怕 vcpkg 搶走而特地在 `vcpkg.json` 加 `curl`（→ 從源碼編、很慢）是多餘的。vcpkg toolchain 只是在標準 CMake 模組搜尋**之前**插入自己的搜尋路徑，沒裝就自然落回系統庫。Manjaro 上 `find_package(CURL REQUIRED)` 直接命中 `/usr/lib/libcurl.so`。
 - **vcpkg manifest 沒釘 `builtin-baseline`，兩台機器會解出不同版本**：同一份 `vcpkg.json` 因各機 registry 快照不同而版本漂移（實例：glaze，Windows 7.8.4 / Linux 7.4.0）。API 沒變、行為一致，但**跨機潛在地雷**——要鎖版就加 `builtin-baseline` 或 `version>=`。
 - **★ MinGW triplet**：vcpkg 預設 triplet `x64-windows`（MSVC 導向）在 MinGW 上會建置／連結失敗，`CMakePresets.json` 的 `mingw-*` 已設 `x64-mingw-static`。**Linux 側 `linux-*` 不設 `VCPKG_TARGET_TRIPLET`**，用偵測到的預設 `x64-linux` 即可。
+- **★ MinGW g++16.1.0：`WINDOWS_EXPORT_ALL_SYMBOLS ON` 的 DLL 會連 libgcc 的 `_Unwind_Resume` 一起匯出，與消費端 exe 的 `-static-libgcc` 撞 `multiple definition`**（連結期，`libcllm.dll.a`／`liblogin.dll.a` 撞 `libgcc_eh.a(unwind-seh.o)`）。舊 MinGW 版本沒事、g++16.1.0 才浮現（工具鏈漂移）。**這不是程式錯誤**——DLL 本就不該對外再匯出 runtime 的 unwind 符號。對策：給該 DLL 的 `target_link_options` 加 **`-Wl,--exclude-libs,ALL`**（自動匯出只涵蓋專案自身符號、排除靜態庫），`CMakeLists.txt`（cllm）與 `tools/CMakeLists.txt`（login）都已加。**Windows 建置實錄**：mingw64 g++16.1.0＋`C:/dev/vcpkg`，`cmake --preset mingw-debug && cmake --build --preset mingw-debug` 全 13 target 連結過、`bash test/cli_smoke.sh` 35/35。
 
 ## clangd / 編輯器
 
