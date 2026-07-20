@@ -1,6 +1,6 @@
 """request.py — 請求組裝：把 prompt／system／tools／media／modalities 組成 OpenAI 相容
 的 /chat/completions 請求 JSON（bytes）。對齊 core/src/cabi_request.cpp 的 build_body——
-本檔即 core-py 這條線的「唯一請求真相源」。
+本檔即 pllm 這條線的「唯一請求真相源」。
 
 ⚠ 陷阱備忘：
   · 送出的請求 JSON 逐欄對齊 cabi_request.cpp：system role 排最前、content 無媒體＝字串／

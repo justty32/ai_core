@@ -1,4 +1,4 @@
-# pyproject.toml — cllm-py（handy 的 LLM 地基；cllm 純 Python 版）的封裝。
+# pyproject.toml — pllm（handy 的 LLM 地基；cllm 的純 Python 版）的封裝。
 # 源出 cllm/core-py（見 README「來源」）；handy 住戶 `pip install -e` 本資料夾來相依。
 #
 # 相依政策：刻意維持「零外部相依」——工作量（單次 POST ＋ SSE 逐行拆框）標準庫 urllib/json 就
@@ -8,18 +8,15 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cllm-core-py"
+name = "pllm"
 version = "0.1.0"
-description = "cllm 的純 Python 平行實作：直接打 OpenAI 相容 /chat/completions（不碰 C ABI）"
+description = "cllm 的純 Python 版（handy 的 LLM 地基）：直接打 OpenAI 相容 /chat/completions（不碰 C ABI）"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = []  # 刻意維持零外部相依（見檔頭權衡）
 
 [project.scripts]
-cllm = "cllm.cli:_entry"
-# 亦註冊 `llm` 同名指令（用法鏡像 C++ 的 llm CLI）；⚠ 與 core/ 建出的原生 `llm` 執行檔可能撞名，
-# 二選一裝或用虛擬環境隔離。只想要不撞名的就用 `cllm`／`python -m cllm`。
-llm = "cllm.cli:_entry"
+pllm = "pllm.cli:_entry"
 
 [tool.setuptools]
-packages = ["cllm"]
+packages = ["pllm"]

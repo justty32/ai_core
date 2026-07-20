@@ -1,4 +1,4 @@
-"""core.py — cllm 純 Python 內核的出口：組請求→打 HTTP→解回應→跑回呼的一次 ask()。
+"""core.py — pllm（cllm 純 Python 版）內核的出口：組請求→打 HTTP→解回應→跑回呼的一次 ask()。
 對齊 core/src/cabi.cpp（唯一入口 llm_ask ＋ make_request）。
 
 這是「真正做事的內核」的門面——本身只做接線，把各關注點分派給姊妹模組（皆對齊 C++ 分檔）：
@@ -7,7 +7,7 @@
   errors.py＝共用 LLMError／DEFAULT_ENDPOINT。API 形狀刻意對齊既有 ctypes binding
 （core/bindings/python/llm.py），差別只在「不經 ctypes、直接打 HTTP」：
 
-    from cllm import ask
+    from pllm import ask
     text = ask("你好")                                      # 只給 prompt（走內建 localhost）
     text = ask("你好", "http://…/chat/completions")         # prompt + endpoint（位置形式）
     text = ask("你好", model="local-model", temperature=0.7)
@@ -29,7 +29,7 @@ tools／media／modalities（皆為 kwargs，可任意組合，等價於 C++ 的
 import os
 import sys
 
-# 對外／相容再匯出：LLMError／DEFAULT_ENDPOINT 供 `from cllm import ...`；_b64decode 供 media.py；
+# 對外／相容再匯出：LLMError／DEFAULT_ENDPOINT 供 `from pllm import ...`；_b64decode 供 media.py；
 # _file_url_to_path 保留 core.* 取用路徑（歷史相容）。
 from .errors import DEFAULT_ENDPOINT, LLMError
 from .http import _file_url_to_path, _transport  # noqa: F401 —— _file_url_to_path 為相容再匯出

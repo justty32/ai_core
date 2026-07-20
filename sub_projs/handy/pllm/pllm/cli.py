@@ -1,4 +1,4 @@
-"""cli.py — 薄 CLI 外殼：把命令列組成一次 cllm.core.ask 的發問（鏡像 C++ 的 `llm` CLI）。
+"""cli.py — 薄 CLI 外殼：把命令列組成一次 pllm.core.ask 的發問（鏡像 cllm 的 `llm` CLI）。
 
 只做「參數解析 + I/O 接線」，真正的活（組請求／打 HTTP／解串流）全丟給內核 core.ask。周邊拆到
 同套件的姊妹模組（皆對齊 C++ 的分檔）：

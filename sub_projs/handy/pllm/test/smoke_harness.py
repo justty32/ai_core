@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PROJ = os.path.dirname(HERE)  # cllm-py/（cllm package 所在）
+PROJ = os.path.dirname(HERE)  # pllm/（pllm package 所在）
 # fixtures 隨本副本自帶（test/fixtures/），故 handy 版自包含、離線可測；
 # 無「../core」外部相依（源出 cllm/core/test/fixtures，見 README「來源」）。
 FX_ROOT = os.path.join(HERE, "fixtures")
@@ -27,13 +27,13 @@ def fx(name):
 
 
 def run(cli_args, stdin=None, extra_env=None):
-    """跑 `python -m cllm <cli_args>`；回 (exit_code, stdout, stderr)。"""
+    """跑 `python -m pllm <cli_args>`；回 (exit_code, stdout, stderr)。"""
     env = dict(os.environ)
     env["PYTHONPATH"] = PROJ + os.pathsep + env.get("PYTHONPATH", "")
     env["PYTHONIOENCODING"] = "utf-8"  # Windows 主控台預設非 UTF-8，強制對齊
     if extra_env:
         env.update(extra_env)
-    p = subprocess.run([sys.executable, "-m", "cllm"] + cli_args,
+    p = subprocess.run([sys.executable, "-m", "pllm"] + cli_args,
                        input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        env=env, encoding="utf-8")
     return p.returncode, p.stdout, p.stderr

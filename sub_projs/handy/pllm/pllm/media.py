@@ -1,6 +1,6 @@
 """media.py — --image/--media 的 MIME 對照與三分流取值。
 
-mime_of／ext_of 對齊 cli_config.cpp 的同名對照表。build_media_item 是 core-py 特有的取值分流：
+mime_of／ext_of 對齊 cli_config.cpp 的同名對照表。build_media_item 是 pllm 特有的取值分流：
 讓 --media 除了讀二進位圖檔，也能吃「已編碼」形式（data:/http URL、或 .json 描述子），省掉每次
 重算 base64（見 README「用法」段）。
 """

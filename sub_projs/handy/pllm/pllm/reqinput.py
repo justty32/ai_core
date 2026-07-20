@@ -1,6 +1,6 @@
 """reqinput.py — 把 CLI 的請求類旗標驗證／組成 core.ask 的請求輸入（cli.cpp 組請求段）。
 
-⚠ 與 C++ llm 刻意分歧（只發生在 core-py）：--schema/--tool/--modality 的 cfg 收「字面 JSON
+⚠ 與 cllm 的 C++ llm 刻意分歧（只發生在 pllm）：--schema/--tool/--modality 的 cfg 收「字面 JSON
 文字」（同 --system），不再開檔；要吃檔案內容一律靠 shell $(cat s.json)。解 JSON 失敗＝用法錯
 （退 1）。--image/--media 的三分流取值在 media.py（build_media_item）。本檔把這些旗標收成
 core.ask 要的 schema／tools／modalities／media 四份輸入，並驗 --media-out 目錄。
