@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 list.json
 *.tmp
+
+# 編輯器本機設定
+.vscode/
