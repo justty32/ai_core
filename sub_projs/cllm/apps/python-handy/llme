@@ -19,14 +19,10 @@
 
 import os
 import sys
-import shlex
-import subprocess
 from pathlib import Path
 
-
-def getenv_nonempty(k):
-    v = os.environ.get(k)
-    return v if v else None
+import _handy
+from _handy import getenv_nonempty
 
 
 def script_dir():
@@ -108,18 +104,16 @@ def main():
 
     llm = getenv_nonempty("LLME_LLM") or "llm"
 
-    # 組轉發命令：llm --config <cfg> [--api-key <env>] <其餘參數...>
+    # 組轉發參數：llm --config <cfg> [--api-key <env>] <其餘參數...>（list-form，無 shell）
     # 自動 --api-key 放在使用者參數「之前」——命令列後者覆寫前者，使用者顯式帶的仍最終生效。
-    parts = [shlex.quote(llm), "--config", shlex.quote(str(cfg))]
+    args = ["--config", str(cfg)]
     if not user_gave_api_key(rest):
         k = auto_api_key(ep)
         if k:
-            parts.append("--api-key")
-            parts.append(shlex.quote(k))
-    for a in rest:
-        parts.append(shlex.quote(a))
+            args += ["--api-key", k]
+    args += rest
 
-    code = subprocess.call(" ".join(parts), shell=True)
+    code = _handy.spawn(llm, args)
     sys.exit(code)
 
 

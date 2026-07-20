@@ -12,11 +12,11 @@
 # 環境變數：
 #   ZHTW_LLME  覆寫 llme 執行檔（預設＝本 script 同層 sibling <script-dir>/llme）
 
-import os
 import sys
-import shlex
-import subprocess
 from pathlib import Path
+
+import _handy
+from _handy import getenv_nonempty
 
 # ── 烤死的設定（薄包裝的本體就這幾行，改這裡即換人格）─────────────
 ENDPOINT = "deepseek"
@@ -27,11 +27,6 @@ PREFIX = "翻譯以下內容：\n"
 #   翻譯設 4096 綽綽有餘。（top-p 與 temperature 慣例二擇一，這裡兩者都示範。）
 FLAGS = ["--temperature", "0.2", "--top-p", "0.9", "--max-tokens", "4096"]
 # ────────────────────────────────────────────────────────────────
-
-
-def getenv_nonempty(k):
-    v = os.environ.get(k)
-    return v if v else None
 
 
 def script_dir():
@@ -54,19 +49,15 @@ def main():
 
     prompt = PREFIX + text
 
-    # sibling 解析：預設同層 <script-dir>/llme，env ZHTW_LLME 可覆寫。
-    llme = getenv_nonempty("ZHTW_LLME") or str(script_dir() / "llme")
+    # sibling 解析：預設同層 <script-dir>/llme（我方 Python script，走 sys.executable），
+    # env ZHTW_LLME 可覆寫成任意外部命令。
+    llme_ov = getenv_nonempty("ZHTW_LLME")
+    llme = llme_ov or str(script_dir() / "llme")
 
-    # 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
-    parts = [shlex.quote(llme), shlex.quote(ENDPOINT)]
-    for f in FLAGS:
-        parts.append(shlex.quote(f))
-    parts.append("--system")
-    parts.append(shlex.quote(SYSTEM))
-    parts.append("--")
-    parts.append(shlex.quote(prompt))
+    # 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>（list-form，無 shell）
+    args = [ENDPOINT] + FLAGS + ["--system", SYSTEM, "--", prompt]
 
-    code = subprocess.call(" ".join(parts), shell=True)
+    code = _handy.spawn(llme, args, py=(llme_ov is None))
     sys.exit(code)
 
 

@@ -23,12 +23,13 @@ tools／media／modalities（v2 補齊，皆為 kwargs，可任意組合）：
 
 on_tool／on_media 回真值＝要求中止（同 on_delta 慣例）。
 
-消費穩定 C ABI（見 ../../docs/c-abi-reference.md）。libcllm.so 路徑：預設 ../../build/libcllm.so，
-可用環境變數 LIBCLLM 覆寫。範圍：prompt＋連線/取樣選項＋stream＋schema＋on_delta/on_error＋
+消費穩定 C ABI（見 ../../docs/c-abi-reference.md）。共享庫路徑：預設 ../../build/libcllm.{dll,dylib,so}
+（依 os 平台自動選副檔名），可用環境變數 LIBCLLM 覆寫。範圍：prompt＋連線/取樣選項＋stream＋schema＋on_delta/on_error＋
 tools/on_tool＋media/on_media＋modalities。
 """
 import ctypes
 import os
+import sys
 from ctypes import (CDLL, CFUNCTYPE, POINTER, Structure, byref, string_at,
                     c_char_p, c_float, c_int, c_long, c_size_t, c_uint, c_void_p)
 
@@ -68,7 +69,11 @@ class _Modality(Structure):
 
 
 class _Request(Structure):
-    _fields_ = [("prompt", c_char_p), ("schema", POINTER(_Schema)),
+    # ⚠ 欄位順序/型別須與 cabi_request.h 的 llm_request_t 逐欄一致——尤其 `system` 是
+    #   prompt 之後的第二欄；漏掉它會讓其後所有欄位位移一個指標寬（8B），導致 stream 旗標
+    #   落錯槽（→ DLL 當非串流解 SSE fixture → 空字串）、media/modalities 指標讀錯位址
+    #   （→ 存取違規）。見 gotchas/windows.md。
+    _fields_ = [("prompt", c_char_p), ("system", c_char_p), ("schema", POINTER(_Schema)),
                 ("tools", POINTER(_ToolDef)), ("tools_count", c_size_t),
                 ("media", POINTER(_MediaIn)), ("media_count", c_size_t),
                 ("modalities", POINTER(_Modality)), ("modalities_count", c_size_t),
@@ -108,7 +113,15 @@ def _lib():
     global _LIB
     if _LIB is None:
         here = os.path.dirname(os.path.abspath(__file__))
-        default = os.path.join(here, "..", "..", "build", "libcllm.so")
+        # 依平台選共享庫副檔名：Windows→.dll、macOS→.dylib、其餘（Linux/BSD）→.so。
+        # LIBCLLM 環境變數仍可覆寫整個路徑（跨平台一致）。
+        if sys.platform.startswith("win"):
+            libname = "libcllm.dll"
+        elif sys.platform == "darwin":
+            libname = "libcllm.dylib"
+        else:
+            libname = "libcllm.so"
+        default = os.path.join(here, "..", "..", "build", libname)
         path = os.environ.get("LIBCLLM", default)
         lib = CDLL(path)
         lib.llm_ask.restype = c_int
@@ -117,7 +130,7 @@ def _lib():
     return _LIB
 
 
-def ask(prompt, endpoint=None, *, api_key=None, model=None, timeout_ms=None,
+def ask(prompt, endpoint=None, *, system=None, api_key=None, model=None, timeout_ms=None,
         temperature=None, top_p=None, presence_penalty=None, frequency_penalty=None,
         max_tokens=None, seed=None, stream=False, schema=None,
         tools=None, on_tool=None, media=None, modalities=None, on_media=None,
@@ -199,6 +212,7 @@ def ask(prompt, endpoint=None, *, api_key=None, model=None, timeout_ms=None,
 
     r = _Request()
     r.prompt = cstr(prompt)
+    r.system = cstr(system)
     r.stream = 1 if stream else 0
     sc = _Schema()
     if schema is not None:

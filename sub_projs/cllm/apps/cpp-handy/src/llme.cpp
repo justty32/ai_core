@@ -67,6 +67,7 @@ static void usage(const std::string& dir) {
 }
 
 int main(int argc, char** argv) {
+  HANDY_INIT_ARGV();
   std::vector<std::string> args(argv, argv + argc);  // args[0]=prog、args[1]=endpoint …
 
   std::string dir = getenv_nonempty("LLME_CONFIG_DIR").value_or(handy::app_root() + "/configs");

@@ -1,0 +1,14 @@
+# cllm 的行尾規範。動機：core.autocrlf=true 的 Windows 檢出會把 LF 檔轉 CRLF，
+# 而 test/fixtures 是「位元組精確」的假 HTTP 回應——SSE fixture（fake_stream）的
+# data:…\n\n 邊界被塞進 \r 就解不出 → 串流回空字串（見 gotchas/windows.md）。
+# 故 fixtures 一律當二進位（-text，永不轉換）；bash 腳本鎖 LF（CRLF 會壞 shebang/解析）。
+
+core/test/fixtures/** -text
+
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Windows 專屬腳本用 CRLF（PowerShell/cmd 慣例）
+*.ps1  text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf

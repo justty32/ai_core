@@ -48,6 +48,7 @@ static std::string heuristic_route(const std::string& text) {
 }
 
 int main(int argc, char** argv) {
+  HANDY_INIT_ARGV();
   std::vector<std::string> args(argv, argv + argc);
 
   // ── 解析前置旗標（-b/-a/-i、-- 停止、-h）＋收任務詞 ──────────
@@ -93,7 +94,7 @@ int main(int argc, char** argv) {
   }
 
   std::string endpoint = getenv_nonempty("WF_ENDPOINT").value_or("deepseek");
-  std::string llme = getenv_nonempty("WF_LLME").value_or(handy::script_dir() + "/llme");
+  std::string llme = getenv_nonempty("WF_LLME").value_or(handy::sibling("llme"));
   std::string claude = getenv_nonempty("WF_CLAUDE").value_or("claude");
   // WF_SYSTEM：未設（NULL）→ 預設繁中；已設（含空字串）→ 用其值（空字串關掉）。
   const char* sys_env = std::getenv("WF_SYSTEM");
@@ -126,13 +127,22 @@ int main(int argc, char** argv) {
 
   // inbox 模式：非同步投遞，轉呼同層 mail send（task 與 ctx 分開傳，slug 才乾淨）。
   if (route == "inbox") {
-    std::string mail = handy::script_dir() + "/mail";
+    std::string mail = handy::sibling("mail");
     std::string send_task = !task.empty() ? task : ctx;
     std::string base = handy::join({shquote(mail), "send", shquote(send_task)});
-    std::string cmd = (has_ctx && !task.empty())
-                        ? ("printf %s " + shquote(ctx) + " | " + base)
-                        : base;
-    return handy::run_system(cmd);
+    if (has_ctx && !task.empty()) {
+      // ctx 經 stdin 餵給 mail send。POSIX 用 `printf %s <ctx> | mail`；Windows 無 printf，
+      // 改以 _popen("w") 開 mail 的 stdin 寫入（run_system 走 cmd.exe，路徑一致）。
+#ifdef _WIN32
+      FILE* p = handy::popen_cmd(base, "w");
+      if (!p) return 127;
+      std::fwrite(ctx.data(), 1, ctx.size(), p);
+      return handy::pclose_cmd(p);  // _pclose 直接回子程序 exit code
+#else
+      return handy::run_system("printf %s " + shquote(ctx) + " | " + base);
+#endif
+    }
+    return handy::run_system(base);
   }
 
   // ── 執行（brain / agent 當場跑）──────────────────────────────

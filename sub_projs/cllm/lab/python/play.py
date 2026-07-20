@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """play.py — cllm Python binding：基本 ask、串流、schema+JSON 解析、shell(CLI) 呼叫。
-跑：source ~/dev/cllm/env.sh 後  python3 play.py "$CLLM_FIXTURES" """
+POSIX 跑：source ~/dev/cllm/env.sh 後  python3 play.py "$CLLM_FIXTURES"
+Windows 跑：pwsh -File run.ps1（湊好 PYTHONPATH/LIBCLLM/PATH/fixtures URI）"""
 import sys, json, subprocess
 import llm
 base = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -42,6 +43,10 @@ except llm.LLMError as e:
     print("[py] media in+modality =>", e)
 
 # shell 呼叫：從 Python 呼叫 llm CLI，捕捉答案
+#   ⚠ Windows 兩個坑（兩者對 POSIX 也無害，故不分平台）：
+#   ① stdin=DEVNULL：llm 是 unix filter，會讀 inherited stdin；不給 EOF 會卡住等輸入。
+#   ② encoding="utf-8"：llm 輸出 UTF-8，但 text=True 在 Windows 用 locale 碼頁（繁中 cp950）
+#      解碼會炸 UnicodeDecodeError，須顯式指定 utf-8。
 out = subprocess.run(["llm", "你好", "--endpoint", ep("fake/chat/completions")],
-                     capture_output=True, text=True)
+                     capture_output=True, encoding="utf-8", stdin=subprocess.DEVNULL)
 print("[py] shell(llm) =>", out.stdout.strip())

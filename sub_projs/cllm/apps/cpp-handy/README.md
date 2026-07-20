@@ -63,6 +63,21 @@ STD=c++20 ./build.sh       # 換標準（預設 c++23）
 `build.sh` 對每支工具跑 `$CXX -std=$STD -O2 -Isrc src/<tool>.cpp -o bin/<tool>`。純 shell-out，
 不需 pkg-config／libcllm。
 
+> **Windows（PowerShell）**：`pwsh -File build.ps1` → `bin\{llme,zhtw,wf,mail}.exe`（額外連 `-lshell32`），
+> 之後 `.\bin\llme.exe …` 照跑。跨平台細節全在 `util.hpp` 的 `#ifdef _WIN32`：run_system/capture 走
+> **`_wsystem`/`_wpopen`（寬字元）**——cmd.exe 才正確吃 UTF-8 中文，narrow `system()` 會用 cp950 解成
+> mojibake；`shquote` 改 cmd.exe 兩層轉義（MSVCRT argv-quote＋metacharacter caret）；`script_dir` 用
+> `GetModuleFileNameA`、sibling 解成 `<name>.exe`；`HANDY_INIT_ARGV()` 從 `GetCommandLineW` 還原
+> UTF-8 中文參數（narrow argv 是 cp950，表達不了）；mail 的檔案路徑走 `fspath()`（寬字元 path，中文
+> 檔名才落對）。走 cmd.exe 的好處＝echo（內建）／claude.cmd（PATHEXT）／llm.exe／sibling .exe 全自然解析。
+> dry-run 用法（`[Console]::OutputEncoding` 設 UTF-8、stdin EOF 用 `$null |`）：
+>
+> ```powershell
+> [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+> $env:LLME_LLM="echo"; .\bin\llme.exe deepseek --stream hi
+> $env:WF_LLME="echo"; $env:WF_CLAUDE="echo"; $null | .\bin\wf.exe 幫我修改 foo.py
+> ```
+
 ### 1. 離線 dry-run（不觸網，把外部命令換成 echo）
 
 ```sh

@@ -22,10 +22,10 @@ using handy::getenv_nonempty;
 static std::vector<std::string> list_md(const std::string& dir) {
   std::vector<std::string> out;
   std::error_code ec;
-  for (auto& e : std::filesystem::directory_iterator(dir, ec)) {
+  for (auto& e : std::filesystem::directory_iterator(handy::fspath(dir), ec)) {
     if (ec) break;
     if (!e.is_regular_file(ec)) continue;
-    std::string name = e.path().filename().string();
+    std::string name = handy::path_to_utf8(e.path().filename());  // Windows 中文檔名要 UTF-8 還原
     const std::string suf = ".md";
     if (name.size() > suf.size() && name.compare(name.size() - suf.size(), suf.size(), suf) == 0)
       out.push_back(name.substr(0, name.size() - suf.size()));
@@ -80,18 +80,19 @@ static std::string slugify(const std::string& task) {
 }
 
 static std::string read_file(const std::string& p) {
-  std::ifstream f(p, std::ios::binary);
+  std::ifstream f(handy::fspath(p), std::ios::binary);
   if (!f) return "";
   std::ostringstream ss; ss << f.rdbuf();
   return ss.str();
 }
 
 static void write_file(const std::string& p, const std::string& body) {
-  std::ofstream f(p, std::ios::binary);
+  std::ofstream f(handy::fspath(p), std::ios::binary);
   f << body;
 }
 
 int main(int argc, char** argv) {
+  HANDY_INIT_ARGV();
   std::vector<std::string> args(argv, argv + argc);
 
   std::string inbox_dir = getenv_nonempty("INBOX_DIR").value_or(handy::app_root() + "/inbox");
@@ -99,7 +100,7 @@ int main(int argc, char** argv) {
 
   auto ensure_dirs = [&]() {
     std::error_code ec;
-    std::filesystem::create_directories(done_dir, ec);
+    std::filesystem::create_directories(handy::fspath(done_dir), ec);
   };
 
   auto unique_path = [&](const std::string& slug) -> std::string {
@@ -180,7 +181,7 @@ int main(int argc, char** argv) {
       int code = handy::run_system(cmd);
       if (code == 0) {
         std::error_code ec;
-        std::filesystem::rename(path, done_dir + "/" + slug + ".md", ec);
+        std::filesystem::rename(handy::fspath(path), handy::fspath(done_dir + "/" + slug + ".md"), ec);
         std::cout << "  ✓ 完成，歸檔 → done/" << slug << ".md\n";
       } else {
         std::cerr << "  ✗ claude 退出碼 " << code << "，保留在 inbox（未歸檔）\n";

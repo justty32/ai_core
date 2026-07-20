@@ -70,6 +70,20 @@ WF_CLAUDE=false ./mail run <slug>  # 失敗 → 保留 inbox、印 ✗、exit 1
 LLME_LLM=echo ./zhtw 測試          # → --config …/deepseek.json … --system … -- 翻譯以下內容：\n測試
 ```
 
+> **Windows（PowerShell/cmd）**：四支工具是無副檔名 Python script，用 `python llme …` 跑，或用同層
+> `.cmd` shim 直接 `llme …`（`llme.cmd` 內即 `python "%~dp0llme" %*`）。跨平台細節全在 `_handy.py`
+> ——**list-form subprocess、無 shell**（取代原 `shell=True`＋POSIX `shlex.quote`，那在 cmd.exe 會壞）：
+> sibling（llme/mail）走 `sys.executable`、`.cmd`/`.bat` 外部命令（如 npm 裝的 claude.cmd）自動包
+> `cmd /c`、`echo` dry-run 轉接同層 `_echo.py` 蟬（Windows 無 echo.exe）。dry-run 語意與上面 POSIX 一致：
+>
+> ```powershell
+> $env:PYTHONIOENCODING="utf-8"                                  # 中文輸出
+> $env:LLME_LLM="echo"; python llme deepseek --stream hi         # 或 .\llme.cmd deepseek …
+> $env:WF_LLME="echo"; $env:WF_CLAUDE="echo"; $null | python wf 幫我修改 foo.py
+> $env:INBOX_DIR="$env:TEMP\inbox"; $null | python mail send 測試任務; python mail list
+> ```
+> ⚠ PowerShell 無 `<` 重導，stdin 給 EOF 用 `$null | …`。
+
 ### 2. 真後端 DeepSeek
 
 ```sh

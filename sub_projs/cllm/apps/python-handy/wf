@@ -24,14 +24,10 @@
 
 import os
 import sys
-import shlex
-import subprocess
 from pathlib import Path
 
-
-def getenv_nonempty(k):
-    v = os.environ.get(k)
-    return v if v else None
+import _handy
+from _handy import getenv_nonempty
 
 
 def script_dir():
@@ -41,11 +37,6 @@ def script_dir():
 # stdin 被 pipe / 重導才讀（非 tty，安全），避免互動卡等 EOF。
 def stdin_piped():
     return not sys.stdin.isatty()
-
-
-def capture(cmd):
-    r = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
-    return (r.stdout or b"").decode("utf-8", "replace")
 
 
 # ── 啟發式路由關鍵詞（一字不差照抄 Fennel 版）─────────────────────────
@@ -87,15 +78,11 @@ CLASSIFY_SYS = (
 )
 
 
-def classify(text, llme, endpoint):
+def classify(text, llme, endpoint, llme_py):
     # 回 "agent" 或 "brain"；不清楚/失敗 → "agent"（偏向能完成動手任務，較安全）
-    cmd = " ".join([
-        shlex.quote(llme), shlex.quote(endpoint),
-        "--temperature", "0", "--max-tokens", "16",
-        "--system", shlex.quote(CLASSIFY_SYS),
-        "--", shlex.quote(text),
-    ])
-    out = capture(cmd).strip().upper()
+    args = [endpoint, "--temperature", "0", "--max-tokens", "16",
+            "--system", CLASSIFY_SYS, "--", text]
+    out = _handy.capture(llme, args, py=llme_py).strip().upper()
     if "BRAIN" in out:
         return "brain"
     if "AGENT" in out:
@@ -151,57 +138,53 @@ def main():
         sys.exit(2)
 
     endpoint = getenv_nonempty("WF_ENDPOINT") or "deepseek"
-    llme = getenv_nonempty("WF_LLME") or str(script_dir() / "llme")
+    # llme：預設同層 sibling（我方 Python script，走 sys.executable）；WF_LLME 可覆寫成外部命令。
+    llme_ov = getenv_nonempty("WF_LLME")
+    llme = llme_ov or str(script_dir() / "llme")
+    llme_py = llme_ov is None
     claude = getenv_nonempty("WF_CLAUDE") or "claude"
     _s = os.environ.get("WF_SYSTEM")
     system = "與使用者溝通時用繁體中文。" if _s is None else _s
 
     # 決策順序：強制旗標 ＞ 啟發式（免 LLM）＞ LLM 分類（只有前兩者沒定案才呼叫）
     heur = None if force else heuristic_route(prompt)
-    route = force or heur or classify(prompt, llme, endpoint)
+    route = force or heur or classify(prompt, llme, endpoint, llme_py)
     how = "強制" if force else ("啟發式・免 LLM" if heur else ("llme 分類，endpoint=" + endpoint))
     sys.stderr.write("[wf] 路由：" + route + "（" + how + "）\n")
 
     # inbox 模式：非同步投遞，轉呼同層 mail send（task 與 ctx 分開傳，slug 才乾淨）。
     if route == "inbox":
-        mail = str(script_dir() / "mail")
+        mail = str(script_dir() / "mail")   # 我方 sibling（Python script）
         send_task = task if len(task) > 0 else (ctx or "")
-        base = " ".join([shlex.quote(mail), "send", shlex.quote(send_task)])
-        if has_ctx and len(task) > 0:
-            cmd = "printf %s " + shlex.quote(ctx) + " | " + base
-        else:
-            cmd = base
-        code = subprocess.call(cmd, shell=True)
+        # ctx 經 stdin 餵給 mail send（取代 POSIX 的 `printf %s <ctx> | mail send`）。
+        stdin = ctx.encode("utf-8") if (has_ctx and len(task) > 0) else None
+        code = _handy.spawn(mail, ["send", send_task], py=True, input=stdin)
         sys.exit(code)
 
     # ── 執行（brain / agent 當場跑）──────────────────────────────────────
     if route == "brain":
-        # 只需腦 → llme（DeepSeek）直接答，串流吐出
-        parts = [shlex.quote(llme), shlex.quote(endpoint), "--stream"]
+        # 只需腦 → llme（DeepSeek，我方 sibling）直接答，串流吐出
+        prog, prog_py = llme, llme_py
+        args = [endpoint, "--stream"]
         if len(system) > 0:
-            parts.append("--system")
-            parts.append(shlex.quote(system))
-        parts.append("--")
-        parts.append(shlex.quote(prompt))
+            args += ["--system", system]
+        args += ["--", prompt]
     else:
-        # 要動手 → claude -p headless agent（在當前目錄動手）
+        # 要動手 → claude -p headless agent（外部命令，在當前目錄動手）
         permission = getenv_nonempty("WF_PERMISSION") or "acceptEdits"
-        parts = [shlex.quote(claude), "-p", "--permission-mode", shlex.quote(permission)]
+        prog, prog_py = claude, False
+        args = ["-p", "--permission-mode", permission]
         if len(system) > 0:
-            parts.append("--append-system-prompt")
-            parts.append(shlex.quote(system))
+            args += ["--append-system-prompt", system]
         m = getenv_nonempty("WF_MODEL")
         if m:
-            parts.append("--model")
-            parts.append(shlex.quote(m))
+            args += ["--model", m]
         e = getenv_nonempty("WF_EFFORT")
         if e:
-            parts.append("--effort")
-            parts.append(shlex.quote(e))
-        parts.append("--")
-        parts.append(shlex.quote(prompt))
+            args += ["--effort", e]
+        args += ["--", prompt]
 
-    code = subprocess.call(" ".join(parts), shell=True)
+    code = _handy.spawn(prog, args, py=prog_py)
     sys.exit(code)
 
 

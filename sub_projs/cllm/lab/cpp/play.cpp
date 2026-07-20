@@ -1,10 +1,17 @@
 // play.cpp — cllm C++ 便利層（llm.hpp + llm_reflect.hpp）＋ shell(CLI) 呼叫。
-// 編：g++ -std=c++23 play.cpp $(pkg-config --cflags --libs cllm) -o example
-// 跑：source ~/dev/cllm/env.sh 後  ./play "$CLLM_FIXTURES"
+// POSIX 編：g++ -std=c++23 play.cpp $(pkg-config --cflags --libs cllm) -o example
+//      跑：source ~/dev/cllm/env.sh 後  ./play "$CLLM_FIXTURES"
+// Windows 跑：pwsh -File run.ps1（組 <cllm/…> include layout＋glaze＋-lcllm，見該檔）
 #include <cstdio>
 #include <string>
 #include <cllm/llm.hpp>         // 便利層：聚合 ask／expected 錯誤／串流糖／media helpers
 #include <cllm/llm_reflect.hpp> // glaze 反射糖：ask_as<T>／make_tool<Args>／args_as<Args>
+
+// Windows 的 popen/pclose 叫 _popen/_pclose（POSIX 名在嚴格 ISO 下不宣告）。
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
 
 static llm::Client client_for(const std::string &base, const char *leaf) {
   llm::Client c;
@@ -71,7 +78,15 @@ int main(int argc, char **argv) {
   std::printf("[cpp] media in+modality => %s\n", multi ? "ok" : multi.error().message.c_str());
 
   // 7) shell 呼叫 llm CLI（unix filter）
-  std::string cmd = "llm 你好 --endpoint '" + base + "fake/chat/completions'";
+  //   ⚠ Windows 兩坑（POSIX 分支維持原樣）：① cmd.exe 的引號是雙引號、單引號不轉義
+  //      → endpoint 用平台對應引號字元。② llm 是 filter 會讀 stdin，popen 的子程序繼承
+  //      我方 stdin（可能是 console）→ 不給 EOF 會卡住 → 明確從 NUL/dev/null 導入。
+#ifdef _WIN32
+  const char *Q = "\"", *DEVNULL = " < NUL";
+#else
+  const char *Q = "'", *DEVNULL = " < /dev/null";
+#endif
+  std::string cmd = "llm 你好 --endpoint " + std::string(Q) + base + "fake/chat/completions" + Q + DEVNULL;
   std::string out;
   if (FILE *p = popen(cmd.c_str(), "r")) {
     char b[512]; size_t n;

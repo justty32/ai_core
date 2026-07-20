@@ -26,6 +26,7 @@ static const std::vector<std::string> FLAGS = {
 // ────────────────────────────────────────────────────────────────
 
 int main(int argc, char** argv) {
+  HANDY_INIT_ARGV();
   std::vector<std::string> words(argv + 1, argv + argc);
 
   // 有位置參數＝所有參數併成一句；否則讀 stdin（僅非 tty 才讀，避免互動卡等 EOF）。
@@ -43,7 +44,7 @@ int main(int argc, char** argv) {
   std::string prompt = PREFIX + text;
 
   // sibling 解析：預設 <script-dir>/llme，可用 ZHTW_LLME 覆寫。
-  std::string llme = handy::getenv_nonempty("ZHTW_LLME").value_or(handy::script_dir() + "/llme");
+  std::string llme = handy::getenv_nonempty("ZHTW_LLME").value_or(handy::sibling("llme"));
 
   // 組：llme <ENDPOINT> <FLAGS...> --system <SYSTEM> -- <prompt>
   std::vector<std::string> parts = {shquote(llme), shquote(ENDPOINT)};

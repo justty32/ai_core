@@ -46,12 +46,17 @@ API 三句話：`ask(prompt[, endpoint], opts…)` 回完整答案字串；`on_d
 - **真相源**：本資料夾的 `play.*` 抄自 `~/repo/ai_core/sub_projs/cllm/core/bindings/<lang>/example.*`——
   lab 是暫存遊樂場，**值得留的成果記得搬回 repo**。
 
-## Windows（MinGW）註記
+## Windows（PowerShell）
 
-- **C++ 庫路徑已在 Windows 驗綠**（2026-07-20，mingw64 g++16.1.0）：`cpp/play.cpp` 的六大能力
-  （ask／stream／`ask_as<T>` 反射／tool／media out／media in）連結 `libcllm.dll.a`＋glaze 後全對。
-  但**繞過了 `install-dev.sh`／pkg-config**（手工組 include layout＋直接 `-I…/src -I…/glaze -L…/build -lcllm`）——
-  Windows 沒 pkg-config，`run.sh` 那條走不了；打包層（`~/dev` 前綴）在 Windows 尚未驗。
-- **`play.cpp` 第 7 步（shell-out 呼 `llm` CLI）在 Windows 失敗**、非 cllm 問題：那句 `popen("llm … --endpoint 'file://…'")`
-  用單引號，Windows `popen`／`system` 走 `cmd.exe`、單引號非引號 → llm 收到帶引號 endpoint → URL 解析失敗。
-  同 cpp-handy 的 POSIX-shell 假設坑（見 cllm [gotchas/windows](../core/workflows/common/gotchas/windows.md)）。
+**cpp／python 兩個 lab 都有 `run.ps1`，原生 PowerShell 直接跑、全綠**（2026-07-20，mingw64 g++16.1.0＋Python 3.14）：
+
+```powershell
+cd cpp;    pwsh -File run.ps1     # 或 cd python; pwsh -File run.ps1（離線 fixture，全綠）
+pwsh -File run.ps1 http://localhost:1234/v1/   # 打真後端（結尾要有 /）
+```
+
+- **不靠 `install-dev.sh`／pkg-config**（Windows 無）；`run.ps1` 就地把條件湊齊：
+  - `cpp/run.ps1`：組 `<cllm/…>` include layout（便利層＋cabi 頭複製進 `.cllm-include/cllm/`）＋glaze include＋`-L build -lcllm`，編 `.play.exe` 再跑——六大能力全綠。
+  - `python/run.ps1`：湊好 `PYTHONPATH`（→ bindings/python）＋`LIBCLLM`（→ `libcllm.dll`，`llm.py` 現已依平台自動選副檔名）＋`PATH`（→ build，第 7 步找 `llm.exe`）＋fixtures 真磁碟 `file:///C:/…` URI——七步全綠（含串流、media＋modality）。
+- 兩個 `play.*` 的第 7 步 shell-out 已就地修為跨平台（cmd.exe 用雙引號＋`< NUL`；Python 用 `stdin=DEVNULL`＋`encoding=utf-8`）。
+- **深入的 Windows 消費坑**——庫載入、串流/media＋modality 曾崩的 `_Request` struct 錯位**根因與根治**、fixtures 被 autocrlf 轉 CRLF 弄壞 SSE——全記在 [gotchas/windows](../core/workflows/common/gotchas/windows.md)。
