@@ -1,0 +1,1 @@
+{"id":"chatcmpl-media","object":"chat.completion","created":1234567890,"model":"local-model","choices":[{"index":0,"message":{"role":"assistant","content":"這是語音回覆","audio":{"id":"audio-1","data":"aGVsbG8td2F2LWJ5dGVz","format":"wav"}},"finish_reason":"stop"}],"usage":{"prompt_tokens":30,"completion_tokens":12,"total_tokens":42}}

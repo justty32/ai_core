@@ -1,0 +1,10 @@
+# Python 產物（不入版控）
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+# 自測暫存（cli_smoke.py 會自清，保險再擋一層）
+test/_smoke_*.json
+test/llm-media-*.wav

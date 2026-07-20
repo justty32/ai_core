@@ -1,0 +1,1 @@
+{"id":"chatcmpl-fake","object":"chat.completion","created":1234567890,"model":"local-model","choices":[{"index":0,"message":{"role":"assistant","content":"哼，才不是為你回答的……下不為例喔。"},"finish_reason":"stop"}],"usage":{"prompt_tokens":42,"completion_tokens":21,"total_tokens":63}}
