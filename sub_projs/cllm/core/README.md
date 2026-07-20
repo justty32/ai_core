@@ -56,7 +56,7 @@ llm 生成一個傲嬌角色 --schema ./char.json   # JSON Schema 檔 → 結構
 
 > **完整旗標表／config 三層來源／退出碼（0/1/2/130）／離線自測** → [CLI 手冊](docs/cli-manual.md)。
 
-## 接真後端（本機 LM Studio）
+## 接真後端（本機 LM Studio／雲端 OpenRouter）
 
 離線 fixture 是**回歸測試**（`test/cli_smoke.sh` 全走 `file://`、不連網）。要打**真的**本機 LM Studio，把 `llm` 的 `--endpoint` 指過去（或寫進 config 檔）：
 
@@ -69,6 +69,22 @@ llm 用一句話介紹你自己 --endpoint http://localhost:1234/v1/chat/complet
 - **`endpoint`**：到 `/v1/chat/completions` 為止的完整 URL。**`model`**：LM Studio 接受 `local-model`（用已載入模型）；雲端 API 需真實 model id＋`api_key`。**`timeout_ms`**：真後端（尤其 reasoning）單次可能等數十秒，config 設 `120000` 寬裕些。
 - ⚠ **真後端的行為（含錯誤路徑）要靠真後端驗**（離線 `file://` fixture 從不回錯）：C ABI 的後端錯誤護欄（`guard_backend_error`）就是真後端驗揪出來修的。
 - ⚠ **reasoning 模型的 `max_tokens` 陷阱**（`google/gemma-4-e4b` 實測血淚）：思考鏈（`reasoning_content`）與答案（`content`）共用同一份 `max_tokens` 預算，設小值（如 600）會讓 reasoning 吃光、`content` 變空。**打 reasoning 時刻意不設 `--max-tokens`**，交後端用 context 上限。細節見 [gotchas/backend](workflows/common/gotchas/backend.md)。
+
+### 雲端：OpenRouter（實測綠，2026-07-20）
+
+任何 **OpenAI 相容**雲端端點裸接即通（cllm 硬編 `Authorization: Bearer`＋OpenAI wire format）。**OpenRouter 已對真後端驗綠**（Windows `build/llm.exe`，非串流＋`--stream` 兩路 exit 0）：
+
+```json
+{
+  "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+  "model":    "tencent/hy3:free",
+  "api_key":  "sk-or-...",
+  "timeout_ms": 120000
+}
+```
+
+- 一個閘道就把下面幾百個模型接上：`deepseek/…`、`openai/gpt-4o-mini`、`anthropic/claude-…`、`google/gemini-…` 都靠改 `model` 一欄切換（DeepSeek／OpenAI 直連也同理，各自的 OpenAI 相容端點填 key 即可；**Anthropic 直連**才要走 [anthropic-proxy](tools/anthropic-proxy/README.md)）。
+- ⚠ **OpenRouter 的 `:free` slug 是帳號權限 gated**（2026-07-20 實測揪出）：`deepseek-…:free`／`llama-3.3-70b:free` 回 HTTP 404「免費版已下架、改用付費 slug」，`gemini-2.0-flash-exp:free` 回「無端點」，同帳號只有 `tencent/hy3:free` 打得動。**免費清單依帳號／時間而變**，換家要重試。此路正好順帶驗到真後端錯誤路徑——OpenRouter 的 404 被 `guard_backend_error` 正確攔成結構化錯誤（exit 2）、沒被吞成空字串。
 
 ## 更多文檔
 
