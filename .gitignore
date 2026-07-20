@@ -6,5 +6,5 @@ __pycache__/
 list.json
 *.tmp
 
-# 編輯器本機設定
-.vscode/
+# 編輯器本機設定（只忽略 repo 根的，不動子專案內的 .vscode 模板）
+/.vscode/
