@@ -57,7 +57,10 @@ if(WIN32)
     # --exclude-libs,ALL：自動匯出只涵蓋專案自身符號，排除靜態庫（libgcc/libstdc++）的
     # runtime 符號——否則 g++16.1.0 下 DLL 會連 _Unwind_Resume 一起匯出，與消費端
     # exe 的 -static-libgcc 撞成 multiple definition（見 common/gotchas）。
-    target_link_options(cllm PRIVATE -static-libgcc -static-libstdc++ -Wl,--exclude-libs,ALL)
+    # -static（非只 -static-libgcc/-libstdc++）：連 libwinpthread 也靜態包入，DLL 自足、
+    # 不依賴 mingw runtime DLL——否則下游（如 Python ctypes、pkg-config link）載 .dll 時
+    # 還要另找 libwinpthread-1.dll（見 common/gotchas/windows）。
+    target_link_options(cllm PRIVATE -static -Wl,--exclude-libs,ALL)
 else()
     # 非 Windows：http 模組走 libcurl（vcpkg 裝 curl；見 vcpkg.json 註）
     find_package(CURL REQUIRED)
@@ -82,7 +85,7 @@ target_compile_options(llm PRIVATE
 
 if(WIN32)
     # -municode：wmain 取寬字元命令列（中文 argv 不亂碼），對齊舊 try_3 exe。
-    target_link_options(llm PRIVATE -municode -static-libgcc -static-libstdc++)
+    target_link_options(llm PRIVATE -municode -static)
 endif()
 
 # ── 安裝規則：常駐 prefix（如 ~/dev），變成可 include/link 的東西 ──
