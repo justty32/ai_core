@@ -17,6 +17,7 @@
 | **要建置／裝依賴** | [建置環境與依賴](setup.md) |
 | **查平台分流／跨機 preset** | [平台與傳輸](platform.md) |
 | **除錯／編輯器 LSP** | [除錯與編輯器整合](debugging.md) |
+| **要對某後端做結構化輸出**（json_schema／tool 哪個吃）| [各後端結構化輸出矩陣](backend-structured-output.md) |
 
 ## 檔案清單
 
@@ -31,6 +32,7 @@
 | [`setup.md`](setup.md) | 建置環境需求（Windows／Linux）＋ vcpkg manifest 依賴（glaze／triplet）|
 | [`platform.md`](platform.md) | 平台分流：native HTTP（WinHTTP／libcurl／`file://`）＋ 跨平台雙機 preset |
 | [`debugging.md`](debugging.md) | VSCode/gdb 除錯 ＋ clangd（nvim/VSCode 共用）＋ 設計要點（static／中文／SAC／gdb）|
+| [`backend-structured-output.md`](backend-structured-output.md) | 主題：15 家後端對 json_schema／json_object／tool calling 的支援矩陣（DeepSeek 實測＋其餘文檔依據，2026-07-20）|
 
 ## 這些 docs 怎麼維護
 
