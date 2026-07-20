@@ -1,0 +1,26 @@
+# pyproject.toml — cllm core-py（純 Python 平行實作）的封裝。
+#
+# 相依政策：這塊「可以用 PyPI 套件」（見 ../../../CLAUDE.md 對本子專案的放寬），但權衡後
+# 選擇「零外部相依」——工作量（單次 POST ＋ SSE 逐行拆框）標準庫 urllib/json 就乾淨覆蓋，
+# 換得零安裝、跨平台、與 C ABI 那條「小、免開發環境」的敘事一致。若日後要連線池／HTTP2／
+# 重試策略，再引 httpx 才划算。
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cllm-core-py"
+version = "0.1.0"
+description = "cllm 的純 Python 平行實作：直接打 OpenAI 相容 /chat/completions（不碰 C ABI）"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []  # 刻意維持零外部相依（見檔頭權衡）
+
+[project.scripts]
+cllm = "cllm.cli:_entry"
+# 亦註冊 `llm` 同名指令（用法鏡像 C++ 的 llm CLI）；⚠ 與 core/ 建出的原生 `llm` 執行檔可能撞名，
+# 二選一裝或用虛擬環境隔離。只想要不撞名的就用 `cllm`／`python -m cllm`。
+llm = "cllm.cli:_entry"
+
+[tool.setuptools]
+packages = ["cllm"]
