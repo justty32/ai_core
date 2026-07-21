@@ -7,6 +7,12 @@
     "timeout_ms": 120000,
     "api_key": { "$env": "DEEPSEEK_API_KEY" }
   },
+  "openrouter": {
+    "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "model": "cohere/north-mini-code:free",
+    "timeout_ms": 120000,
+    "api_key": { "$env": "OPENROUTER_API_KEY" }
+  },
   "local": {
     "endpoint": { "$ref": "_lmstudio" },
     "model": "google/gemma-4-e4b",

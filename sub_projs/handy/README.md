@@ -134,6 +134,7 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 
 ```sh
 ./llme.py deepseek 一句話介紹你自己      # 雲端 DeepSeek（需 DEEPSEEK_API_KEY）
+./llme.py openrouter 你好                # OpenRouter 免費模型（需 OPENROUTER_API_KEY）
 ./llme.py deepseek --stream 你好         # 透傳 --stream 等所有 util.llm 旗標
 ./llme.py local 你好                     # 本機 LM Studio（無 key；目前多離線）
 ./llme.py --help                         # 用法＋可用 endpoint

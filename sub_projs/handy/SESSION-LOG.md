@@ -13,7 +13,9 @@
   - 分歧三處（已寫進 README／`call.py` docstring）：endpoint 仍收完整 URL、內部剝成 `api_base`；model 自動加 `openai/` 前綴（`LLM_RAW_MODEL=1` 可關）；`drop_params` 開著。`file://` 保留為**非串流** fixture 逃生口。
   - **踩到並修掉一個真 bug**：litellm 的 openai provider **一律要求 api_key**，不給就丟 `InternalServerError`——連本機免認證端點都打不出去（`llme local`／`qwen` 首當其衝，舊 pllm 無 key 就不送 header 故無此限）。修法＝沒給 key 時補佔位字串 `handy-no-auth`，已加迴歸測試守門。
   - 驗證：`python util/llm/test/smoke.py` 離線 30/30 過（裝與沒裝 litellm 兩種解釋器都過）；另起 stdlib 假後端做端到端實跑，**非串流／串流／system＋schema＋取樣參數全通**，比對後端實收 body 正確。
-  - **open 尾巴**：①**真雲端 API 仍未打過**（待使用者 DeepSeek key）——目前所有實跑都對本機假後端；②本機 LM Studio 未實測（多離線）；③tool_calls 只驗到 fixture 解析，未經真後端往返；④C++ cllm 非 Python 消費者現況待盤（定退休時程）。
+  - **真雲端已打通**（2026-07-21，用使用者的臨時 OpenRouter free-tier key，已過期）：新增 `openrouter` endpoint，模型 `cohere/north-mini-code:free`，**非串流／串流／`--system`／`--tool`／stdin 合體全過**，tool_calls 真後端往返也驗到（不再只是 fixture）。
+  - **open 尾巴**：①`--schema` 在該免費模型上**沒生效**——模型回的是散文＋markdown JSON，不是嚴格結構化輸出。請求組裝本身正確（假後端已比對欄位無誤），疑似 litellm `drop_params=True` 把後端不支援的 `response_format` 靜默丟掉了；**`drop_params` 的靜默丟棄是雙面刃，待觀察**。②本機 LM Studio 未實測（多離線）。③C++ cllm 非 Python 消費者現況待盤（定退休時程）。
+  - ⚠ 免費模型 slug 會下架：`tencent/hy3:free` 已轉付費、`google/gemma-4-31b-it:free` 上游限流。要重測請先查 `https://openrouter.ai/api/v1/models` 挑當下真的免費的。
 - **本輪定位＝測試，「零相依」暫時擱置**（2026-07-21，使用者裁示）。`util.llm` 依賴 litellm 與 AGENTS.md 鐵律 1 相衝，但現階段只是**試裝試打**、不是拍板的架構決定：**別為此改頂層 AGENTS.md，也別再拿這條出來當待辦問**。等 litellm 這條路試出體感再談去留。
 
 ## 開發環境（本機 durable 注記 · Windows）
