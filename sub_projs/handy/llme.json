@@ -1,26 +1,56 @@
 {
-  "_notes": "llme 的 endpoint 設定：<endpoint 名> → { 欄位: 值 }。欄位名就是 util.llm 的旗標名、底線換連字號（timeout_ms → --timeout-ms），所以想固定 temperature 之類的直接加一欄，不必改 llme.py；沒填的欄位會跳過（用後端預設）。慣用四欄：endpoint／model／timeout_ms／api_key。指令式節點（見 util/README.md）：{\"$env\":\"VAR\"[,\"default\":…]} 取環境變數（未設且無 default → null）；{\"$ref\":\"#a/b\"} 引用本檔片段、{\"$ref\":\"other.json\"} 引用他檔、{\"$ref\":[\"a.json\",\"b.json\"]} 依序合併後者覆蓋前者。⚠ 金鑰用 $env 帶、別寫死，secret 才不落版控。`_` 開頭的鍵（如 _notes/_lmstudio）非 endpoint、只當共用資料，不會被列進可用 endpoint。加模型＝在此加一列。",
+  "_notes": "llme 的 endpoint 設定：<endpoint 名> → { 欄位: 值 }。欄位名就是 util.llm 的旗標名、底線換連字號（timeout_ms → --timeout-ms），所以想固定 temperature 之類的直接加一欄，不必改 llme.py；值寫 null＝不送這個旗標（交後端預設）。命令列自帶的旗標優先，設定檔同名欄位不會蓋過它。每個 endpoint 把六顆取樣旋鈕（temperature／top_p／presence_penalty／frequency_penalty／max_tokens／seed）全列出來，null 也列——這一檔就是「該後端吃什麼」的現況表。指令式節點（見 util/README.md）：{\"$env\":\"VAR\"[,\"default\":…]} 取環境變數（未設且無 default → null）；{\"$ref\":\"#a/b\"} 引用本檔片段、{\"$ref\":\"other.json\"} 引用他檔、{\"$ref\":[\"a.json\",\"b.json\"]} 依序合併後者覆蓋前者。⚠ 金鑰用 $env 帶、別寫死，secret 才不落版控。`_` 開頭的鍵（如 _notes/_lmstudio）非 endpoint、只當共用資料，不會被列進可用 endpoint。加模型＝在此加一列。",
   "_lmstudio": "http://localhost:1234/v1/chat/completions",
+
+  "_notes_deepseek": "六旋鈕連 seed=42 都實測全吃（2026-07-21）。seed 平時 null：temperature 0 已近確定性，要嚴格重現再開。",
   "deepseek": {
     "endpoint": "https://api.deepseek.com/v1/chat/completions",
     "model": "deepseek-chat",
     "timeout_ms": 120000,
+    "temperature": 0,
+    "top_p": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "max_tokens": 4096,
+    "seed": null,
     "api_key": { "$env": "DEEPSEEK_API_KEY" }
   },
+
+  "_notes_openrouter": "laguna 的 supported_parameters 只有 max_tokens／temperature／tools／tool_choice／reasoning（2026-07-21 查 /api/v1/models）——top_p、penalties、seed 送了也被靜默無視（同坑 1），故全 null。max_tokens 也特意 null：reasoning 模型思考會吃光上限回空（坑 8）。",
   "openrouter": {
     "endpoint": "https://openrouter.ai/api/v1/chat/completions",
     "model": "poolside/laguna-m.1:free",
     "timeout_ms": 120000,
+    "temperature": 0,
+    "top_p": null,
+    "presence_penalty": null,
+    "frequency_penalty": null,
+    "max_tokens": null,
+    "seed": null,
     "api_key": { "$env": "OPENROUTER_API_KEY" }
   },
+
+  "_notes_lmstudio": "LM Studio（llama.cpp）標配吃全部六旋鈕；後端目前多半關著（省電），未逐項實測——不吃會當場炸（drop_params=False 是刻意的），炸了再改 null。",
   "local": {
     "endpoint": { "$ref": "#_lmstudio" },
     "model": "google/gemma-4-e4b",
-    "timeout_ms": 120000
+    "timeout_ms": 120000,
+    "temperature": 0,
+    "top_p": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "max_tokens": 4096,
+    "seed": null
   },
   "qwen": {
     "endpoint": { "$ref": "#_lmstudio" },
     "model": "qwen/qwen3.5-9b",
-    "timeout_ms": 120000
+    "timeout_ms": 120000,
+    "temperature": 0,
+    "top_p": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "max_tokens": 4096,
+    "seed": null
   }
 }
