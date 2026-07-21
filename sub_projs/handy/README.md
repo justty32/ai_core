@@ -113,29 +113,28 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 金鑰寫成 `{"$env":"DEEPSEEK_API_KEY"}`、共用端點用 `{"$ref":"_lmstudio"}`；`_` 開頭鍵非 endpoint
 （當共用資料）。**加模型＝在此加一列**。
 
-### api_key 來源（cascade，前者優先）
+### api_key 來源
 
-1. 使用者顯式 `--api-key`（在透傳參數裡）→ 尊重、不注入
-2. `llme.json` 該 endpoint 的 `api_key`（通常 `{"$env":"…"}`）
-3. env auto-inject：`LLME_KEY_<EP>` ＞ `<EP>_API_KEY`（`<EP>`＝endpoint 名大寫、非英數轉 `_`）
+金鑰**只有一個來源**：`llme.json` 該 endpoint 的 `api_key`（通常寫成 `{"$env":"…"}`，由 `util.config`
+從環境變數帶入）。本地免 key 的 endpoint 不填即可。
 
-本地免 key 的 endpoint（2、3 都沒有）不受影響。
+使用者在命令列自帶 `--api-key` 仍會生效並蓋過設定檔——不是 llme 特別處理，而是**透傳參數排在後面，
+`util.llm` 的 argv 解析後者覆寫前者**，自然如此。
 
 ### 環境變數
 
 | 變數 | 作用 |
 |--|--|
 | `LLME_CONFIG` | 覆寫設定檔路徑（預設＝同層 `llme.json`）|
-| `LLME_DRY=1` | 不真打，改印「會傳給 `util.llm` 的 argv」到 stderr 後 exit 0（冒煙自測）|
-| `LLME_KEY_<EP>` / `<EP>_API_KEY` | auto-inject 的 api key 來源（見 cascade ③）|
 
 ### 冒煙自測（不需真後端）
 
 ```sh
-LLME_DRY=1 ./llme.py local --stream 你好                          # local 無 key，不注入
-DEEPSEEK_API_KEY=FAKE LLME_DRY=1 ./llme.py deepseek hi             # $env 帶入 → …--api-key FAKE hi
-DEEPSEEK_API_KEY=FAKE LLME_DRY=1 ./llme.py deepseek --api-key mine hi  # 使用者自帶 → 不注入
-./llme.py nonexist                                                # 找不到 → 列可用 endpoint，exit 2
-# 端到端（走真 util.llm，用 fixture 假回應）：
-./llme.py deepseek 你好 --endpoint "file://$(pwd)/util/llm/test/fixtures/text.json"
+./llme.py --help                        # 用法＋可用 endpoint，exit 0
+./llme.py nonexist                      # 找不到 → 列可用 endpoint，exit 2
+# 端到端（走真 util.llm，用 fixture 假回應、不連網）：
+./llme.py local 你好 --endpoint "file://$(pwd)/util/llm/test/fixtures/text.json"
 ```
+
+> llme 沒有自己的測試套件——它就是「查表→翻旗標→轉發」，翻譯與解析的測試都在
+> [util/llm/test/smoke.py](util/llm/test/smoke.py)。
