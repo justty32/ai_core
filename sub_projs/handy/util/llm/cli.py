@@ -61,8 +61,12 @@ def _apply_flags(client, raw_values):
 
 
 def main(argv=None):
-    """CLI 進入點；回退出碼。"""
-    args = list(sys.argv if argv is None else argv)
+    """CLI 進入點；回退出碼。
+
+    argv **不含程式名**——`main(["--stream", "你好"])` 即可，不必墊一個假的第 0 項。
+    省略則取 `sys.argv[1:]`。⚠ 這是與已封存 pllm 的分歧（那邊收整份 sys.argv）。
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
 
     p, ec = parse_argv(args)
     if p is None:

@@ -28,8 +28,7 @@ def main(argv):
             flags.append("--" + field.replace("_", "-"))
             flags.append(str(value))
 
-    # cli_main 跟一般 CLI 一樣會跳過第 0 個參數（程式名），所以前面墊一個。
-    return cli_main(["llme"] + flags + rest)
+    return cli_main(flags + rest)
 
 
 if __name__ == "__main__":
