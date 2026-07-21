@@ -21,8 +21,8 @@ handy/
 - **每個住戶**：單檔 `.py` 或資料夾（folder-as-callable）。**入口＝檔頭 docstring**（小住戶不另開 README）。
 - **地基與 lib**：`util.llm`＝LLM 呼叫；`util` 其餘＝跨住戶共用的純工具。住戶靠它們，別各自重造。
 
-> ⚠ **零相依鐵律的刻意例外**：`util.llm` 依賴 **litellm**（外部套件）。handy 其餘部分維持零相依；
-> 這條例外是使用者決定「不自己造 LLM client」的結果，取捨脈絡見 [SESSION-LOG](SESSION-LOG.md)。
+> ⚠ `util.llm` 依賴 **litellm**（外部套件），handy 其餘部分維持零相依。**本輪是試裝試打的測試階段**，
+> 不是拍板的架構決定——去留待試出體感再談，見 [SESSION-LOG](SESSION-LOG.md)。
 
 ---
 
