@@ -33,7 +33,8 @@ handy/
 
 | 模組 | 用途 |
 |---|---|
-| `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref` |
+| `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref`（含跨檔引用與陣列合併）|
+| `util.jsref` | `$ref` 語法的純函式：拆解／走路徑／深合併 |
 | `util.env` | 環境變數小工具：`first()`／`stem()`（⚠ 目前無人使用）|
 | `util.llm` | **LLM 地基**：litellm 包裝，轉出 `ask`／`cli_main`／`LLMError` |
 
@@ -86,7 +87,7 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 **不必回頭改 llme.py**。慣用四欄：`endpoint`／`model`／`timeout_ms`／`api_key`。
 
 用 `util.config` 讀，故吃 `$env`/`$ref`：金鑰寫成 `{"$env":"DEEPSEEK_API_KEY"}`、共用端點用
-`{"$ref":"_lmstudio"}`；`_` 開頭鍵非 endpoint（當共用資料）。**加模型＝在此加一列**。
+`{"$ref":"#_lmstudio"}`（`#` 開頭＝本檔片段）；`_` 開頭鍵非 endpoint（當共用資料）。**加模型＝在此加一列**。
 
 > ⚠ 因為欄位直接變旗標，**打錯欄位名＝`util.llm` 報「未知旗標」**（不是被忽略）。
 

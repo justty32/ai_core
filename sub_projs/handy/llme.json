@@ -1,5 +1,5 @@
 {
-  "_notes": "llme 的 endpoint 設定：<endpoint 名> → { endpoint, model, timeout_ms, api_key? }。llme <endpoint> 挑對應這組、翻成 pllm 連線旗標；缺的欄位跳過（用後端預設）。指令式節點：{\"$env\":\"VAR\"[,\"default\":…]} 取環境變數（未設且無 default＝該欄位視為缺）；{\"$ref\":\"a.b.c\"} 引用本檔其他值（從根算路徑，可共用區塊、遞迴解析）。⚠ 金鑰用 $env 帶、別寫死，secret 才不落版控。`_` 開頭的鍵（如 _notes/_lmstudio）非 endpoint、只當共用資料，不會被列進可用 endpoint。加模型＝在此加一列。",
+  "_notes": "llme 的 endpoint 設定：<endpoint 名> → { 欄位: 值 }。欄位名就是 util.llm 的旗標名、底線換連字號（timeout_ms → --timeout-ms），所以想固定 temperature 之類的直接加一欄，不必改 llme.py；沒填的欄位會跳過（用後端預設）。慣用四欄：endpoint／model／timeout_ms／api_key。指令式節點（見 util/README.md）：{\"$env\":\"VAR\"[,\"default\":…]} 取環境變數（未設且無 default → null）；{\"$ref\":\"#a/b\"} 引用本檔片段、{\"$ref\":\"other.json\"} 引用他檔、{\"$ref\":[\"a.json\",\"b.json\"]} 依序合併後者覆蓋前者。⚠ 金鑰用 $env 帶、別寫死，secret 才不落版控。`_` 開頭的鍵（如 _notes/_lmstudio）非 endpoint、只當共用資料，不會被列進可用 endpoint。加模型＝在此加一列。",
   "_lmstudio": "http://localhost:1234/v1/chat/completions",
   "deepseek": {
     "endpoint": "https://api.deepseek.com/v1/chat/completions",
@@ -14,12 +14,12 @@
     "api_key": { "$env": "OPENROUTER_API_KEY" }
   },
   "local": {
-    "endpoint": { "$ref": "_lmstudio" },
+    "endpoint": { "$ref": "#_lmstudio" },
     "model": "google/gemma-4-e4b",
     "timeout_ms": 120000
   },
   "qwen": {
-    "endpoint": { "$ref": "_lmstudio" },
+    "endpoint": { "$ref": "#_lmstudio" },
     "model": "qwen/qwen3.5-9b",
     "timeout_ms": 120000
   }
