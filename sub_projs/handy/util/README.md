@@ -97,7 +97,7 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 `read()` 在**檔案不存在或 JSON 壞掉時直接拋**（`OSError`／`json.JSONDecodeError`），不自己吞。
 另有 `config.resolve_in(js, base_dir)` 可解析已在記憶體裡的結構（相當於 Go 的 `ResolveJSRefsIn`）。
 
-**自測**：`python util/test/config_smoke.py`（離線、零相依）；現況 24/24。
+**自測**：`python util/test/config_smoke.py`（離線、零相依）；現況 33/33。
 
 ---
 
