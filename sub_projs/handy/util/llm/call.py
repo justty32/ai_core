@@ -8,7 +8,9 @@
     api_base（…/v1）。
   · model 自動加 openai/ 前綴，走 OpenAI-compatible 路徑；否則 litellm 會把
     google/gemma-… 的 google/ 誤判成 provider。設 LLM_RAW_MODEL=1 可關掉。
-  · drop_params 開著：後端不吃的取樣參數自動丟棄而非炸掉。
+  · drop_params 關著：後端不吃的參數當場炸（litellm 丟 UnsupportedParamsError，
+    到 core.py 收成 LLMError）。寧可吵也不要靜默失效——`--schema` 被無聲丟掉
+    卻拿到散文的教訓。
   · **沒給 api_key 時補一個佔位字串**：舊 pllm 沒 key 就不送 Authorization header，
     litellm 的 openai provider 卻一律要求 key，不給就當場丟 InternalServerError
     （連本機 LM Studio 這種免認證端點都打不出去）。補的佔位值免認證後端會忽略。
@@ -32,7 +34,7 @@ def load_litellm():
         import litellm
     except ImportError as e:
         raise LLMError("litellm 未安裝（pip install litellm）") from e
-    litellm.drop_params = True
+    litellm.drop_params = False   # 不支援就炸，見模組 docstring
     litellm.suppress_debug_info = True
     return litellm
 

@@ -12,8 +12,8 @@
 > **這裡只留還沒完成的**。
 
 - **本輪定位＝試裝試打 litellm，「零相依」暫時擱置**（2026-07-21，使用者裁示）。`util.llm` 依賴 litellm 與 AGENTS.md 鐵律 1 相衝，但現階段**不是拍板的架構決定**：**別為此改頂層 AGENTS.md，也別再拿這條出來當待辦問**。等試出體感再談 litellm 去留。
-- **`drop_params=True` 的靜默丟棄待觀察**（2026-07-21）。實例：`--schema` 打 OpenRouter 的 `cohere/north-mini-code:free` **沒生效**，模型回散文＋markdown JSON。請求組裝本身正確（假後端比對過欄位無誤），疑似 litellm 認定該後端不支援而靜默丟掉 `response_format`。好處是參數不合不會當場炸，代價是**你不會知道參數被吃掉**。要改成「不支援就炸」＝動 `util/llm/call.py` 一行。**尚未定案**。
-- **兩塊沒驗到的**：①**本機 LM Studio 未實測**（使用者那邊多離線）——需要真的把模型跑起來才驗得到 `local`／`qwen` 兩個 endpoint。②**C++ cllm 的非 Python 消費者現況待盤**，盤完才能定退休時程（脈絡：CLI 即天然跨語言接口，FFI 在 LLM 場景優勢蒸發）。
+- **`drop_params=False` 的新行為待實地回歸**（2026-07-21 定案改為「不支援就炸」，見 [util/llm/README](util/llm/README.md) 坑 1）。離線冒煙全過，但**真後端還沒重打**——尤其要看取樣參數（`--temperature` 等）打到不吃它的免費 slug 會不會從「被無視」變成「請求失敗」。若日常被炸得太煩，再談要不要退回 `True`。
+- **C++ cllm 的非 Python 消費者現況待盤**，盤完才能定退休時程（脈絡：CLI 即天然跨語言接口，FFI 在 LLM 場景優勢蒸發）。
 - ⚠ **OpenRouter 免費 slug 汰換很快**：`tencent/hy3:free` 已轉付費、`google/gemma-4-31b-it:free` 上游限流。要重測先查 `https://openrouter.ai/api/v1/models` 挑當下 `pricing` 真的為 0 的。
 
 ## 開發環境（本機 durable 注記 · Windows）

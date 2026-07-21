@@ -77,17 +77,18 @@ echo 資料 | llm -- --看似旗標 - 尾      # → prompt 是「--看似旗標
 
 ## ⚠ 坑（全部實測過，別重踩）
 
-### 1. `drop_params=True`：不支援的參數會被**靜默丟掉**
+### 1. `drop_params=False`：後端不吃的參數會**當場炸**（已定案）
 
-[call.py](call.py) 開了 litellm 的 `drop_params`，後端不吃的取樣參數會被自動丟棄**而非報錯**。
-好處是參數不合的後端不會當場炸；**代價是你不會知道某個參數被無聲吃掉了**。
+[call.py](call.py) 把 litellm 的 `drop_params` **關掉**：後端不支援的參數不會被丟棄，litellm 直接丟
+`UnsupportedParamsError`，到 [core.py](core.py) 收成 `LLMError`（CLI 退出碼 `2`）。
 
-**實例**：拿 `--schema` 打 OpenRouter 的 `cohere/north-mini-code:free`，模型回的是散文＋markdown
-包的 JSON，不是嚴格結構化輸出。請求組裝本身正確（對假後端比對過，`response_format.json_schema`
-欄位完整送出），推測就是 litellm 認定該後端不支援而丟掉了。
+**為何這樣選**：開著時是**靜默丟棄**——拿 `--schema` 打 OpenRouter 的 `cohere/north-mini-code:free`，
+模型回散文＋markdown 包的 JSON 而非嚴格結構化輸出，請求組裝本身完全正確（對假後端比對過，
+`response_format.json_schema` 欄位完整送出），是 litellm 認定該後端不支援而無聲吃掉。
+**參數被吃掉卻拿到看似正常的答案**比當場炸難查太多，故選吵。
 
-> 想要「不支援就炸給我看」而非靜默失效，把 `call.py` 的 `litellm.drop_params = True` 改掉即可。
-> 這是雙面刃，尚未定案。
+> ⚠ 代價：取樣參數（`--temperature` 等）打到不吃它的後端，以前會被無視、現在會**請求失敗**。
+> 想換回舊行為＝把 `call.py` 的 `litellm.drop_params = False` 改成 `True`。
 
 ### 2. 沒給 api_key 會**完全打不出去**（已修，但要知道為何）
 
