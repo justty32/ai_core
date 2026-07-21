@@ -12,23 +12,13 @@ sys.path.insert(0, HERE)  # 讓共用 lib util（handy/util/）可 import
 from util import config          # noqa: E402
 from util.llm import cli_main    # noqa: E402
 
-CFG = os.environ.get("LLME_CONFIG") or os.path.join(HERE, "llme.json")
-
 # config 欄位 → 連線旗標。缺的欄位跳過。
 FLAGS = [("endpoint", "--endpoint"), ("model", "--model"),
          ("timeout_ms", "--timeout-ms"), ("api_key", "--api-key")]
 
 
 def main(argv):
-    cfg = config.read(CFG)
-    ep = argv[0] if argv else None
-    if ep in (None, "--help", "-h") or not isinstance(cfg.get(ep), dict):
-        eps = " ".join(sorted(k for k in cfg if not k.startswith("_")))
-        sys.stderr.write("用法：llme <endpoint> [util.llm 參數...]\n"
-                         "可用 endpoint：" + eps + "\n")
-        return 0 if ep in ("--help", "-h") else 2
-
-    ecfg = cfg[ep]
+    ecfg = config.read(os.path.join(HERE, "llme.json"))[argv[0]]
     fwd = ["llme"]  # 假程式名（util.llm 的 argv 解析跳過 argv[0]）
     for field, flag in FLAGS:
         if ecfg.get(field) not in (None, ""):

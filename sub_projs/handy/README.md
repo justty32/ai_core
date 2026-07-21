@@ -102,10 +102,13 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 ./llme.py openrouter 你好                # OpenRouter 免費模型（需 OPENROUTER_API_KEY）
 ./llme.py deepseek --stream 你好         # 透傳 --stream 等所有 util.llm 旗標
 ./llme.py local 你好                     # 本機 LM Studio（無 key；目前多離線）
-./llme.py --help                         # 用法＋可用 endpoint
 ```
 
 上 PATH 當裸命令：`ln -sf "$(pwd)/llme.py" ~/.local/bin/llme`（有 shebang，直接可執行）。
+
+**刻意極簡**：整支 30 行、一個函式，就是「讀 json → 查 endpoint → 填旗標 → 併 argv → 轉發」。
+沒有 `--help`、沒有錯誤訊息、沒有設定檔路徑覆寫——**打錯 endpoint 名就是 `KeyError` traceback**。
+要看有哪些 endpoint 直接開 `llme.json`；要看旗標用 `./llme.py <任一ep> --help`（那是 `util.llm` 的）。
 
 ### llme.json（多模型定義在一檔）
 
@@ -121,17 +124,9 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 使用者在命令列自帶 `--api-key` 仍會生效並蓋過設定檔——不是 llme 特別處理，而是**透傳參數排在後面，
 `util.llm` 的 argv 解析後者覆寫前者**，自然如此。
 
-### 環境變數
-
-| 變數 | 作用 |
-|--|--|
-| `LLME_CONFIG` | 覆寫設定檔路徑（預設＝同層 `llme.json`）|
-
 ### 冒煙自測（不需真後端）
 
 ```sh
-./llme.py --help                        # 用法＋可用 endpoint，exit 0
-./llme.py nonexist                      # 找不到 → 列可用 endpoint，exit 2
 # 端到端（走真 util.llm，用 fixture 假回應、不連網）：
 ./llme.py local 你好 --endpoint "file://$(pwd)/util/llm/test/fixtures/text.json"
 ```
