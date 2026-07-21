@@ -28,47 +28,16 @@ handy/
 
 ## util — 通用共用 lib
 
-**定位**：`handy/util/` 是「很多 .py 共用的小工具庫」——純函式、無副作用、不綁特定住戶。
-它是 **Python 3.3+ 隱式命名空間套件**：**不需要 `__init__.py`**，往裡丟 `.py` 就多一個子模組
-（`util/config.py` → `util.config`、日後 `util/http.py` → `util.http`…）。
-
-**現有模組**：
+「很多 `.py` 共用的小工具庫」——純函式、無副作用、不綁特定住戶。**Python 隱式命名空間套件**，
+往裡丟一個 `.py` 就多一個子模組。
 
 | 模組 | 用途 |
 |---|---|
-| `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref`（見下）|
-| `util.env` | 環境變數小工具：`first(*keys)`（第一個非空值）、`stem(name)`（名字→`ENV_IDENT`）|
-| `util.llm` | **LLM 地基**（子套件，見下節）：litellm 包裝，轉出 `ask`／`cli_main`／`LLMError` |
+| `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref` |
+| `util.env` | 環境變數小工具：`first()`／`stem()`（⚠ 目前無人使用）|
+| `util.llm` | **LLM 地基**：litellm 包裝，轉出 `ask`／`cli_main`／`LLMError` |
 
-**住戶怎麼吃**（推薦：放上 `sys.path` 正常 import）：
-
-```python
-import os, sys
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)          # 住戶在 handy/ 根：HERE 即 handy/，util/ 是其子夾
-from util import config            # 之後 config.read(...) / config.resolve(...)
-```
-
-> 住戶若在子資料夾（folder-as-callable），把 `sys.path` 指到 **handy 根**（util 的父層）即可。
-> 另有 `importlib.util.spec_from_file_location(...)` 能「按路徑載入單檔、不放 path」——但樣板多、
-> 內部互 import 麻煩，**只在載入非固定位置的單檔時才划算**；共用 lib 走上面的 namespace 套件路。
-
-### util.config — 讀 JSON ＋ 解析 `$env` / `$ref`
-
-```python
-from util import config
-cfg = config.read("some.json")     # 回「完全解析後」的 dict
-```
-
-設定檔裡任意欄位值可放**指令式節點**，`read()` 就地替換：
-
-| 節點 | 意思 |
-|---|---|
-| `{"$env": "VAR"}` | 取環境變數 `VAR`；未設（或空字串）→ `None`（該欄位視為缺） |
-| `{"$env": "VAR", "default": "…"}` | 同上，未設時用 `default` |
-| `{"$ref": "a.b.c"}` | 引用本檔其他值（從根算 dotted 路徑）；遞迴解析、含 `$ref` 迴圈防護 |
-
-**用意**：secret（金鑰）用 `$env` 從環境帶、不寫死進版控；重複值（共用端點等）用 `$ref` 收斂成一處。
+**用法、實測行為表、住戶怎麼 import 一律見 → [util/README.md](util/README.md)。**
 
 ---
 
