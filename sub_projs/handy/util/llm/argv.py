@@ -31,12 +31,9 @@ class ParsedArgs:
 
 
 def parse_argv(args):
-    """掃描參數，回 (ParsedArgs, None)；遇 --help／用法錯回 (None, 退出碼)。
-
-    args **不含程式名**，第 0 個就是第一個參數（與 pllm 的分歧，見 cli.py）。
-    """
+    """掃描 argv，回 (ParsedArgs, None)；遇 --help／用法錯回 (None, 退出碼)。"""
     p = ParsedArgs()
-    i = 0
+    i = 1
     n = len(args)
 
     def need_value(flag):

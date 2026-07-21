@@ -44,7 +44,7 @@ def run_cli(args):
     sys.stdin = io.StringIO("")
     try:
         with redirect_stdout(out), redirect_stderr(err):
-            code = cli_main(args)
+            code = cli_main(["llm"] + args)
     finally:
         sys.stdin = saved
     return code, out.getvalue() + err.getvalue()
@@ -72,8 +72,6 @@ def test_cli():
     cli_case("未知旗標", ["--bogus", "hi"], 1, "未知旗標")
     cli_case("-- 之後一律當 prompt", ["--endpoint", TEXT, "--", "--bogus"], 0,
              "下不為例")
-    cli_case("第一個參數就被解析（不當程式名跳過）",
-             ["--endpoint", TEXT, "hi"], 0, "下不為例")
     cli_case("旗標缺值", ["--model"], 1, "缺少值")
     cli_case("缺 prompt", [], 1, "缺少 prompt")
     cli_case("--tool 壞 JSON", ["--tool", "nope", "hi"], 1, "不是合法 JSON")

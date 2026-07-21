@@ -38,14 +38,14 @@ from util.llm import ask
 ### 當 CLI
 
 ```python
-from util.llm import cli_main     # 借用整套 CLI（llme.py 就是這樣透傳）
+from util.llm import cli_main       # 借用整套 CLI（llme.py 就是這樣透傳）
 
-cli_main(["--stream", "你好"])     # 回退出碼；argv 不含程式名
-cli_main()                         # 省略＝取 sys.argv[1:]
+cli_main(["llm", "--stream", "你好"])   # 回退出碼
+cli_main()                              # 省略＝取 sys.argv
 ```
 
-> ⚠ **與已封存 pllm 的分歧**：pllm 的 `cli_main` 收**整份 `sys.argv`**（含程式名、從第 1 項開始
-> 解析），呼叫端得墊一個假的第 0 項。這裡改成**不含程式名**，第 0 項就是第一個參數。
+> ⚠ argv **收整份 `sys.argv`**（含程式名、從第 1 項開始解析），沿用 pllm 慣例。自己組 argv 呼叫時
+> 記得墊一個第 0 項——llme.py 墊的就是字串 `"llme"`。
 
 實際多半透過住戶 [`llme`](../../README.md#llme--多-endpoint-dispatcher住戶) 用：
 
@@ -158,7 +158,7 @@ uv pip install --python ./.venv/Scripts/python.exe --only-binary :all: litellm
 ## 自測
 
 ```sh
-python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 32/32
+python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 31/31
 ```
 
 驗得到「argv 解析／退出碼分流／參數翻譯／回應解讀」；**驗不到**「litellm 真的打得通」與「後端錯誤
