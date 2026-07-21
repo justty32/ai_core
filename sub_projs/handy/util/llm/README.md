@@ -65,6 +65,14 @@ cli_main()                              # 省略＝取 sys.argv
 **prompt 來源**：位置參數＋導管 stdin 可合體——`-` ＝ stdin 插入點；沒寫 `-` 而兩者都有＝
 prompt＋空行＋stdin；只給其一＝用那一個。
 
+**`-` 與 `--` 可共存**，分工乾淨：`--` 只關掉「旗標解析」，`-` 是「stdin 插入點」，互不干擾。
+
+```sh
+echo 資料 | llm -- --看似旗標 - 尾      # → prompt 是「--看似旗標 資料 尾」
+```
+
+> ⚠ 代價：**傳不了字面的 `-` 當 prompt 內容**——`--` 不會讓它失效，也沒有跳脫寫法。
+
 ---
 
 ## ⚠ 坑（全部實測過，別重踩）
@@ -158,7 +166,7 @@ uv pip install --python ./.venv/Scripts/python.exe --only-binary :all: litellm
 ## 自測
 
 ```sh
-python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 36/36
+python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 37/37
 ```
 
 驗得到「argv 解析／退出碼分流／參數翻譯／回應解讀」；**驗不到**「litellm 真的打得通」與「後端錯誤

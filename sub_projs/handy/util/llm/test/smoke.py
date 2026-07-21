@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 from util.llm import cli_main                        # noqa: E402
 from util.llm.call import (PLACEHOLDER_KEY, api_base,        # noqa: E402
                            build_kwargs, model_id)
+from util.llm.argv import parse_argv                         # noqa: E402
 from util.llm.cli import _make_prompt                        # noqa: E402
 
 FIX = os.path.join(HERE, "fixtures")
@@ -145,6 +146,10 @@ def test_prompt():
     check("只有 stdin", _make_prompt([], "床前明月光"), "床前明月光")
     check("只有位置參數", _make_prompt(["只有這個"], ""), "只有這個")
     check("「-」但 stdin 是空的", _make_prompt(["前", "-", "後"], ""), "前  後")
+    # 「--」只關掉旗標解析，不會讓「-」失效——兩者可共存（代價：傳不了字面的 -）
+    p, _ = parse_argv(["llm", "--", "前", "-", "後"])
+    check("「--」之後的「-」仍是 stdin 插入點", p.prompt_parts,
+          ["前", "-", "後"])
 
 
 def main():
