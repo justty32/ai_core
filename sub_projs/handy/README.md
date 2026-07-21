@@ -50,9 +50,9 @@ from util.llm import ask          # 函式庫用法
 from util.llm import cli_main     # 借用整套 CLI（llme 就是這樣透傳）
 ```
 
-**完整用法、安裝（venv／litellm 版本釘選）、結構、以及七個實測過的坑
-（`drop_params` 已關＝不支援就炸、api_key 必給、`openai/` 開頭模型名被吃掉…）
-一律見 → [util/llm/README.md](util/llm/README.md)。**
+**完整用法、安裝（venv／litellm 版本釘選）、結構、以及八個實測過的坑
+（★ 參數被後端靜默無視、reasoning 模型吃光 `--max-tokens` 回空、api_key 必給、
+`openai/` 開頭模型名被吃掉…）一律見 → [util/llm/README.md](util/llm/README.md)。**
 
 ```sh
 pip install litellm                  # ⚠ 唯一外部相依

@@ -12,9 +12,9 @@
 > **這裡只留還沒完成的**。
 
 - **本輪定位＝試裝試打 litellm，「零相依」暫時擱置**（2026-07-21，使用者裁示）。`util.llm` 依賴 litellm 與 AGENTS.md 鐵律 1 相衝，但現階段**不是拍板的架構決定**：**別為此改頂層 AGENTS.md，也別再拿這條出來當待辦問**。等試出體感再談 litellm 去留。
-- **`drop_params=False` 的新行為待實地回歸**（2026-07-21 定案改為「不支援就炸」，見 [util/llm/README](util/llm/README.md) 坑 1）。離線冒煙全過，但**真後端還沒重打**——尤其要看取樣參數（`--temperature` 等）打到不吃它的免費 slug 會不會從「被無視」變成「請求失敗」。若日常被炸得太煩，再談要不要退回 `True`。
+- **`--schema` 的靜默失效已查明兇手＝後端，不是 litellm**（2026-07-21 真後端翻案，詳見 [util/llm/README](util/llm/README.md) 坑 1）。攔下 litellm 實際送出的 body 確認 `response_format` **完整送出**；是 OpenRouter 那個模型的 `supported_parameters` 沒有它、收下直接無視。`drop_params` 已依使用者裁示留在 `False`（立場問題，對此症狀幾乎 no-op）。**尚未做的**：目前只能靠人工查模型表防身，要不要在 `util.llm` 加一層「宣告能力比對」的護欄未議。
 - **C++ cllm 的非 Python 消費者現況待盤**，盤完才能定退休時程（脈絡：CLI 即天然跨語言接口，FFI 在 LLM 場景優勢蒸發）。
-- ⚠ **OpenRouter 免費 slug 汰換很快**：`tencent/hy3:free` 已轉付費、`google/gemma-4-31b-it:free` 上游限流。要重測先查 `https://openrouter.ai/api/v1/models` 挑當下 `pricing` 真的為 0 的。
+- ⚠ **OpenRouter 免費 slug 汰換很快**：`tencent/hy3:free` 已轉付費、`google/gemma-4-31b-it:free` 上游限流。要重測先查 `https://openrouter.ai/api/v1/models` 挑當下 `pricing` 真的為 0 的。`llme.json` 的 `openrouter` 預設現為 **`poolside/laguna-m.1:free`**（2026-07-21 使用者指定；262k context、實測基本呼叫與 `--schema` 都通，但它**沒宣告** `response_format`，schema 是靠模型自願配合、非保證，且是 reasoning 模型＝別設小的 `--max-tokens`，見坑 8）。
 
 ## 開發環境（本機 durable 注記 · Windows）
 

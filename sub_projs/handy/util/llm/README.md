@@ -77,18 +77,33 @@ echo 資料 | llm -- --看似旗標 - 尾      # → prompt 是「--看似旗標
 
 ## ⚠ 坑（全部實測過，別重踩）
 
-### 1. `drop_params=False`：後端不吃的參數會**當場炸**（已定案）
+### 1. ★★ 參數被靜默無視——**兇手是後端，不是 litellm**（2026-07-21 實測翻案）
 
-[call.py](call.py) 把 litellm 的 `drop_params` **關掉**：後端不支援的參數不會被丟棄，litellm 直接丟
-`UnsupportedParamsError`，到 [core.py](core.py) 收成 `LLMError`（CLI 退出碼 `2`）。
+**症狀**：`--schema` 打 OpenRouter 的 `cohere/north-mini-code:free`，模型回散文＋markdown 包的
+JSON，不是嚴格結構化輸出，而且 **exit 0、無任何錯誤**。
 
-**為何這樣選**：開著時是**靜默丟棄**——拿 `--schema` 打 OpenRouter 的 `cohere/north-mini-code:free`，
-模型回散文＋markdown 包的 JSON 而非嚴格結構化輸出，請求組裝本身完全正確（對假後端比對過，
-`response_format.json_schema` 欄位完整送出），是 litellm 認定該後端不支援而無聲吃掉。
-**參數被吃掉卻拿到看似正常的答案**比當場炸難查太多，故選吵。
+**曾經的誤判**：以為是 litellm 的 `drop_params=True` 認定該後端不支援而丟掉。**錯了。**
+拿 stdlib `http.server` 攔下 litellm 真正送出的 body，`response_format.json_schema` **完整送出、
+一個欄位都沒少**。查 OpenRouter 的模型表也對得上——該模型的 `supported_parameters` 裡**根本沒有
+`response_format`**，它收下之後直接無視。
 
-> ⚠ 代價：取樣參數（`--temperature` 等）打到不吃它的後端，以前會被無視、現在會**請求失敗**。
-> 想換回舊行為＝把 `call.py` 的 `litellm.drop_params = False` 改成 `True`。
+| 模型 | 宣告支援 `response_format` | `--schema` 實測 |
+|---|---|---|
+| `cohere/north-mini-code:free` | ❌ | 散文（靜默失效）|
+| `poolside/laguna-m.1:free` | ❌ | 竟然吐對 JSON——**模型自願配合，非保證** |
+| `google/gemma-4-26b-a4b-it:free` | ✅ | `{"city":"台北","temp_c":25.5}` 嚴格 JSON |
+
+> ★ **教訓**：靜默丟棄發生在**後端／聚合器那一側**，**沒有任何客戶端旗標攔得住**。
+> 唯一可靠的偵測是**看回應實際有沒有符合 schema**，不能看有沒有報錯。
+> （同一課在 [cllm](../../../cllm/core/docs/backend-structured-output.md) 已記過一次。）
+
+**防身**：用前先查 `https://openrouter.ai/api/v1/models`，確認該 model 的 `supported_parameters`
+含你要用的參數。宣告支援才有保證，沒宣告就算這次吐對了也只是運氣。
+
+**現行設定**：[call.py](call.py) 的 `litellm.drop_params = False`（不支援就炸，litellm 丟
+`UnsupportedParamsError` → [core.py](core.py) 收成 `LLMError` → 退出碼 `2`）。⚠ 但**別對它有期待**：
+handy 一律走 openai provider 路徑，litellm 認得的參數本來就不會被它過濾，所以這個開關對上面的症狀
+**幾乎是 no-op**，留著只是「寧可吵不要靜默」的立場。想換回舊行為＝改成 `True`。
 
 ### 2. 沒給 api_key 會**完全打不出去**（已修，但要知道為何）
 
@@ -131,10 +146,23 @@ provider。
 CLI 只要 stdin 不是互動終端就整段讀到 EOF。在 CI／`bash -c` 這類 stdin 既非 tty 又沒東西餵的環境
 會**永久阻塞**。這是沿用 pllm 的行為，非新 bug——測試時一律帶 `< /dev/null`。
 
-### 7. OpenRouter 免費 slug 汰換很快
+### 7. OpenRouter 免費 slug 汰換很快、且**有速率限制**
 
 `tencent/hy3:free` 已轉付費、`google/gemma-4-31b-it:free` 上游限流。用之前先查
 `https://openrouter.ai/api/v1/models` 挑當下真的免費的（`pricing.prompt` 與 `.completion` 皆 0）。
+
+免費層連打幾次就會撞到 `litellm.RateLimitError: Provider returned error`（2026-07-21 實測，
+連三次呼叫的第三次就中）。**這個會正常炸出來**、退出碼 `2`，不是靜默失效——等一下再打即可。
+
+### 8. reasoning 模型：`--max-tokens` 設小會**回空字串＋exit 0**
+
+`poolside/laguna-m.1:free` 這類會思考的模型，reasoning token 也吃 `max_tokens` 額度。實測
+`--max-tokens 300` → **輸出整個空的、退出碼 0**（額度全花在思考、沒剩給 content）；
+拿掉 `--max-tokens` 同一題就正常吐 `{"city": "台北", "temp_c": 32.08}`。
+
+> 對「笨模型＋護欄」這是很惡劣的一種失敗——**看起來成功、實際沒東西**。
+> **要嘛別設 `--max-tokens`**（交後端默認），要設就給思考留足空間。
+> 同一坑在 [galtxt](../../../galtxt/workflows/common/gotchas.md) 也踩過。
 
 ---
 
@@ -174,8 +202,12 @@ python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；
 語意」。要驗那些就起真後端——`test/` 沒收假後端腳本，需要時照 [SESSION-LOG](../../SESSION-LOG.md)
 的紀錄用 stdlib `http.server` 現寫一個（能同時吐 JSON 與 SSE 即可）。
 
-**已對真後端驗過**（2026-07-21，OpenRouter `cohere/north-mini-code:free`）：非串流／串流／
-`--system`／`--tool`（真往返）／stdin 合體全過；`--schema` 見坑 1。
+**已對真後端驗過**（2026-07-21，OpenRouter）：非串流／串流／`--system`／`--tool`（真往返）／
+stdin 合體全過（`cohere/north-mini-code:free`）；`--schema` 對**宣告支援**的模型
+（`google/gemma-4-26b-a4b-it:free`）吐嚴格 JSON、對沒宣告的則不保證，見坑 1。
+
+**攔請求的小工具**：要看 litellm 到底送出什麼，用 stdlib `http.server` 現寫一個 capture server
+（印下 body 後回一份最小合法回應），把 `--endpoint` 指過去即可——坑 1 的翻案就是這樣查出來的。
 
 ---
 
