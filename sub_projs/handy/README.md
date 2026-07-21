@@ -1,31 +1,28 @@
-# handy — 把 OS 當 AI agent 的試驗田（rebuild on pllm）
+# handy — 把 OS 當 AI agent 的試驗田（rebuild on litellm）
 
 handy＝**路徑一（把作業系統當 AI agent）的落地試驗田**：一組小程式／小腳本，拿現成件用薄殼包裝、
 按慣例組合。北極星＝整個 OS 變成一個 agent（工具集，非單體）。
 
-本輪**淨空重來**，以純 Python 的 LLM 地基 [`pllm`](pllm/) 重構。舊實作全部凍結於 [`archive/`](archive/)
-（歷史保留、可還原；要看以前的住戶／設計脈絡進那裡）。
+本輪**淨空重來**，LLM 地基＝[`util.llm`](util/llm/)（litellm 的薄包裝）。自寫的純 Python 地基
+`pllm` 與更早的實作全部凍結於 [`archive/`](archive/)（歷史保留、可還原；要看以前的住戶／設計脈絡
+進那裡）。
 
 ## 結構
 
 ```
 handy/
-├─ pllm/      LLM 地基：cllm 的純 Python 版（零相依）。可 import／pip install。★住戶的「腦」
-├─ util/      通用共用 lib（namespace 套件）：很多 .py 共用的小工具（config／env／pllm）
+├─ util/      通用共用 lib（namespace 套件）：很多 .py 共用的小工具
+│  └─ llm/    LLM 地基：litellm 包裝，CLI 形狀鏡像已封存的 pllm。★住戶的「腦」
 ├─ llme.py    住戶①：多 endpoint dispatcher（單檔）。換 endpoint 名＝換模型
 ├─ llme.json  llme 的模型設定（多個模型定義在一檔）
-└─ archive/   舊實作凍結（Fennel 版 llme/zhtw/wf/mail、hermy…）
+└─ archive/   舊實作凍結（pllm、Fennel 版 llme/zhtw/wf/mail、hermy…）
 ```
 
 - **每個住戶**：單檔 `.py` 或資料夾（folder-as-callable）。**入口＝檔頭 docstring**（小住戶不另開 README）。
-- **地基與 lib**：`pllm`＝LLM 呼叫；`util`＝跨住戶共用的純工具。住戶靠它們，別各自重造。
+- **地基與 lib**：`util.llm`＝LLM 呼叫；`util` 其餘＝跨住戶共用的純工具。住戶靠它們，別各自重造。
 
----
-
-## pllm — LLM 地基（住戶的「腦」）
-
-cllm 的純 Python 版，`from pllm import ask` 直接呼叫（`tools`/`media`/`stream`/`schema` 皆 kwargs），
-或當 CLI `python -m pllm`。完整用法、pip install、與 C++ `llm` 的旗標分歧見 **[pllm/README.md](pllm/README.md)**。
+> ⚠ **零相依鐵律的刻意例外**：`util.llm` 依賴 **litellm**（外部套件）。handy 其餘部分維持零相依；
+> 這條例外是使用者決定「不自己造 LLM client」的結果，取捨脈絡見 [SESSION-LOG](SESSION-LOG.md)。
 
 ---
 
@@ -41,7 +38,7 @@ cllm 的純 Python 版，`from pllm import ask` 直接呼叫（`tools`/`media`/`
 |---|---|
 | `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref`（見下）|
 | `util.env` | 環境變數小工具：`first(*keys)`（第一個非空值）、`stem(name)`（名字→`ENV_IDENT`）|
-| `util.pllm` | 便捷橋：定位並載入 handy 的 [`pllm`](pllm/) 地基，轉出 `ask`／`cli_main`／`LLMError`。拿 LLM 當腦的住戶 `from util.pllm import ask` 即可，不必自算 pllm 路徑 |
+| `util.llm` | **LLM 地基**（子套件，見下節）：litellm 包裝，轉出 `ask`／`cli_main`／`LLMError` |
 
 **住戶怎麼吃**（推薦：放上 `sys.path` 正常 import）：
 
@@ -75,14 +72,62 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 
 ---
 
+## util.llm — LLM 地基（住戶的「腦」）
+
+litellm 的薄包裝，**對外形狀＝已封存的 pllm**：`ask()` 簽章與整套 CLI 旗標逐項照舊，換腦不換介面。
+
+```python
+from util.llm import ask          # 函式庫用法
+text = ask("你好")                                    # 走內建 localhost endpoint
+text = ask("你好", "https://…/v1/chat/completions", model="deepseek-chat")
+ask("數到五", stream=True, on_delta=lambda s: print(s, end=""))
+```
+
+```python
+from util.llm import cli_main     # 借用整套 CLI（llme 就是這樣透傳）
+```
+
+**檔案**（每檔單一職責、≤150 行，依賴為無環 DAG，`errors` 為葉）：
+
+| 檔 | 職責 |
+|---|---|
+| `core.py` | `ask()` 門面＋回呼接線 |
+| `call.py` `msg.py` | **去程**：參數→litellm kwargs／組 messages |
+| `resp.py` | **回程**：litellm 回應→四個回呼（fixture 也走這條） |
+| `cli.py` `argv.py` `flags.py` `cfg.py` `req.py` `media.py` `out.py` | CLI 外殼（沿用 pllm 的分檔） |
+| `test/smoke.py` | 離線冒煙測試 |
+
+### ⚠ 與已封存 pllm 的刻意分歧（litellm 帶來的）
+
+- **`--endpoint` 仍收完整 URL**（`…/v1/chat/completions`）＝舊介面不動；內部剝成 litellm 的
+  `api_base`（`…/v1`）。
+- **model 自動加 `openai/` 前綴**走 OpenAI-compatible 路徑，否則 litellm 會把 `google/gemma-…` 的
+  `google/` 誤判成 provider。`LLM_RAW_MODEL=1` 可關掉（要打原生 provider 時用）。
+- **`drop_params` 開著**：後端不吃的取樣參數自動丟棄而非炸掉。
+- **`file://` 端點＝離線 fixture 逃生口**：不經 litellm、直接讀該檔當一份**非串流**回應（串流的
+  SSE fixture 不支援）。只為無後端自測。
+
+`--schema`／`--tool`／`--modality` 收**字面 JSON 文字不讀檔**（同 `--system`，長內容用 `$(cat s.json)`）；
+`--image`／`--media` 例外保留讀檔並三分流。退出碼：`0` 成功／`1` 用法錯／`2` 請求失敗／`130` 取消。
+完整旗標見 `python -c "from util.llm import cli_main; cli_main(['llm','--help'])"` 或 `./llme.py <ep> --help`。
+
+### 相依與自測
+
+```sh
+pip install litellm                  # ⚠ 唯一外部相依；沒裝時打真端點會報「litellm 未安裝」
+python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm）；現況 29/29
+```
+
+---
+
 ## llme — 多 endpoint dispatcher（住戶①）
 
-**換 endpoint 名＝換模型**：`llme <endpoint> [pllm 的其餘參數...]`。從 `llme.json` 挑一組設定、
-翻成 pllm 連線旗標，其餘參數原樣透傳，再**重用 pllm 自己的 CLI 解析**跑一次（不 subprocess）。
+**換 endpoint 名＝換模型**：`llme <endpoint> [util.llm 的其餘參數...]`。從 `llme.json` 挑一組設定、
+翻成連線旗標，其餘參數原樣透傳，再**重用 `util.llm` 自己的 CLI 解析**跑一次（不 subprocess）。
 
 ```sh
 ./llme.py deepseek 一句話介紹你自己      # 雲端 DeepSeek（需 DEEPSEEK_API_KEY）
-./llme.py deepseek --stream 你好         # 透傳 --stream 等所有 pllm 旗標
+./llme.py deepseek --stream 你好         # 透傳 --stream 等所有 util.llm 旗標
 ./llme.py local 你好                     # 本機 LM Studio（無 key；目前多離線）
 ./llme.py --help                         # 用法＋可用 endpoint
 ```
@@ -108,7 +153,7 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 | 變數 | 作用 |
 |--|--|
 | `LLME_CONFIG` | 覆寫設定檔路徑（預設＝同層 `llme.json`）|
-| `LLME_DRY=1` | 不真打，改印「會傳給 pllm 的 argv」到 stderr 後 exit 0（冒煙自測）|
+| `LLME_DRY=1` | 不真打，改印「會傳給 `util.llm` 的 argv」到 stderr 後 exit 0（冒煙自測）|
 | `LLME_KEY_<EP>` / `<EP>_API_KEY` | auto-inject 的 api key 來源（見 cascade ③）|
 
 ### 冒煙自測（不需真後端）
@@ -118,6 +163,6 @@ LLME_DRY=1 ./llme.py local --stream 你好                          # local 無 
 DEEPSEEK_API_KEY=FAKE LLME_DRY=1 ./llme.py deepseek hi             # $env 帶入 → …--api-key FAKE hi
 DEEPSEEK_API_KEY=FAKE LLME_DRY=1 ./llme.py deepseek --api-key mine hi  # 使用者自帶 → 不注入
 ./llme.py nonexist                                                # 找不到 → 列可用 endpoint，exit 2
-# 端到端（走真 pllm，用 fixture 假回應）：
-./llme.py deepseek 你好 --endpoint "file://$(pwd)/pllm/test/fixtures/fake/chat/completions"
+# 端到端（走真 util.llm，用 fixture 假回應）：
+./llme.py deepseek 你好 --endpoint "file://$(pwd)/util/llm/test/fixtures/text.json"
 ```

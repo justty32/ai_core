@@ -7,12 +7,13 @@
 
 ## 最新進度（open）
 
-- **正在評估「把 handy 核心換成 litellm / openai SDK」（CLI 形狀不動）——「先試試看」階段、未定**（2026-07-21）。起於「pllm 是否重造輪子」的長談，收斂出的判斷：
-  - **pllm 判活**：零依賴是真北極星（使用者信到「最終連 LLM 都不依賴」），pllm 作為零依賴 LLM 地基站得住。
-  - **「CLI＝跨語言 binding」**：非 Python 消費者不必走 FFI，`exec("llme …")` 即天然跨語言接口，FFI 的優勢在 LLM 場景（進程開銷 vs 秒級推理）幾乎全蒸發。
-  - **C++ cllm 判退休（非斬立決）**：效能無意義（client 語言不是瓶頸）＋跨語言可用 CLI 取代。退休成本＝現有**非 Python 消費者從 FFI 遷到 shell-call pllm CLI** 的工作量，待盤點。
-  - litellm 方向為使用者主動要試；環境戰證明它在此環境成本高（見下），且 SDK 選擇與「能否連 API」正交。
-  - **open 尾巴**：①「llme CLI 形狀不變、底層走 openai SDK」的最小 PoC 未寫（venv 已備妥，見下）；②真連 API 待使用者 DeepSeek key（至今只跑 file:// fixture 離線）；③C++ cllm 非 Python 消費者現況待盤（定退休時程）；④pllm 去留最終取決於 litellm/openai PoC 的體感。
+- **litellm 換腦已落地，但「真的打得通」未驗**（2026-07-21）。使用者拍板：**pllm 封存、改用 litellm**。已完成：
+  - `pllm/` → `archive/pllm/`（凍結，可還原）；新地基＝**`util/llm/`**（litellm 薄包裝）。
+  - **對外形狀＝舊 pllm**：`ask()` 簽章與整套 CLI 旗標逐項照舊（完整鏡像，非子集），`llme.py` 只改一行 import。
+  - 分歧三處（已寫進 README／`call.py` docstring）：endpoint 仍收完整 URL、內部剝成 `api_base`；model 自動加 `openai/` 前綴（`LLM_RAW_MODEL=1` 可關）；`drop_params` 開著。`file://` 保留為**非串流** fixture 逃生口。
+  - 驗證：`python util/llm/test/smoke.py` 離線 29/29 過（CLI 分流＋參數翻譯）。
+  - **open 尾巴**：①**litellm 根本還沒裝**（此機無），故「真的送得出請求」零實測——只驗到未裝時報錯；②真連 API 待使用者 DeepSeek key；③**串流路徑完全未測**（fixture 只解非串流）；④C++ cllm 非 Python 消費者現況待盤（定退休時程）。
+- **零相依鐵律出現第一個例外，待使用者定調**（2026-07-21）。AGENTS.md 鐵律 1「零外部相依」現與 `util.llm` 依賴 litellm 衝突。目前只在 handy/README.md 就地註記為「刻意例外」，**未動頂層 AGENTS.md**。要不要把鐵律改成「地基層可有相依、其餘零相依」之類的措辭，請使用者決定。
 
 ## 開發環境（本機 durable 注記 · Windows）
 

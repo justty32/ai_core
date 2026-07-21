@@ -10,7 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # 讓共用 lib util（handy/util/）可 import
 
 from util import config, env       # noqa: E402
-from util.pllm import cli_main     # noqa: E402
+from util.llm import cli_main      # noqa: E402
 
 CFG = os.environ.get("LLME_CONFIG") or os.path.join(HERE, "llme.json")
 
