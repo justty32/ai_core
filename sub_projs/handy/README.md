@@ -106,7 +106,7 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 
 上 PATH 當裸命令：`ln -sf "$(pwd)/llme.py" ~/.local/bin/llme`（有 shebang，直接可執行）。
 
-**刻意極簡**：整支 30 行、一個函式，就是「讀 json → 查 endpoint → 填旗標 → 併 argv → 轉發」。
+**刻意極簡**：整支 38 行、一個函式，就是「讀 json → 查 endpoint → 填旗標 → 併 argv → 轉發」。
 沒有 `--help`、沒有錯誤訊息、沒有設定檔路徑覆寫——**打錯 endpoint 名就是 `KeyError` traceback**。
 要看有哪些 endpoint 直接開 `llme.json`；要看旗標用 `./llme.py <任一ep> --help`（那是 `util.llm` 的）。
 

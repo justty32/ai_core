@@ -12,18 +12,26 @@ sys.path.insert(0, HERE)  # 讓共用 lib util（handy/util/）可 import
 from util import config          # noqa: E402
 from util.llm import cli_main    # noqa: E402
 
-# config 欄位 → 連線旗標。缺的欄位跳過。
+# llme.json 的欄位 → util.llm 的旗標。沒填的欄位就不加。
 FLAGS = [("endpoint", "--endpoint"), ("model", "--model"),
          ("timeout_ms", "--timeout-ms"), ("api_key", "--api-key")]
 
 
 def main(argv):
-    ecfg = config.read(os.path.join(HERE, "llme.json"))[argv[0]]
-    fwd = ["llme"]  # 假程式名（util.llm 的 argv 解析跳過 argv[0]）
+    name = argv[0]        # 第一個參數＝endpoint 名
+    rest = argv[1:]       # 其餘的原樣轉發
+
+    settings = config.read(os.path.join(HERE, "llme.json"))
+    chosen = settings[name]
+
+    flags = []
     for field, flag in FLAGS:
-        if ecfg.get(field) not in (None, ""):
-            fwd += [flag, str(ecfg[field])]
-    return cli_main(fwd + argv[1:])  # 透傳在後＝使用者的同名旗標最終生效
+        if chosen.get(field):
+            flags.append(flag)
+            flags.append(str(chosen[field]))
+
+    # cli_main 跟一般 CLI 一樣會跳過第 0 個參數（程式名），所以前面墊一個。
+    return cli_main(["llme"] + flags + rest)
 
 
 if __name__ == "__main__":
