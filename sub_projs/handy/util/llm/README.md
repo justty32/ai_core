@@ -166,7 +166,7 @@ uv pip install --python ./.venv/Scripts/python.exe --only-binary :all: litellm
 ## 自測
 
 ```sh
-python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 37/37
+python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 49/49
 ```
 
 驗得到「argv 解析／退出碼分流／參數翻譯／回應解讀」；**驗不到**「litellm 真的打得通」與「後端錯誤
@@ -197,7 +197,7 @@ util/llm/
 ├─ req.py        --schema/--tool/--modality 驗證組裝
 ├─ media.py      --image/--media 的 MIME 對照與三分流取值
 ├─ out.py        出口 Sink：文字/tool_calls/媒體落檔/錯誤
-└─ test/         離線冒煙＋fixtures
+└─ test/         離線冒煙（harness.py＝管線、smoke.py＝案例）＋fixtures
 ```
 
 **去程／回程**是理解本套件的主軸：`call.py`＋`msg.py` 把 pllm 形狀翻成 litellm 形狀，`resp.py` 翻回來。

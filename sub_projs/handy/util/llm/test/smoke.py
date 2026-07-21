@@ -1,67 +1,19 @@
 """smoke.py — util.llm 的離線冒煙測試（不連網、不需要裝 litellm）。
 
-跑法：python util/llm/test/smoke.py（從 handy 根跑）。全過回 0，有失敗回 1。
+跑法：python util/llm/test/smoke.py（從哪跑都行）。全過回 0，有失敗回 1。
+管線（斷言／跑 CLI／記分）在 harness.py，本檔只放案例。
 
 驗得到「argv 解析／退出碼分流／參數翻譯／回應解讀」；驗不到「litellm 真的打得通」
 與「後端錯誤語意」——那要真後端。CLI 案例走 fixtures/ 的 file:// 假回應。
 """
-import io
-import os
 import sys
-from contextlib import redirect_stderr, redirect_stdout
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
-
-from util.llm import cli_main                        # noqa: E402
-from util.llm.call import (PLACEHOLDER_KEY, api_base,        # noqa: E402
+from harness import (TEXT, TOOL, check, cli_case,   # noqa: E402
+                     report, run_cli)
+from util.llm.argv import parse_argv                # noqa: E402
+from util.llm.call import (PLACEHOLDER_KEY, api_base,   # noqa: E402
                            build_kwargs, model_id)
-from util.llm.argv import parse_argv                         # noqa: E402
-from util.llm.cli import _make_prompt                        # noqa: E402
-
-FIX = os.path.join(HERE, "fixtures")
-TEXT = "file://" + os.path.join(FIX, "text.json").replace("\\", "/")
-TOOL = "file://" + os.path.join(FIX, "tool.json").replace("\\", "/")
-
-RESULT = {"pass": 0, "fail": 0}
-
-
-def check(desc, got, want):
-    """單一斷言。"""
-    if got == want:
-        print("  PASS  " + desc)
-        RESULT["pass"] += 1
-        return
-    print("  FAIL  " + desc)
-    print("        got =%r" % (got,))
-    print("        want=%r" % (want,))
-    RESULT["fail"] += 1
-
-
-def run_cli(args):
-    """跑一次 cli_main，回 (退出碼, stdout+stderr)。stdin 給空的、不卡住。"""
-    out = io.StringIO()
-    err = io.StringIO()
-    saved = sys.stdin
-    sys.stdin = io.StringIO("")
-    try:
-        with redirect_stdout(out), redirect_stderr(err):
-            code = cli_main(["llm"] + args)
-    finally:
-        sys.stdin = saved
-    return code, out.getvalue() + err.getvalue()
-
-
-def cli_case(desc, args, want_code, want_in=""):
-    """跑一個 CLI 案例，比對退出碼與輸出關鍵字。"""
-    code, text = run_cli(args)
-    if code == want_code and (not want_in or want_in in text):
-        print("  PASS  " + desc)
-        RESULT["pass"] += 1
-        return
-    print("  FAIL  %s（退出碼 want=%d got=%d）" % (desc, want_code, code))
-    print("        " + text.strip().replace("\n", " | ")[:120])
-    RESULT["fail"] += 1
+from util.llm.cli import _make_prompt               # noqa: E402
 
 
 def test_cli():
@@ -88,6 +40,46 @@ def test_cli():
     cli_case("打不通的端點＝請求失敗", ["hi", "--endpoint",
                                        "http://127.0.0.1:9/v1"], 2,
              "請求失敗")
+
+
+def test_edge():
+    """邊界：prompt 空掉的各種寫法、「-」在沒東西可讀時的分流。"""
+    print("== 邊界 ==")
+    cli_case("只有 --（其後全空）", ["--"], 1, "缺少 prompt")
+    cli_case("只有 -，stdin 接上但空", ["-"], 1, "缺少 prompt")
+    cli_case("只有 -，stdin 是互動終端", ["-"], 1, "互動終端", tty=True)
+    cli_case("-- 之後只有一個 -", ["--", "-"], 1, "缺少 prompt")
+    cli_case("空字串當 prompt", [""], 1, "缺少 prompt")
+    cli_case("stdin 只有換行", [], 1, "缺少 prompt", stdin="\n\n")
+    cli_case("--endpoint 缺值（在結尾）", ["--endpoint"], 1, "缺少值")
+    cli_case("只有 - 且 stdin 有東西＝用 stdin",
+             ["-", "--endpoint", TEXT], 0, "下不為例", stdin="資料")
+    cli_case("-- 之後有內容就照用",
+             ["--endpoint", TEXT, "--", "内容"], 0, "下不為例")
+    # 旗標吃下一個 argv 當值，即使它長得像旗標（getopt 慣例）
+    p, _ = parse_argv(["llm", "--model", "--stream", "hi"])
+    check("旗標值長得像旗標也照吃", p.raw_values["model"][0], "--stream")
+    check("被吃掉就不算旗標了", p.stream, False)
+
+
+def test_prompt():
+    """prompt 合體：「-」＝stdin 插入點，沒寫就接在後面（unix 慣例）。"""
+    print("== prompt 與 stdin 合體 ==")
+    check("「-」插在指定位置",
+          _make_prompt(["請點評", "-", "這句詩"], "床前明月光"),
+          "請點評 床前明月光 這句詩")
+    check("沒寫「-」＝prompt＋空行＋stdin",
+          _make_prompt(["請點評"], "床前明月光"),
+          "請點評\n\n床前明月光")
+    check("只有 stdin", _make_prompt([], "床前明月光"), "床前明月光")
+    check("只有位置參數", _make_prompt(["只有這個"], ""), "只有這個")
+    check("「-」但 stdin 是空的", _make_prompt(["前", "-", "後"], ""), "前  後")
+    check("兩個「-」＝stdin 塞兩次",
+          _make_prompt(["-", "-"], "資料"), "資料 資料")
+    # 「--」只關掉旗標解析，不會讓「-」失效——兩者可共存（代價：傳不了字面的 -）
+    p, _ = parse_argv(["llm", "--", "前", "-", "後"])
+    check("「--」之後的「-」仍是 stdin 插入點", p.prompt_parts,
+          ["前", "-", "後"])
 
 
 def test_translate():
@@ -134,32 +126,9 @@ def test_translate():
         "嗨", "http://h/v1", {"api_key": "K"})["api_key"], "K")
 
 
-def test_prompt():
-    """prompt 合體：「-」＝stdin 插入點，沒寫就接在後面（unix 慣例）。"""
-    print("== prompt 與 stdin 合體 ==")
-    check("「-」插在指定位置",
-          _make_prompt(["請點評", "-", "這句詩"], "床前明月光"),
-          "請點評 床前明月光 這句詩")
-    check("沒寫「-」＝prompt＋空行＋stdin",
-          _make_prompt(["請點評"], "床前明月光"),
-          "請點評\n\n床前明月光")
-    check("只有 stdin", _make_prompt([], "床前明月光"), "床前明月光")
-    check("只有位置參數", _make_prompt(["只有這個"], ""), "只有這個")
-    check("「-」但 stdin 是空的", _make_prompt(["前", "-", "後"], ""), "前  後")
-    # 「--」只關掉旗標解析，不會讓「-」失效——兩者可共存（代價：傳不了字面的 -）
-    p, _ = parse_argv(["llm", "--", "前", "-", "後"])
-    check("「--」之後的「-」仍是 stdin 插入點", p.prompt_parts,
-          ["前", "-", "後"])
-
-
-def main():
+if __name__ == "__main__":
     test_cli()
+    test_edge()
     test_prompt()
     test_translate()
-    total = RESULT["pass"] + RESULT["fail"]
-    print("\n結果：%d/%d 通過" % (RESULT["pass"], total))
-    return 1 if RESULT["fail"] else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(report())
