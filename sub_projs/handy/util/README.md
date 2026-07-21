@@ -10,7 +10,7 @@
 | 模組 | 用途 |
 |---|---|
 | [`util.config`](config.py) | 讀 JSON ＋ 解析 `$env`／`$ref`（見下）|
-| [`util.env`](env.py) | 環境變數小工具：`first()`／`stem()`（見下）|
+| [`util.jsref`](jsref.py) | `$ref` 語法的純函式：拆解／走路徑／深合併（見下）|
 | [`util.llm`](llm/) | **LLM 地基**：litellm 包裝 → **[llm/README.md](llm/README.md)** |
 
 > `util/llm/` 是唯一有 `__init__.py` 的成員——它是**真的套件**（多檔、有內部相依），不是單檔模組。
@@ -107,23 +107,3 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 （回 `(值, 有沒有找到)`，好分辨「不存在」與「值是 null」）、`merge()` 深合併兩個值。
 單獨拿來合併兩個 dict 也行。
 
----
-
-## util.env — 環境變數小工具
-
-純讀 `os.environ`、無副作用。
-
-```python
-from util import env
-
-env.first("LLME_KEY_DEEPSEEK", "DEEPSEEK_API_KEY")   # 第一個「有設且非空」的值
-env.stem("deep-seek")                                 # → "DEEP_SEEK"
-```
-
-| 函式 | 行為 |
-|---|---|
-| `first(*keys)` | 依序找，回第一個**有設且非空**的值；**空字串視為沒設**；都沒有回 `None` |
-| `stem(name)` | 名字→env 慣例識別子：大寫、非英數一律轉 `_`（`gpt-4o.mini` → `GPT_4O_MINI`）|
-
-> ⚠ **目前沒有任何住戶在用**。它原本是 llme 的 api_key 環境變數自動注入（`LLME_KEY_<EP>` ＞
-> `<EP>_API_KEY`）在用，那功能已被砍掉。留著給日後住戶，或哪天確定不需要就刪。

@@ -35,7 +35,6 @@ handy/
 |---|---|
 | `util.config` | 讀 JSON ＋ 解析 `$env`／`$ref`（含跨檔引用與陣列合併）|
 | `util.jsref` | `$ref` 語法的純函式：拆解／走路徑／深合併 |
-| `util.env` | 環境變數小工具：`first()`／`stem()`（⚠ 目前無人使用）|
 | `util.llm` | **LLM 地基**：litellm 包裝，轉出 `ask`／`cli_main`／`LLMError` |
 
 **用法、實測行為表、住戶怎麼 import 一律見 → [util/README.md](util/README.md)。**
