@@ -9,6 +9,9 @@
   · model 自動加 openai/ 前綴，走 OpenAI-compatible 路徑；否則 litellm 會把
     google/gemma-… 的 google/ 誤判成 provider。設 LLM_RAW_MODEL=1 可關掉。
   · drop_params 開著：後端不吃的取樣參數自動丟棄而非炸掉。
+  · **沒給 api_key 時補一個佔位字串**：舊 pllm 沒 key 就不送 Authorization header，
+    litellm 的 openai provider 卻一律要求 key，不給就當場丟 InternalServerError
+    （連本機 LM Studio 這種免認證端點都打不出去）。補的佔位值免認證後端會忽略。
 """
 import json
 import os
@@ -17,6 +20,7 @@ from .errors import LLMError
 from .msg import build_messages
 
 PLACEHOLDER_MODEL = "openai/gpt-3.5-turbo"   # 沒給 model 時的佔位
+PLACEHOLDER_KEY = "handy-no-auth"            # 沒給 api_key 時的佔位（見上）
 
 SAMPLING = ["temperature", "top_p", "presence_penalty",
             "frequency_penalty", "max_tokens", "seed"]
@@ -111,6 +115,8 @@ def build_kwargs(prompt, url, opts):
 
     if opts.get("api_key"):
         kw["api_key"] = opts["api_key"]
+    else:
+        kw["api_key"] = PLACEHOLDER_KEY   # 免認證端點也得給，見模組 docstring
     if opts.get("timeout_ms") is not None:
         kw["timeout"] = float(opts["timeout_ms"]) / 1000.0   # 毫秒→秒
     _add_sampling(kw, opts)

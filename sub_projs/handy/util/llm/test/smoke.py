@@ -14,7 +14,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 
 from util.llm import cli_main                        # noqa: E402
-from util.llm.call import api_base, build_kwargs, model_id   # noqa: E402
+from util.llm.call import (PLACEHOLDER_KEY, api_base,        # noqa: E402
+                           build_kwargs, model_id)
 
 FIX = os.path.join(HERE, "fixtures")
 TEXT = "file://" + os.path.join(FIX, "text.json").replace("\\", "/")
@@ -80,7 +81,7 @@ def test_cli():
     cli_case("--media-out 壞目錄", ["hi", "--media-out", "/nope/nope"], 1,
              "不是可用目錄")
     cli_case("讀不到媒體檔", ["hi", "--image", "/nope.png"], 1, "讀不到檔案")
-    cli_case("litellm 未裝＝請求失敗", ["hi", "--endpoint",
+    cli_case("打不通的端點＝請求失敗", ["hi", "--endpoint",
                                        "http://127.0.0.1:9/v1"], 2,
              "請求失敗")
 
@@ -123,7 +124,10 @@ def test_translate():
 
     plain = build_kwargs("嗨", "http://h/v1/chat/completions", {})
     check("無 media＝純字串 content", plain["messages"][0]["content"], "嗨")
-    check("沒 api_key 就不送", "api_key" in plain, False)
+    # 迴歸守門：沒 key 時必須補佔位，否則 litellm 連免認證的本機端點都打不出去
+    check("沒 api_key 補佔位", plain["api_key"], PLACEHOLDER_KEY)
+    check("有給就用使用者的", build_kwargs(
+        "嗨", "http://h/v1", {"api_key": "K"})["api_key"], "K")
 
 
 def main():
