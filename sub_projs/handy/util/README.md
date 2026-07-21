@@ -54,8 +54,7 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 **用意**：金鑰用 `$env` 從環境帶、不寫死進版控；重複值（共用端點等）用 `$ref` 收斂成一處；
 陣列形式用來做「基底＋覆寫」的分層設定。
 
-> **`$ref` 語法對齊 [guanyu 專案的 `util_jsonschema.go`](file:///C:/code/guanyu/project_template/util/util_jsonschema.go)**，
-> 跨專案同一套規則。**沒有 `#` 就整串當檔名**——所以引用本檔片段一定要寫 `#`。
+> **沒有 `#` 就整串當檔名**——所以引用本檔片段一定要寫 `#`。
 
 ### 陣列形式的合併規則
 
@@ -83,19 +82,17 @@ cfg = config.read("some.json")     # 回「完全解析後」的 dict
 | `$ref` 片段用數字段 | 可索引陣列（`#list/1`）|
 | `$ref` 指向的節點自己含 `$env`／`$ref` | **遞迴解析**，拿到最終值 |
 | 同一份檔被引用多次 | **只讀一次**（依絕對路徑 cache）|
-| 同一個 dict 同時有 `$ref` 與 `$env` | **`$ref` 優先**（同 Go 版）|
+| 同一個 dict 同時有 `$ref` 與 `$env` | **`$ref` 優先** |
 | 指令式節點在**陣列裡** | 一樣會解析 |
 | `$ref` 形成迴圈 | `ValueError: config $ref 迴圈：…` |
 | `$ref` 片段不存在 | `ValueError: config $ref 找不到路徑：…` |
 | `$ref` 陣列為空／元素非字串／`$ref` 非字串非陣列 | 各拋對應的 `ValueError` |
 
-> ⚠ **`$env` 沒設時，那個鍵仍然存在、值是 `None`**——不是被移除。呼叫端要自己判斷，
+> ⚠ **`$env` 沒設時不報錯**——那個鍵仍然存在、值是 `None`（不是被移除）。呼叫端要自己判斷，
 > 例如 [llme.py](../llme.py) 用 `if value:` 跳過沒填的欄位。
->
-> ⚠ 這點與 Go 版不同：**Go 在環境變數未設時直接報錯**，這裡回 `default`／`None`。
 
 `read()` 在**檔案不存在或 JSON 壞掉時直接拋**（`OSError`／`json.JSONDecodeError`），不自己吞。
-另有 `config.resolve_in(js, base_dir)` 可解析已在記憶體裡的結構（相當於 Go 的 `ResolveJSRefsIn`）。
+另有 `config.resolve_in(js, base_dir)` 可解析已在記憶體裡的結構（不碰檔案）。
 
 **自測**：`python util/test/config_smoke.py`（離線、零相依）；現況 33/33。
 

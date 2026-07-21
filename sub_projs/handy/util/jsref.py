@@ -1,7 +1,6 @@
 """jsref.py — JSON `$ref` 語法的純函式：拆引用、走片段路徑、合併。
 
-不碰檔案、不遞迴解析——那些在 [config.py](config.py)。這裡只有三個純轉換，
-語意對齊 guanyu 專案的 util_jsonschema.go。
+不碰檔案、不遞迴解析——那些在 [config.py](config.py)。這裡只有三個純轉換。
 """
 
 

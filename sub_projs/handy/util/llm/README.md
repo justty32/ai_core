@@ -149,7 +149,7 @@ pip install litellm
 **本機（Windows 開發機）已備好 venv**：`handy/.venv`（版控忽略）。建法：
 
 ```sh
-uv venv --python "C:/Users/WG-Guanyu/AppData/Local/Programs/Python/Python313/python.exe" .venv
+uv venv --python "$LOCALAPPDATA/Programs/Python/Python313/python.exe" .venv   # 官方安裝器版
 uv pip install --python ./.venv/Scripts/python.exe --only-binary :all: litellm
 ./.venv/Scripts/python.exe llme.py openrouter 你好
 ```

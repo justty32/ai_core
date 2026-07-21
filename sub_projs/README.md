@@ -11,7 +11,7 @@
 | [cllm/](cllm/) | **cllm 傘**：獨立 C LLM 產物（`core/`）＋其周邊。見下「cllm 傘」。 | [README.md](cllm/README.md) |
 | [lang-labs/](lang-labs/) | **各語言開發遊樂場傘**：Common Lisp（`cl-lab/`，內含 `comfy/`）＋Janet（`janet-lab/`）。見下「lang-labs 傘」。 | [README.md](lang-labs/README.md) |
 | [galtxt/](galtxt/) | **動手實驗場（第一把刀）**：ai_core 北極星第一目標問題的落地執行處（galgame 台詞生成）。套 workflows 分層模板；現行推進線＝語料庫 `corpus/`＋gen 生成器＋uni 統一 kernel。〔2026-07-20 開發暫緩〕 | [AGENTS.md](galtxt/AGENTS.md) |
-| [handy/](handy/) | **路徑一試驗田（OS 當 AI agent）**：一組靈活小腳本／小程式集，拿現成程式（尤其 `cllm`）用腳本包裝、資料夾＝callable、按慣例組合。已有住戶 `llme`／`zhtw`，規劃 `wf`／`daemon`。〔2026-07-20：之後將大規模重構，現狀僅供參考〕 | [AGENTS.md](handy/AGENTS.md) |
+| [handy/](handy/) | **路徑一試驗田（OS 當 AI agent）**：一組靈活小腳本／小程式集，拿現成件用薄殼包裝、資料夾＝callable、按慣例組合。**2026-07-21 重構完成**：LLM 地基＝`util/llm`（litellm 薄包裝，形狀鏡像已封存的 `pllm`）＋共用 lib `util`（`config`／`jsref`）＋住戶① `llme`。舊 Fennel 版住戶（`llme`/`zhtw`/`wf`/`mail`、`hermy`）與 `pllm` 全凍結於 `archive/`。⚠ 刻意破例依賴 litellm 的**試裝階段**。 | [README.md](handy/README.md) |
 | [unipath/](unipath/) | **歸一於路徑基材（比 handy 更底層）**：Plan 9 思想＋9P 協議、FUSE 起步，把活 process 執行態暴露成可 walk 路徑樹。step 1–6 全綠、規則語言＝Janet。**Windows 跑不了**（FUSE，僅 Linux／macOS）。 | [AGENTS.md](unipath/AGENTS.md) |
 | [llm_forge/](llm_forge/) | **框架規劃地（爐子）**：把 LLM 鍛成可靠管線的機制之家——固化階梯／雙錨驗證／評分級聯。目前僅規劃期文檔骨架、無程式碼；galtxt 跑通的機制才搬來固化。 | [AGENTS.md](llm_forge/AGENTS.md) |
 | `ver_1/` | 早期 Python 實作版的**封存**（src／tests／原型／範例）。已從主線退下，半封存狀態、不在現役維護鏈、不精整。 | （封存，不另設入口）|
