@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 from util.llm import cli_main                        # noqa: E402
 from util.llm.call import (PLACEHOLDER_KEY, api_base,        # noqa: E402
                            build_kwargs, model_id)
+from util.llm.cli import _make_prompt                        # noqa: E402
 
 FIX = os.path.join(HERE, "fixtures")
 TEXT = "file://" + os.path.join(FIX, "text.json").replace("\\", "/")
@@ -132,8 +133,23 @@ def test_translate():
         "嗨", "http://h/v1", {"api_key": "K"})["api_key"], "K")
 
 
+def test_prompt():
+    """prompt 合體：「-」＝stdin 插入點，沒寫就接在後面（unix 慣例）。"""
+    print("== prompt 與 stdin 合體 ==")
+    check("「-」插在指定位置",
+          _make_prompt(["請點評", "-", "這句詩"], "床前明月光"),
+          "請點評 床前明月光 這句詩")
+    check("沒寫「-」＝prompt＋空行＋stdin",
+          _make_prompt(["請點評"], "床前明月光"),
+          "請點評\n\n床前明月光")
+    check("只有 stdin", _make_prompt([], "床前明月光"), "床前明月光")
+    check("只有位置參數", _make_prompt(["只有這個"], ""), "只有這個")
+    check("「-」但 stdin 是空的", _make_prompt(["前", "-", "後"], ""), "前  後")
+
+
 def main():
     test_cli()
+    test_prompt()
     test_translate()
     total = RESULT["pass"] + RESULT["fail"]
     print("\n結果：%d/%d 通過" % (RESULT["pass"], total))

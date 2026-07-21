@@ -158,7 +158,7 @@ uv pip install --python ./.venv/Scripts/python.exe --only-binary :all: litellm
 ## 自測
 
 ```sh
-python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 31/31
+python util/llm/test/smoke.py     # 離線冒煙：不連網、不需 litellm；現況 36/36
 ```
 
 驗得到「argv 解析／退出碼分流／參數翻譯／回應解讀」；**驗不到**「litellm 真的打得通」與「後端錯誤
