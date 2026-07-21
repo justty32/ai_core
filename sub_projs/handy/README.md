@@ -106,15 +106,20 @@ python util/llm/test/smoke.py        # 離線冒煙（不連網、不需 litellm
 
 上 PATH 當裸命令：`ln -sf "$(pwd)/llme.py" ~/.local/bin/llme`（有 shebang，直接可執行）。
 
-**刻意極簡**：整支 38 行、一個函式，就是「讀 json → 查 endpoint → 填旗標 → 併 argv → 轉發」。
+**刻意極簡**：整支 36 行、一個函式，就是「讀 json → 查 endpoint → 填旗標 → 併 argv → 轉發」。
 沒有 `--help`、沒有錯誤訊息、沒有設定檔路徑覆寫——**打錯 endpoint 名就是 `KeyError` traceback**。
 要看有哪些 endpoint 直接開 `llme.json`；要看旗標用 `./llme.py <任一ep> --help`（那是 `util.llm` 的）。
 
 ### llme.json（多模型定義在一檔）
 
-`<endpoint 名> → { endpoint, model, timeout_ms, api_key? }`。用 `util.config` 讀，故吃 `$env`/`$ref`：
-金鑰寫成 `{"$env":"DEEPSEEK_API_KEY"}`、共用端點用 `{"$ref":"_lmstudio"}`；`_` 開頭鍵非 endpoint
-（當共用資料）。**加模型＝在此加一列**。
+`<endpoint 名> → { 欄位: 值, ... }`。**欄位名就是 `util.llm` 的旗標名，底線換連字號**
+（`timeout_ms` → `--timeout-ms`），所以想固定 `temperature`、`max_tokens` 之類的，直接加一欄就好，
+**不必回頭改 llme.py**。慣用四欄：`endpoint`／`model`／`timeout_ms`／`api_key`。
+
+用 `util.config` 讀，故吃 `$env`/`$ref`：金鑰寫成 `{"$env":"DEEPSEEK_API_KEY"}`、共用端點用
+`{"$ref":"_lmstudio"}`；`_` 開頭鍵非 endpoint（當共用資料）。**加模型＝在此加一列**。
+
+> ⚠ 因為欄位直接變旗標，**打錯欄位名＝`util.llm` 報「未知旗標」**（不是被忽略）。
 
 ### api_key 來源
 
