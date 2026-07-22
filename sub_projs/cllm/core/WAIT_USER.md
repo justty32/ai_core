@@ -10,7 +10,7 @@
 
 ## 待使用者項
 
-- **`--usage` 真後端驗證**：離線 fixture 非串流／串流兩路已綠（40/40），跨不過去的那關是真後端對 `stream_options.include_usage` 的實際反應（需 API key）。對 OpenRouter／LM Studio／DeepSeek 各打一次 `llm 你好 --usage` 與 `llm 你好 --usage --stream`，確認：① 非串流 usage 正常印；② 串流末塊有沒有真的附 usage；③ 有沒有後端不認 `stream_options` 直接 400（若有 → 記 [gotchas/backend](workflows/common/gotchas/backend.md)，並考慮該後端串流別開 `--usage`）。結果回寫 [docs/c-abi-output.md](docs/c-abi-output.md)。
+- **`--usage` 雲端真後端驗證**（LM Studio 已於 2026-07-22 驗綠：非串流／串流兩路 usage 正確、`stream_options` 未被拒）：剩 OpenRouter／DeepSeek（需 API key）各打一次 `llm 你好 --usage` 與 `llm 你好 --usage --stream`，確認 ① usage 正常印；② 串流末塊有沒有真的附 usage；③ 有沒有後端不認 `stream_options` 直接 400（若有 → 記 [gotchas/backend](workflows/common/gotchas/backend.md)，並考慮該後端串流別開 `--usage`）。結果回寫 [docs/c-abi-output.md](docs/c-abi-output.md)。
 
 - **llm-login 真 OAuth 往返驗證**（C++ 版）：[tools/llm-login/](tools/llm-login/README.md) 已 C++ 重寫、離線測 24 條＋免瀏覽器整合測全綠（PKCE／URL 組裝／token store／config patch／接 callback→換 token→存檔→patch）。跨不過去的那關要**真帳號＋開瀏覽器**：**最快從 OpenRouter 驗**（免註冊 client）——先建 `cmake --build --preset linux-debug --target llm-login` → `cp tools/llm-login/providers/openrouter.json ~/.config/llm/oauth.json` → `./build/tools/llm-login login`（headless 加 `--no-browser`，另開瀏覽器貼網址）→ 確認拿到 key、寫進 `config.json`、`llm` 裸跑帶得上 bearer。其餘三家要先各自備好（Google OAuth Client／Entra app＋tenant／GitHub OAuth App）再驗。踩到的真實行為（scope、token 壽命、refresh 是否輪換、redirect_uri 白名單、OpenRouter 回應欄位是否真為 `key`）回寫 preset `_notes`／README／gotchas。
 

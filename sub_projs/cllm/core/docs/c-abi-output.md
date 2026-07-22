@@ -73,7 +73,7 @@ typedef struct llm_usage_t {
 ```
 
 - **非串流**：從回應 body 的 `usage` 物件解出，內容 handler（text/tool/media）都跑完後交付。
-- **串流**：裝了 `on_usage` 時請求會**多送 `stream_options.include_usage:true`**（OpenAI 慣例，要後端把 usage 附在末塊）；不裝就完全不送、請求 body 與從前一致。後端末塊有附才會呼叫。
+- **串流**：裝了 `on_usage` 時請求會**多送 `stream_options.include_usage:true`**（OpenAI 慣例，要後端把 usage 附在末塊）；不裝就完全不送、請求 body 與從前一致。後端末塊有附才會呼叫。**LM Studio 實測綠**（2026-07-22，`google/gemma-4-e4b`）：非串流／串流兩路 usage 都正確吐、`stream_options` 未被拒。
 - ⚠ **後端沒回 usage ＝ 不呼叫**（不是三欄全 -1）——跟 `--schema` 同一課：有沒有拿到要看實際回應，不能假設後端配合。
 
 ---
