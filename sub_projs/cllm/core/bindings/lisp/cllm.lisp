@@ -78,7 +78,8 @@
   (on-text :pointer) (text-user :pointer)
   (on-tool :pointer) (tool-user :pointer)
   (on-media :pointer) (media-user :pointer)
-  (on-error :pointer) (error-user :pointer))
+  (on-error :pointer) (error-user :pointer)
+  (on-usage :pointer) (usage-user :pointer)) ; token 用量（本綁定未外露，恆 NULL）
 
 ;; field_mask 位旗標（cabi_client.h 的 LLM_FIELD_*）
 (defconstant +f-temperature+ 1)
@@ -247,7 +248,10 @@
                   (foreign-slot-value h '(:struct handlers) 'on-media) (callback %on-media)
                   (foreign-slot-value h '(:struct handlers) 'media-user) (null-pointer)
                   (foreign-slot-value h '(:struct handlers) 'on-error) (callback %on-error)
-                  (foreign-slot-value h '(:struct handlers) 'error-user) (null-pointer))
+                  (foreign-slot-value h '(:struct handlers) 'error-user) (null-pointer)
+                  ;; on-usage 未外露：必須明填 NULL（foreign 記憶體不歸零，殘值會被當函數指標呼叫）
+                  (foreign-slot-value h '(:struct handlers) 'on-usage) (null-pointer)
+                  (foreign-slot-value h '(:struct handlers) 'usage-user) (null-pointer))
             ;; 呼叫（動態變數餵給 callback）
             (let ((*acc* (make-string-output-stream))
                   (*on-delta* on-delta) (*on-error* on-error)

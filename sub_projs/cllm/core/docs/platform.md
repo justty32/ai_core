@@ -48,7 +48,7 @@ int status = http::stream(req, [](std::string_view chunk){ /* 逐塊 raw bytes *
 cmake --preset linux-debug          # configure：glaze:x64-linux vcpkg 自動裝、約 1.4 秒；系統 CURL 直接命中
 cmake --build --preset linux-debug  # 7 個編譯單元全過（.so 5：cabi.cpp/cabi_request/response/stream＋http；
                                      #   CLI 2：cli.cpp＋main.cpp），link 出 build/libcllm.so ＋ build/llm
-bash test/cli_smoke.sh              # 離線黑箱煙霧測試 35/35 綠：輸出正確（含串流／結構化）、config 三層來源、
+bash test/cli_smoke.sh              # 離線黑箱煙霧測試 40/40 綠：輸出正確（含串流／結構化）、config 三層來源、
                                      #   退出碼 0/1/2 三段分流；中文輸出（繁中台詞）原樣 UTF-8、無亂碼
 ```
 

@@ -69,6 +69,7 @@ void print_usage() {
       "                         模型的 tool_calls 以一行一則 JSON 吐 stdout（jq 友善）\n"
       "  --modality <名[=檔]>   要求輸出模態（可重複）：如 audio 或 audio=cfg.json（模態參數 JSON）\n"
       "  --media-out <目錄>     產出媒體落檔目錄（llm-media-N.<ext>，路徑逐行吐 stdout）；沒給＝丟棄\n"
+      "  --usage                token 用量吐 stderr（布林；串流時會多送 stream_options.include_usage）\n"
       "  --                     分隔符：其後所有參數一律當 prompt\n"
       "  --help, -h             顯示本說明\n"
       "\n連線／取樣旗標（由 llm::abi::Client 欄位反射生成，未給即不送、交後端默認）：\n");

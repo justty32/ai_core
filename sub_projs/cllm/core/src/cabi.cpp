@@ -73,7 +73,7 @@ llm_status_t llm_ask(llm_context_t *ctx, const llm_client_t *client,
   }
 
   try {
-    std::string body = build_body(client, req);
+    std::string body = build_body(client, req, handlers && handlers->on_usage);
     if (const char *d = std::getenv("LLM_DUMP_BODY"); d && *d && *d != '0')
       std::fprintf(stderr, "%s\n", body.c_str()); // 除錯／trace：把送出的請求 JSON 印到 stderr
     set_phase(ctx, LLM_PHASE_WAIT);

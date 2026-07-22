@@ -138,4 +138,4 @@ typedef struct llm_modality_t {
 
 ---
 
-**收回那半邊**（模型吐回來的 tool_call／media_out ＋ 四 handler）與**非同步控制** → [C ABI · 輸出型與控制](c-abi-output.md)。
+**收回那半邊**（模型吐回來的 tool_call／media_out／usage ＋ 五 handler）與**非同步控制** → [C ABI · 輸出型與控制](c-abi-output.md)。

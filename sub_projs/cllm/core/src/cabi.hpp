@@ -6,7 +6,7 @@
 //   · 指標 + count      → std::vector
 //   · 函數指標 + void*  → std::function（閉包自帶狀態，void* user 消失）
 //   · field_mask + 值   → std::optional（省掉記帳）
-// 出口保持 C ABI 的「對稱三 handler」（on_text/on_tool/on_media + on_error），ask() 回 Status。
+// 出口保持 C ABI 的對稱 handler 集（on_text/on_tool/on_media + on_error/on_usage），ask() 回 Status。
 // ★ 反射糖（ask_as<T>、make_tool<Args>…）刻意不放這層——那是「方便使用」的便利層，
 //   已在薄鏡像上包好：bindings/cpp/llm.hpp（零依賴人體工學）＋ llm_reflect.hpp（glaze 糖）。
 //   本檔只依賴 cabi.h，不碰 glaze。
@@ -134,6 +134,13 @@ public:
             std::string_view(msg, n));
       };
       h.error_user = const_cast<void *>(static_cast<const void *>(&handlers.on_error));
+    }
+    if (handlers.on_usage) {
+      h.on_usage = [](const llm_usage_t *usg, void *u) {
+        (*static_cast<const std::function<void(const Usage &)> *>(u))(
+            Usage{usg->prompt_tokens, usg->completion_tokens, usg->total_tokens});
+      };
+      h.usage_user = const_cast<void *>(static_cast<const void *>(&handlers.on_usage));
     }
 
     return static_cast<Status>(llm_ask(ctx ? &ctx->c_ : nullptr, &cc, &r, &h));

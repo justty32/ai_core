@@ -32,8 +32,14 @@ struct StreamDelta {
 struct StreamChoice {
   StreamDelta delta;
 };
+struct StreamUsage {
+  std::optional<int> prompt_tokens;
+  std::optional<int> completion_tokens;
+  std::optional<int> total_tokens;
+};
 struct StreamChunk {
   std::vector<StreamChoice> choices;
+  std::optional<StreamUsage> usage; // include_usage 時後端附在末塊（該塊 choices 通常為空）
 };
 struct Assembled {
   std::string id, name, arguments;
@@ -49,6 +55,7 @@ llm_status_t do_stream(llm_context_t *ctx, const llm_client_t *c, const std::str
 
   std::string line_buf, raw_all;
   std::vector<Assembled> acc;
+  std::optional<StreamUsage> usage_seen; // 末塊的 usage（哪塊帶就記哪塊，取最後一筆）
   bool first = false, was_cancelled = false;
 
   int status = http::stream(hreq, [&](std::string_view part) -> bool {
@@ -76,6 +83,8 @@ llm_status_t do_stream(llm_context_t *ctx, const llm_client_t *c, const std::str
       StreamChunk chunk{};
       if (glz::read<kLenient>(chunk, data))
         continue;
+      if (chunk.usage)
+        usage_seen = chunk.usage; // usage 塊的 choices 通常為空，要在下一行 skip 前先收
       if (chunk.choices.empty())
         continue;
       const StreamDelta &d = chunk.choices[0].delta;
@@ -117,6 +126,12 @@ llm_status_t do_stream(llm_context_t *ctx, const llm_client_t *c, const std::str
       if (h->on_tool(&call, h->tool_user))
         break;
     }
+  }
+  if (usage_seen && h && h->on_usage) { // 用量最後交付（同非串流：內容都跑完才輪到 metadata）
+    llm_usage_t u{usage_seen->prompt_tokens.value_or(-1),
+                  usage_seen->completion_tokens.value_or(-1),
+                  usage_seen->total_tokens.value_or(-1)};
+    h->on_usage(&u, h->usage_user);
   }
   set_phase(ctx, LLM_PHASE_DONE);
   return LLM_OK;

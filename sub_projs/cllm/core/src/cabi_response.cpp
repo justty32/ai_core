@@ -37,8 +37,14 @@ struct RespMsg {
 struct RespChoice {
   RespMsg message;
 };
+struct RespUsage {
+  std::optional<int> prompt_tokens;
+  std::optional<int> completion_tokens;
+  std::optional<int> total_tokens;
+};
 struct RespBody {
   std::vector<RespChoice> choices;
+  std::optional<RespUsage> usage;
 };
 
 // 後端錯誤外殼（OpenAI 風格 {"error":{"message":…}}）
@@ -118,6 +124,12 @@ void dispatch_nonstream(const std::string &raw, const llm_handlers_t *h) {
     std::string mime = "audio/" + (m.audio->format ? *m.audio->format : std::string("wav"));
     llm_media_out_t out{mime.c_str(), bytes.data(), bytes.size()};
     h->on_media(&out, h->media_user);
+  }
+  if (parsed.usage && h && h->on_usage) { // 用量最後交付（內容都跑完了才輪到 metadata）
+    llm_usage_t u{parsed.usage->prompt_tokens.value_or(-1),
+                  parsed.usage->completion_tokens.value_or(-1),
+                  parsed.usage->total_tokens.value_or(-1)};
+    h->on_usage(&u, h->usage_user);
   }
 }
 

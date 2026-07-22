@@ -69,10 +69,15 @@ struct ResponseFormat {
   std::string type = "json_schema";
   JsonSchema json_schema;
 };
+// 串流用量：{stream_options:{include_usage:true}}（要後端把 usage 附在末塊；OpenAI 慣例）
+struct StreamOptions {
+  bool include_usage = true;
+};
 struct ReqBody {
   std::optional<std::string> model;
   std::vector<ReqMessage> messages;
   bool stream = false;
+  std::optional<StreamOptions> stream_options;
   std::optional<float> temperature; // ↓ 取樣六欄（由 field_mask 決定送不送）
   std::optional<float> top_p;
   std::optional<int> max_tokens;
@@ -120,9 +125,11 @@ glz::raw_json build_content(const llm_request_t *req) {
 using namespace req_impl;
 
 // 組完整請求 JSON（含 modalities 的 per-modality config：glaze struct 無法動態鍵，故末尾拼接）。
-std::string build_body(const llm_client_t *c, const llm_request_t *req) {
+std::string build_body(const llm_client_t *c, const llm_request_t *req, bool include_usage) {
   ReqBody b;
   b.stream = req->stream != 0;
+  if (b.stream && include_usage) // 非串流的 usage 本來就在 body，不必多要
+    b.stream_options = StreamOptions{};
 
   // 取樣搬運（原 apply_sampling 那七行）：model 看指標非空、六個數值欄看 field_mask。
   if (c) {

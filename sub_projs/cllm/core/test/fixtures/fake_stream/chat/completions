@@ -6,4 +6,6 @@ data: {"choices":[{"delta":{"content":"是為你"}}]}
 
 data: {"choices":[{"delta":{"content":"回答的"}}]}
 
+data: {"choices":[],"usage":{"prompt_tokens":8,"completion_tokens":4,"total_tokens":12}}
+
 data: [DONE]

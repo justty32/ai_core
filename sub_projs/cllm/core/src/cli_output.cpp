@@ -56,6 +56,12 @@ llm::abi::Handlers Sink::handlers() {
   h.on_error = [](std::string_view msg) {
     std::fprintf(stderr, "請求失敗：%.*s\n", static_cast<int>(msg.size()), msg.data());
   };
+  if (show_usage) { // 不裝 handler＝連 stream_options 都不多送（見 cabi_response.h）
+    h.on_usage = [](const llm::abi::Usage &u) { // 診斷歸 stderr，stdout 只留答案（unix filter）
+      std::fprintf(stderr, "用量：prompt=%d completion=%d total=%d\n",
+                   u.prompt_tokens, u.completion_tokens, u.total_tokens);
+    };
+  }
   return h;
 }
 

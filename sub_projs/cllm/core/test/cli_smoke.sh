@@ -68,6 +68,18 @@ expect_body() {
     fi
 }
 
+# expect_err <期望子字串> <說明> -- <指令...>：跑指令、驗 stderr 含子字串且退出碼 0（診斷面輸出，如 --usage）。
+expect_err() {
+    local needle="$1" desc="$2"; shift 2
+    [ "$1" = "--" ] && shift
+    local err; err="$("$@" 2>&1 >/dev/null)"; local got=$?
+    if [ "$got" = 0 ] && printf '%s' "$err" | grep -qF -- "$needle"; then
+        printf '  [PASS] %s\n' "$desc"; pass=$((pass+1))
+    else
+        printf '  [FAIL] exit=%s err=<%s>  %s\n' "$got" "$err" "$desc" >&2; fail=$((fail+1))
+    fi
+}
+
 echo "== llm CLI 離線煙霧測試 =="
 echo "binary: $BIN"
 
@@ -90,6 +102,23 @@ expect_out "才不是為你回答的" "-- 分隔符（旗標在前 -- prompt）"
 printf '{"type":"object"}' > "$TMP/sc.json"
 expect_out '"name":"星野"' "--schema 結構化輸出" \
     -- "$BIN" 給我角色 --schema "$TMP/sc.json" --endpoint "$FX/fake_json/chat/completions"
+
+# ── (1d) --usage：token 用量吐 stderr；串流時 body 多送 stream_options（不給旗標＝完全不送）──
+echo "-- usage --"
+expect_err "用量：prompt=42 completion=21 total=63" "--usage → 用量吐 stderr（非串流）" \
+    -- "$BIN" 你好 --usage --endpoint "$FX/fake/chat/completions"
+expect_err "用量：prompt=8 completion=4 total=12" "--usage → 用量吐 stderr（串流末塊）" \
+    -- "$BIN" 你好 --usage --stream --endpoint "$FX/fake_stream/chat/completions"
+expect_out "才不是為你回答的" "--usage 不汙染 stdout（答案照常）" \
+    -- "$BIN" 你好 --usage --endpoint "$FX/fake/chat/completions"
+expect_body '"stream_options":{"include_usage":true}' "--usage＋--stream → body 送 stream_options" \
+    -- "$BIN" 你好 --usage --stream --endpoint "$FX/fake_stream/chat/completions"
+if LLM_DUMP_BODY=1 "$BIN" 你好 --stream --endpoint "$FX/fake_stream/chat/completions" 2>&1 >/dev/null \
+    | grep -qF '"stream_options"'; then
+    printf '  [FAIL] 未給 --usage 卻送了 stream_options\n' >&2; fail=$((fail+1))
+else
+    printf '  [PASS] 未給 --usage → body 無 stream_options\n'; pass=$((pass+1))
+fi
 
 # ── (1c) --system：在 user 前插一則真 system role 訊息（驗組出去的 body）──
 echo "-- system role --"

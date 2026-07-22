@@ -23,6 +23,10 @@ tools／media／modalities（v2 補齊，皆為 kwargs，可任意組合）：
 
 on_tool／on_media 回真值＝要求中止（同 on_delta 慣例）。
 
+on_usage（後端有回 usage 才呼叫，至多一次、排最後；串流時裝上它會多送 stream_options.include_usage）：
+
+    llm.ask("你好", on_usage=lambda u: print(u["total_tokens"]))  # u={prompt_tokens,completion_tokens,total_tokens}，-1＝沒給
+
 消費穩定 C ABI（見 ../../docs/c-abi-reference.md）。共享庫路徑：預設 ../../build/libcllm.{dll,dylib,so}
 （依 os 平台自動選副檔名），可用環境變數 LIBCLLM 覆寫。範圍：prompt＋連線/取樣選項＋stream＋schema＋on_delta/on_error＋
 tools/on_tool＋media/on_media＋modalities。
@@ -92,18 +96,24 @@ class _MediaOut(Structure):
     _fields_ = [("mime", c_char_p), ("data", c_void_p), ("len", c_size_t)]
 
 
+class _Usage(Structure):
+    _fields_ = [("prompt_tokens", c_int), ("completion_tokens", c_int), ("total_tokens", c_int)]
+
+
 # handler 函數指標型（text/message 走 c_void_p+len，用 string_at 精確取 bytes——不保證 NUL 結尾）
 _TEXT_H = CFUNCTYPE(c_int, c_void_p, c_size_t, c_void_p)
 _TOOL_H = CFUNCTYPE(c_int, POINTER(_ToolCall), c_void_p)
 _MEDIA_H = CFUNCTYPE(c_int, POINTER(_MediaOut), c_void_p)
 _ERROR_H = CFUNCTYPE(None, c_void_p, c_size_t, c_void_p)
+_USAGE_H = CFUNCTYPE(None, POINTER(_Usage), c_void_p)
 
 
 class _Handlers(Structure):
     _fields_ = [("on_text", _TEXT_H), ("text_user", c_void_p),
                 ("on_tool", _TOOL_H), ("tool_user", c_void_p),
                 ("on_media", _MEDIA_H), ("media_user", c_void_p),
-                ("on_error", _ERROR_H), ("error_user", c_void_p)]
+                ("on_error", _ERROR_H), ("error_user", c_void_p),
+                ("on_usage", _USAGE_H), ("usage_user", c_void_p)]
 
 
 _LIB = None
@@ -134,7 +144,7 @@ def ask(prompt, endpoint=None, *, system=None, api_key=None, model=None, timeout
         temperature=None, top_p=None, presence_penalty=None, frequency_penalty=None,
         max_tokens=None, seed=None, stream=False, schema=None,
         tools=None, on_tool=None, media=None, modalities=None, on_media=None,
-        on_delta=None, on_error=None):
+        on_delta=None, on_error=None, on_usage=None):
     """問 LLM，回完整答案字串。詳見模組 docstring。"""
     lib = _lib()
     keep = []  # 讓傳給 C 的 bytes / struct 陣列 / callback 在 llm_ask 期間不被 GC
@@ -283,12 +293,26 @@ def ask(prompt, endpoint=None, *, system=None, api_key=None, model=None, timeout
             except Exception:  # noqa: BLE001
                 pass
 
+    @_USAGE_H
+    def on_usage_cb(usage, _user):
+        if not usage or on_usage is None:
+            return
+        u = usage.contents
+        try:
+            on_usage({"prompt_tokens": u.prompt_tokens,
+                      "completion_tokens": u.completion_tokens,
+                      "total_tokens": u.total_tokens})
+        except Exception:  # noqa: BLE001 —— metadata 回呼無中止語意，例外不擋收尾
+            pass
+
     h = _Handlers()
     h.on_text = on_text
     h.on_tool = on_tool_cb
     h.on_media = on_media_cb
     h.on_error = on_err
-    keep.extend([on_text, on_tool_cb, on_media_cb, on_err])
+    if on_usage is not None:  # 不裝＝NULL：串流時也不多送 stream_options（同 C ABI 語意）
+        h.on_usage = on_usage_cb
+    keep.extend([on_text, on_tool_cb, on_media_cb, on_err, on_usage_cb])
 
     st = lib.llm_ask(None, byref(c), byref(r), byref(h))
 

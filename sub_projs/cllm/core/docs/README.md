@@ -26,7 +26,7 @@
 | [`overview.html`](overview.html) | 視覺總覽：三層交付物、`llm_ask` 資料流、phase 生命週期、型別對照、「我想做…」路由 |
 | [`c-abi-reference.md`](c-abi-reference.md) | C ABI 總覽＋傘檔佈局＋記憶體約定＋統一入口 `llm_ask`／`llm_status_t` |
 | [`c-abi-input.md`](c-abi-input.md) | C ABI 輸入型：`llm_client_t`／`field_mask`／`llm_request_t`／schema／tool_def／media_in／modality |
-| [`c-abi-output.md`](c-abi-output.md) | C ABI 輸出型與控制：四 handler／tool_call／media_out／`llm_context_t`／`llm_phase_t`／cancel |
+| [`c-abi-output.md`](c-abi-output.md) | C ABI 輸出型與控制：五 handler／tool_call／media_out／usage／`llm_context_t`／`llm_phase_t`／cancel |
 | [`cpp-mirror-reference.md`](cpp-mirror-reference.md) | C++ 薄鏡像 `llm::abi`：`Client`／`Request`／`Handlers`／`Context`＋型別對照＋範例 |
 | [`cli-manual.md`](cli-manual.md) | `llm` CLI：旗標（固定＋反射生成）／config 三層來源／退出碼／接真後端／離線自測 |
 | [`setup.md`](setup.md) | 建置環境需求（Windows／Linux）＋ vcpkg manifest 依賴（glaze／triplet）|

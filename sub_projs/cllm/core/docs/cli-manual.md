@@ -55,6 +55,7 @@ llm 你好 --endpoint "file:///<abs>/test/fixtures/fake/chat/completions"
 | `--tool <檔>` | 工具定義檔（**可重複**）：`{"name","description","parameters"}`，`description` 選填、容忍多餘鍵；模型的 tool_calls 一行一則 JSON 吐 stdout（見下「輸出與 handler」）|
 | `--modality <名[=檔]>` | 要求輸出模態（**可重複**）：如 `audio` 或 `audio=cfg.json`（`=` 後接該模態參數的 JSON 檔）|
 | `--media-out <目錄>` | 產出媒體落檔目錄（須已存在）；沒給＝收到媒體時 stderr 明說丟棄 |
+| `--usage` | token 用量吐 stderr（`用量：prompt=… completion=… total=…`；-1＝後端沒給該欄）。布林，無值。串流時會多送 `stream_options.include_usage`；後端沒回 usage＝不印 |
 | `--config <檔>` | 設定檔（扁平 JSON，對應下列連線／取樣欄位）|
 | `--` | 分隔符：其後所有參數一律當 prompt（unix 慣例）|
 | `--help`, `-h` | 顯示用法 |
@@ -143,10 +144,10 @@ llm 用一句話介紹你自己 --endpoint http://localhost:1234/v1/chat/complet
 ## 離線自測
 
 ```bash
-bash test/cli_smoke.sh    # 離線黑箱煙霧測試（35/35）：驅動 build/llm 打 file:// fixtures
+bash test/cli_smoke.sh    # 離線黑箱煙霧測試（40/40）：驅動 build/llm 打 file:// fixtures
 ```
 
-`--endpoint file://<絕對路徑>` 就是反射欄位，`cli_smoke.sh` 在執行期用 `$ROOT` 組出 `file://` 路徑餵進去，驗輸出正確（含串流／結構化／stdin 合體／「-」插入點／`--system`）、tools（JSON 行）／媒體落檔（含內容）、config 三層來源、退出碼 0/1/2 三段分流。
+`--endpoint file://<絕對路徑>` 就是反射欄位，`cli_smoke.sh` 在執行期用 `$ROOT` 組出 `file://` 路徑餵進去，驗輸出正確（含串流／結構化／stdin 合體／「-」插入點／`--system`）、`--usage`（用量 stderr＋串流 `stream_options` 有無）、tools（JSON 行）／媒體落檔（含內容）、config 三層來源、退出碼 0/1/2 三段分流。
 
 > **除錯：`LLM_DUMP_BODY=1`** — 送出前把組好的請求 JSON（`messages`／取樣欄位…）印到 **stderr**，不影響 stdout。`file://` 假回應不看 body，此旗是**黑箱檢查 body 組裝**的唯一觀測窗（`cli_smoke.sh` 的 `--system` 用它驗）。例：`LLM_DUMP_BODY=1 llm --system 你是貓 你好 --endpoint file://…/fake/... 2>&1 >/dev/null`。
 

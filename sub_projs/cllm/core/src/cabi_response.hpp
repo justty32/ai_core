@@ -17,6 +17,12 @@ struct MediaOut {
   std::string mime;
   std::string bytes;
 };
+// token 用量（對應 llm_usage_t）。-1＝該欄後端沒給。
+struct Usage {
+  int prompt_tokens = -1;
+  int completion_tokens = -1;
+  int total_tokens = -1;
+};
 
 // 出口回呼集（對應 llm_handlers_t）。用 std::function：閉包自帶狀態，故無 void* user。
 // on_text/on_tool/on_media 回 true＝中止（對應 C ABI 回非 0）；任一可留空（＝該類輸出被丟棄）。
@@ -25,6 +31,7 @@ struct Handlers {
   std::function<bool(const ToolCall &)> on_tool;  // 每個工具呼叫（拼完整）
   std::function<bool(const MediaOut &)> on_media; // 每則產出媒體
   std::function<void(std::string_view)> on_error; // 失敗時一次
+  std::function<void(const Usage &)> on_usage;    // 用量：後端有回才呼叫，至多一次（最後）
 };
 
 } // namespace llm::abi

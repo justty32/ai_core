@@ -2,7 +2,7 @@
 
 ← [C ABI 總覽](c-abi-reference.md)｜[輸入型](c-abi-input.md)｜[docs 索引](README.md)
 
-`llm_ask` 的**收回面**：模型吐回來的東西全走 **`llm_handlers_t`** 四個回呼（`cabi_response.h`）；跨 thread 的取消／觀測走 **`llm_context_t`**（`cabi_context.h`）。
+`llm_ask` 的**收回面**：模型吐回來的東西全走 **`llm_handlers_t`** 五個回呼（`cabi_response.h`）；跨 thread 的取消／觀測走 **`llm_context_t`**（`cabi_context.h`）。
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### `llm_handlers_t` — 出口回呼集
 
-四個 handler，任一可為 `NULL`（該類輸出被丟棄）。每個帶 `void* user` 攜帶狀態。
+五個 handler，任一可為 `NULL`（該類輸出被丟棄）。每個帶 `void* user` 攜帶狀態。`on_usage` 排在結構尾端（尾端追加＝舊客戶端歸零重編即相容）。
 
 ```c
 typedef struct llm_handlers_t {
@@ -18,6 +18,7 @@ typedef struct llm_handlers_t {
   llm_tool_handler  on_tool;   void *tool_user;
   llm_media_handler on_media;  void *media_user;  /* 模型產出的媒體（如 audio）*/
   llm_error_handler on_error;  void *error_user;
+  llm_usage_handler on_usage;  void *usage_user;  /* token 用量（NULL＝不要）*/
 } llm_handlers_t;
 ```
 
@@ -32,9 +33,11 @@ typedef int  (*llm_tool_handler )(const llm_tool_call_t *call, void *user);
 typedef int  (*llm_media_handler)(const llm_media_out_t *media, void *user);
 /* 錯誤：傳輸失敗／後端回錯時呼叫一次。message 只在回呼期間有效。*/
 typedef void (*llm_error_handler)(const char *message, size_t len, void *user);
+/* 用量：後端有回 usage 時、內容 handler 都跑完後呼叫至多一次。usage 只在回呼期間有效。*/
+typedef void (*llm_usage_handler)(const llm_usage_t *usage, void *user);
 ```
 
-> **回非 0 = 要求中止串流**（前三個 handler）。`on_error` 無回傳。
+> **回非 0 = 要求中止串流**（前三個 handler）。`on_error`／`on_usage` 無回傳。
 > `text`/`message` 的字串**不保證 NUL 結尾**，一律用 `len`。
 
 ### `llm_tool_call_t` — 工具呼叫（模型回來要你執行的）
@@ -58,6 +61,20 @@ typedef struct llm_media_out_t {
   size_t      len;
 } llm_media_out_t;
 ```
+
+### `llm_usage_t` — token 用量（後端回報的 usage）
+
+```c
+typedef struct llm_usage_t {
+  int prompt_tokens;      /* -1 = 該欄後端沒給 */
+  int completion_tokens;
+  int total_tokens;
+} llm_usage_t;
+```
+
+- **非串流**：從回應 body 的 `usage` 物件解出，內容 handler（text/tool/media）都跑完後交付。
+- **串流**：裝了 `on_usage` 時請求會**多送 `stream_options.include_usage:true`**（OpenAI 慣例，要後端把 usage 附在末塊）；不裝就完全不送、請求 body 與從前一致。後端末塊有附才會呼叫。
+- ⚠ **後端沒回 usage ＝ 不呼叫**（不是三欄全 -1）——跟 `--schema` 同一課：有沒有拿到要看實際回應，不能假設後端配合。
 
 ---
 

@@ -23,6 +23,13 @@ typedef struct llm_media_out_t {
   size_t len;
 } llm_media_out_t;
 
+/* token 用量（後端回報的 usage）。-1＝該欄後端沒給。*/
+typedef struct llm_usage_t {
+  int prompt_tokens;
+  int completion_tokens;
+  int total_tokens;
+} llm_usage_t;
+
 /* ── 出口回呼（都帶 void* user 以攜狀態）── */
 /* 文字：串流逐段／非串流整段一次。text 非 NUL 結尾保證，長度看 len。回非 0＝要求中止串流。*/
 typedef int (*llm_text_handler)(const char *text, size_t len, void *user);
@@ -32,8 +39,12 @@ typedef int (*llm_tool_handler)(const llm_tool_call_t *call, void *user);
 typedef int (*llm_media_handler)(const llm_media_out_t *media, void *user);
 /* 錯誤：傳輸失敗／後端回錯時呼叫一次。message 只在回呼期間有效。*/
 typedef void (*llm_error_handler)(const char *message, size_t len, void *user);
+/* 用量：後端有回 usage 時、內容 handler 都跑完後呼叫至多一次。usage 只在回呼期間有效。
+ * ⚠ 串流時裝上本 handler＝請求會多送 stream_options.include_usage（要後端把 usage 附在末塊）；
+ *   不裝就完全不送、行為與從前一致。*/
+typedef void (*llm_usage_handler)(const llm_usage_t *usage, void *user);
 
-/* 出口回呼集（任一 handler 可為 NULL）。*/
+/* 出口回呼集（任一 handler 可為 NULL）。on_usage 排最後＝尾端追加，舊客戶端歸零重編即相容。*/
 typedef struct llm_handlers_t {
   llm_text_handler on_text;
   void *text_user;
@@ -43,6 +54,8 @@ typedef struct llm_handlers_t {
   void *media_user;
   llm_error_handler on_error;
   void *error_user;
+  llm_usage_handler on_usage; /* token 用量（NULL＝不要，串流時也不多送 stream_options）*/
+  void *usage_user;
 } llm_handlers_t;
 
 #ifdef __cplusplus

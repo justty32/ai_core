@@ -108,6 +108,7 @@ handler 用 `std::function`（閉包自帶狀態，故無 C ABI 的 `void* user`
 ```cpp
 struct ToolCall { std::string id, name, arguments; };
 struct MediaOut { std::string mime, bytes; };
+struct Usage    { int prompt_tokens = -1, completion_tokens = -1, total_tokens = -1; }; // -1 = 後端沒給
 
 // 出口回呼集（對應 llm_handlers_t）。on_text/on_tool/on_media 回 true = 中止；任一可留空（該類輸出被丟棄）。
 struct Handlers {
@@ -115,8 +116,11 @@ struct Handlers {
   std::function<bool(const ToolCall &)>   on_tool;   // 每個工具呼叫（拼完整）
   std::function<bool(const MediaOut &)>   on_media;  // 每則產出媒體
   std::function<void(std::string_view)>   on_error;  // 失敗時一次
+  std::function<void(const Usage &)>      on_usage;  // 用量：後端有回才呼叫，至多一次（最後）
 };
 ```
+
+> `on_usage` 裝上＋串流＝請求多送 `stream_options.include_usage`（要後端把 usage 附在末塊）；留空就完全不送。細節見 [C ABI 輸出型](c-abi-output.md#llm_usage_t--token-用量後端回報的-usage)。
 
 > ⚠ **回傳語意與 C ABI 一致但值相反的陷阱**：C ABI 的 handler「回非 0 = 中止」；C++ 這層「回 `true` = 中止」。鏡像內部把 `true`→`1` 轉好，寫 C++ 端照 `true`/`false` 想即可。
 

@@ -1,8 +1,8 @@
 // cli.cpp — cli::run 的 orchestrator：把命令列組成一次 llm::abi::Client::ask 的發問。
 //
 // 流程（各步驟的機制拆在旁邊的 TU）：
-//   (1) 解析 argv：固定旗標（--stream/--image/--schema/--config/--tool/--modality/--media-out/
-//       --help/--）特判；反射旗標（cli_flags::client_flags 的合法表）吃下一個 argv 收進
+//   (1) 解析 argv：固定旗標（--stream/--usage/--image/--schema/--config/--tool/--modality/
+//       --media-out/--help/--）特判；反射旗標（cli_flags::client_flags 的合法表）吃下一個 argv 收進
 //       raw_values；其餘當位置參數拼 prompt。
 //   (2) 定 prompt：位置參數與導管 stdin 可合體——「-」＝stdin 插入點；沒寫「-」而兩者都有
 //       ＝prompt＋空行＋stdin（指令在前、資料在後）；互動終端一律不讀 stdin（避免卡住）。
@@ -76,6 +76,7 @@ int run(const std::vector<std::string> &args) {
   std::vector<std::string> modality_specs;       // --modality（可重複；「名」或「名=設定檔」）
   std::string schema_path, config_path, media_out_dir, system_text;
   bool has_schema = false, has_config = false, has_system = false, stream = false;
+  bool show_usage = false; // --usage：token 用量吐 stderr
   bool no_more_flags = false; // 見到 "--" 後，其餘 argv 一律當 prompt（unix 慣例）
 
   // 需要吃下一個 argv 的取值小工具：缺值即報錯。
@@ -98,6 +99,10 @@ int run(const std::vector<std::string> &args) {
     }
     if (a == "--stream") {
       stream = true;
+      continue;
+    }
+    if (a == "--usage") {
+      show_usage = true;
       continue;
     }
     if (a == "--image") {
@@ -269,7 +274,7 @@ int run(const std::vector<std::string> &args) {
 
   // ── 出口 handlers（機制在 cli_output.*）：文字吐 stdout、tool_calls 一行一則 JSON、
   //    產出媒體落檔 --media-out、錯誤吐 stderr。事後讀 sink 的狀態旗標定收尾。──
-  output::Sink sink{.media_out_dir = media_out_dir};
+  output::Sink sink{.media_out_dir = media_out_dir, .show_usage = show_usage};
   llm::abi::Handlers h = sink.handlers();
 
   // ── 發問（可從 SIGINT 取消）──

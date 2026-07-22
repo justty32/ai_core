@@ -6,7 +6,7 @@
 
 本檔＝**總覽 + 統一入口**；型別參考拆兩半：
 - **[C ABI · 輸入型](c-abi-input.md)** — 呼叫端設定（`llm_client_t`／`field_mask`）＋請求輸入（schema／tool_def／media_in／modality／request）。
-- **[C ABI · 輸出型與控制](c-abi-output.md)** — 收回型與四 handler（tool_call／media_out／handlers）＋非同步控制（context／phase／cancel）。
+- **[C ABI · 輸出型與控制](c-abi-output.md)** — 收回型與五 handler（tool_call／media_out／usage／handlers）＋非同步控制（context／phase／cancel）。
 
 > **穩定介面警語**：扁平結構與 `llm_ask` 簽章是穩定 ABI，改它會震到所有 C 客戶端與 `llm` CLI。實際定義以 `src/cabi*.h` 為準（本檔是它們的導覽視圖）。
 
@@ -18,7 +18,7 @@
 |------|------|------|
 | `cabi_client.h` | 連線 + 取樣設定（`llm_client_t`、`LLM_FIELD_*`）| [輸入型](c-abi-input.md#呼叫端設定cabi_clienth) |
 | `cabi_request.h` | 一次發問的「輸入」（schema／tool_def／media_in／modality／request）| [輸入型](c-abi-input.md#請求輸入cabi_requesth) |
-| `cabi_response.h` | 一次發問的「收回」（tool_call／media_out／四 handler）| [輸出型](c-abi-output.md#回應輸出cabi_responseh) |
+| `cabi_response.h` | 一次發問的「收回」（tool_call／media_out／usage／五 handler）| [輸出型](c-abi-output.md#回應輸出cabi_responseh) |
 | `cabi_context.h` | 非同步控制（context／phase／cancel）| [輸出型](c-abi-output.md#非同步控制cabi_contexth) |
 
 傘檔自身再補 `llm_status_t` ＋ `llm_ask`（見下）。

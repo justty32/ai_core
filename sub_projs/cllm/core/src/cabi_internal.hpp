@@ -34,8 +34,9 @@ inline bool cancelled(llm_context_t *ctx) {
 http::Request make_request(const llm_client_t *c, std::string body);
 
 // 組完整 OpenAI 請求 JSON：prompt(+media)＋response_format(schema)＋tools[]＋modalities＋取樣＋stream。
+// include_usage＝呼叫端裝了 on_usage：串流時多送 stream_options.include_usage（要後端附 usage 末塊）。
 // def 在 cabi_request.cpp。
-std::string build_body(const llm_client_t *c, const llm_request_t *req);
+std::string build_body(const llm_client_t *c, const llm_request_t *req, bool include_usage);
 
 // 護欄：後端錯誤（4xx／error JSON）不得被靜默吞成空字串 → throw runtime_error。
 // def 在 cabi_response.cpp。
